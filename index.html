@@ -7,19 +7,20 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/feather-icons"></script>
   <style>
     body { background-color: #0b1120; color: #f3f4f6; }
     input, select { background-color: #1e293b; color: #ffffff; border: 1px solid #334155; }
     th { background-color: #1e293b; color: #94a3b8; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; white-space: nowrap; }
     td { border-bottom: 1px solid #1e293b; }
-    .sidebar-btn { display:flex; align-items:center; gap:.5rem; width:100%; text-align:left; padding:.6rem .8rem; border-radius:.5rem; font-size:.82rem; color:#cbd5e1; }
+    .sidebar-btn { display:flex; align-items:center; gap:.5rem; width:100%; text-align:left; padding:.6rem .8rem; border-radius:.5rem; font-size:.82rem; color:#cbd5e1; cursor:pointer; border:none; background:none; }
     .sidebar-btn:hover { background:#1e293b; }
     .sidebar-btn.active { background:#0e7490; color:#fff; font-weight:600; }
-    .sub-btn { display:block; width:100%; text-align:left; padding:.4rem .8rem .4rem 2.2rem; border-radius:.4rem; font-size:.78rem; color:#94a3b8; }
+    .sub-btn { display:block; width:100%; text-align:left; padding:.4rem .8rem .4rem 2.2rem; border-radius:.4rem; font-size:.78rem; color:#94a3b8; cursor:pointer; border:none; background:none; }
     .sub-btn:hover { background:#1e293b; color:#fff; }
     .sub-btn.active { background:#164e63; color:#67e8f9; font-weight:600; }
     .badge { padding:2px 9px; border-radius:9999px; font-size:.68rem; font-weight:700; white-space:nowrap; display:inline-block; }
-    .filtro-icono { cursor:pointer; margin-left:4px; opacity:.6; }
+    .filtro-icono { cursor:pointer; margin-left:4px; opacity:.6; width:16px; height:16px; display:inline-block; }
     .filtro-icono:hover { opacity:1; }
     .filtro-icono.activo { color:#22d3ee; opacity:1; }
     #col-filter-popup { box-shadow: 0 10px 30px rgba(0,0,0,.5); }
@@ -31,6 +32,8 @@
     .form-group { margin-bottom:1rem; }
     .form-group label { display:block; font-size:0.875rem; color:#cbd5e1; margin-bottom:0.25rem; font-weight:600; }
     .form-group input, .form-group select { width:100%; padding:0.5rem; font-size:0.875rem; border-radius:0.375rem; }
+    .icon-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; cursor:pointer; }
+    .teams-edit-input { background-color:#0f172a; color:#fff; border:1px solid #334155; padding:0.4rem; border-radius:0.3rem; font-size:0.85rem; }
   </style>
 </head>
 <body class="font-sans">
@@ -40,55 +43,76 @@
     <!-- SIDEBAR -->
     <aside class="w-64 bg-[#0f172a] border-r border-gray-800 flex flex-col shrink-0 overflow-y-auto">
       <div class="p-4 border-b border-gray-800">
-        <h1 class="text-sm font-bold text-cyan-400">📊 Dashboard Intelfon</h1>
+        <h1 class="text-sm font-bold text-cyan-400">Dashboard Intelfon</h1>
         <p class="text-[10px] text-gray-500 mt-0.5">SCORECARD CITAS</p>
       </div>
       <nav class="p-3 space-y-1 flex-1">
-        <button class="sidebar-btn" data-view="config" onclick="irA('config')">⚙️ <span>Configuración</span></button>
-        <button class="sidebar-btn" data-view="criterios" onclick="irA('criterios')">📖 <span>Criterios</span></button>
+        <button class="sidebar-btn" data-view="config" onclick="irA('config')">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          <span>Configuración</span>
+        </button>
+        <button class="sidebar-btn" data-view="criterios" onclick="irA('criterios')">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span>Criterios</span>
+        </button>
 
-        <button class="sidebar-btn" onclick="toggleSubmenu('submenu-registros')">🗂️ <span>Registros</span> <span class="ml-auto text-xs">▾</span></button>
+        <button class="sidebar-btn" onclick="toggleSubmenu('submenu-registros')">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          <span>Registros</span> 
+          <span class="ml-auto text-xs">▾</span>
+        </button>
         <div id="submenu-registros" class="space-y-0.5">
-          <button class="sub-btn" data-view="reg-pbx" onclick="irA('reg-pbx')">📞 Llamadas PBX</button>
-          <button class="sub-btn" data-view="reg-cel" onclick="irA('reg-cel')">📱 Llamadas Celular</button>
-          <button class="sub-btn" data-view="reg-leads" onclick="irA('reg-leads')">🎯 Leads Calificados</button>
+          <button class="sub-btn" data-view="reg-pbx" onclick="irA('reg-pbx')">
+            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+            Llamadas PBX
+          </button>
+          <button class="sub-btn" data-view="reg-cel" onclick="irA('reg-cel')">
+            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 20h8a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+            Llamadas Celular
+          </button>
+          <button class="sub-btn" data-view="reg-leads" onclick="irA('reg-leads')">
+            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            Leads Calificados
+          </button>
         </div>
 
-        <button class="sidebar-btn" data-view="catalogo" onclick="irA('catalogo')">📇 <span>Catálogo (CRUD)</span></button>
+        <button class="sidebar-btn" data-view="catalogo" onclick="irA('catalogo')">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          <span>Catálogo (CRUD)</span>
+        </button>
 
-        <button class="sidebar-btn" onclick="toggleSubmenu('submenu-resumen')">📈 <span>Resumen</span> <span class="ml-auto text-xs">▾</span></button>
+        <button class="sidebar-btn" onclick="toggleSubmenu('submenu-resumen')">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+          <span>Resumen</span> 
+          <span class="ml-auto text-xs">▾</span>
+        </button>
         <div id="submenu-resumen" class="space-y-0.5">
-          <button class="sub-btn" data-view="res-pais" onclick="irA('res-pais')">🌎 Resumen País</button>
-          <button class="sub-btn" data-view="res-ejecutivo" onclick="irA('res-ejecutivo')">🧑‍💼 Resumen Llamadas</button>
-          <button class="sub-btn" data-view="res-detalle" onclick="irA('res-detalle')">🔍 Detalle Llamadas</button>
-          <button class="sub-btn" data-view="res-teams" onclick="irA('res-teams')">👥 TEAMS</button>
-          <button class="sub-btn" data-view="res-detalle-teams" onclick="irA('res-detalle-teams')">📋 Detalle TEAMS</button>
+          <button class="sub-btn" data-view="res-pais" onclick="irA('res-pais')">
+            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064A7.969 7.969 0 0118 3V3.089A4.924 4.924 0 0023 7.5v6a4.924 4.924 0 01-4.055 4.89M8 3.935L8.5 9M3 17.988V21a2 2 0 002 2h14a2 2 0 002-2v-3.022A4.964 4.964 0 0016 12H8a4.964 4.964 0 00-5 4.988z"></path></svg>
+            Resumen País
+          </button>
+          <button class="sub-btn" data-view="res-ejecutivo" onclick="irA('res-ejecutivo')">
+            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            Resumen Cumplimiento
+          </button>
+          <button class="sub-btn" data-view="res-detalle" onclick="irA('res-detalle')">
+            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+            Detalle Llamadas
+          </button>
+          <button class="sub-btn" data-view="res-teams" onclick="irA('res-teams')">
+            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM12 14a9 9 0 00-9 9m0 0h18a9 9 0 00-9-9m9 9H3"></path></svg>
+            Resumen Teams
+          </button>
+          <button class="sub-btn" data-view="res-detalle-teams" onclick="irA('res-detalle-teams')">
+            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Detalle Teams
+          </button>
         </div>
       </nav>
     </aside>
 
     <!-- MAIN -->
     <div class="flex-1 flex flex-col overflow-hidden">
-
-      <!-- CONTADORES -->
-      <div class="grid grid-cols-4 gap-3 p-4 border-b border-gray-800 shrink-0">
-        <div class="bg-[#111827] p-3 rounded-lg border border-gray-800">
-          <span class="text-[10px] text-gray-400 font-bold tracking-wider uppercase">LEADS</span>
-          <div id="cant-leads" class="text-2xl font-extrabold text-cyan-400 mt-1">0</div>
-        </div>
-        <div class="bg-[#111827] p-3 rounded-lg border border-gray-800">
-          <span class="text-[10px] text-gray-400 font-bold tracking-wider uppercase">LLAMADAS CELULAR</span>
-          <div id="cant-hist" class="text-2xl font-extrabold text-cyan-400 mt-1">0</div>
-        </div>
-        <div class="bg-[#111827] p-3 rounded-lg border border-gray-800">
-          <span class="text-[10px] text-gray-400 font-bold tracking-wider uppercase">LLAMADAS PBX</span>
-          <div id="cant-llam" class="text-2xl font-extrabold text-cyan-400 mt-1">0</div>
-        </div>
-        <div class="bg-[#111827] p-3 rounded-lg border border-gray-800">
-          <span class="text-[10px] text-gray-400 font-bold tracking-wider uppercase">TOTAL GENERAL</span>
-          <div id="cant-total" class="text-2xl font-extrabold text-emerald-400 mt-1">0</div>
-        </div>
-      </div>
 
       <!-- FILTRO DE FECHA GLOBAL -->
       <div class="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-gray-800 bg-[#0d1526] shrink-0">
@@ -172,13 +196,63 @@
     </div>
   </div>
 
+  <!-- MODAL EDITAR TEAMS -->
+  <div id="modal-teams" class="modal-overlay modal-hidden">
+    <div class="modal-content">
+      <h2 class="text-lg font-bold text-cyan-400 mb-4">Editar Reunión Teams</h2>
+      <form id="form-teams" onsubmit="guardarTeamsModal(event)">
+        <input type="hidden" id="teams-id">
+        
+        <div class="form-group">
+          <label>País</label>
+          <input type="text" id="teams-pais" disabled class="bg-gray-800 cursor-not-allowed">
+        </div>
+
+        <div class="form-group">
+          <label>Ejecutivo</label>
+          <input type="text" id="teams-ejecutivo" disabled class="bg-gray-800 cursor-not-allowed">
+        </div>
+
+        <div class="form-group">
+          <label>Lead</label>
+          <input type="text" id="teams-lead" disabled class="bg-gray-800 cursor-not-allowed">
+        </div>
+
+        <div class="form-group">
+          <label>Cliente</label>
+          <input type="text" id="teams-cliente" disabled class="bg-gray-800 cursor-not-allowed">
+        </div>
+
+        <div class="form-group">
+          <label>Fecha reunión</label>
+          <input type="date" id="teams-fecha" required>
+        </div>
+
+        <div class="form-group">
+          <label>Hora reunión</label>
+          <input type="time" id="teams-hora" required>
+        </div>
+
+        <div class="form-group">
+          <label>Evidencia (Link)</label>
+          <input type="url" id="teams-evidencia" placeholder="https://..." required>
+        </div>
+
+        <div class="flex gap-2 justify-end mt-6">
+          <button type="button" onclick="cerrarModalTeams()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded text-sm font-bold">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     // ==================================================================
     // ESTADO GLOBAL
     // ==================================================================
     let supabaseClient = null;
-    let cache = { leads: [], llamadas: [], historiales: [], ejecutivos: [] };
-    let cargaCompleta = { leads: false, llamadas: false, historiales: false, ejecutivos: false };
+    let cache = { leads: [], llamadas: [], historiales: [], ejecutivos: [], teams_registro: [] };
+    let cargaCompleta = { leads: false, llamadas: false, historiales: false, ejecutivos: false, teams_registro: false };
     let cruceCache = null;
     let vistaActual = 'config';
 
@@ -230,7 +304,10 @@
     function renderConfig(main) {
       main.innerHTML = `
         <div class="max-w-xl bg-[#111827] p-5 rounded-lg border border-gray-800 space-y-4">
-          <h2 class="text-sm font-bold text-gray-300 flex items-center gap-2">⚙️ Configuración de Supabase</h2>
+          <h2 class="text-sm font-bold text-gray-300 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            Configuración de Supabase
+          </h2>
           <div>
             <label class="block text-xs text-gray-400 mb-1">URL de Supabase</label>
             <input type="text" id="sb-url" value="${SB_URL}" class="w-full p-2 text-xs rounded focus:outline-none focus:border-cyan-500">
@@ -318,7 +395,10 @@
       main.innerHTML = `
         <div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
           <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
-            <h2 class="text-sm font-bold text-gray-300">📇 Catálogo de Ejecutivos (CRUD)</h2>
+            <h2 class="text-sm font-bold text-gray-300 flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              Catálogo de Ejecutivos (CRUD)
+            </h2>
             <div class="flex flex-wrap gap-2 items-center">
               <button onclick="abrirModalNuevo()" class="bg-teal-600 hover:bg-teal-700 text-xs px-3 py-1.5 rounded font-bold">➕ Nuevo Ejecutivo</button>
               <button onclick="recargarUnaTabla('ejecutivos','null')" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded">🔄 Recargar</button>
@@ -335,7 +415,6 @@
       await asegurarCache('ejecutivos', null);
       document.getElementById('estado-tabla').classList.add('hidden');
       
-      // Agregar botones de acción a cada fila
       const ejecutivosConAcciones = cache.ejecutivos.map(e => ({
         ...e,
         acciones: `<div class="flex gap-1" style="white-space: nowrap;">
@@ -396,18 +475,15 @@
 
       try {
         if (id) {
-          // Editar
           const { error } = await client.from('ejecutivos').update(datos).eq('id', parseInt(id));
           if (error) throw error;
           alert('✅ Ejecutivo actualizado');
         } else {
-          // Crear
           const { error } = await client.from('ejecutivos').insert([datos]);
           if (error) throw error;
           alert('✅ Ejecutivo agregado');
         }
         
-        // Recargar tabla
         cargaCompleta.ejecutivos = false;
         await cargarTablaCompleta('ejecutivos', null);
         cerrarModal();
@@ -461,32 +537,16 @@
       return cache[tabla];
     }
 
-    async function actualizarContadores() {
-      try {
-        const client = getSupabase();
-        const [rLeads, rHist, rLlam] = await Promise.all([
-          client.from('leads').select('*', { count: 'exact', head: true }),
-          client.from('historiales').select('*', { count: 'exact', head: true }),
-          client.from('llamadas').select('*', { count: 'exact', head: true })
-        ]);
-        const cL = rLeads.count || 0, cH = rHist.count || 0, cLl = rLlam.count || 0;
-        document.getElementById('cant-leads').innerText = cL.toLocaleString();
-        document.getElementById('cant-hist').innerText = cH.toLocaleString();
-        document.getElementById('cant-llam').innerText = cLl.toLocaleString();
-        document.getElementById('cant-total').innerText = (cL + cH + cLl).toLocaleString();
-      } catch (e) { console.error(e); }
-    }
-
     async function recargarTodoYContadores() {
       console.log('🔄 [DEBUG] Iniciando recargarTodoYContadores...');
-      cargaCompleta = { leads: false, llamadas: false, historiales: false, ejecutivos: false };
+      cargaCompleta = { leads: false, llamadas: false, historiales: false, ejecutivos: false, teams_registro: false };
       cruceCache = null;
       try {
         await cargarTablaCompleta('leads', 'fecha_agendada');
         await cargarTablaCompleta('llamadas', 'fecha');
         await cargarTablaCompleta('historiales', 'fecha');
         await cargarTablaCompleta('ejecutivos', null);
-        await actualizarContadores();
+        await cargarTablaCompleta('teams_registro', null);
         render();
         console.log('✨ [DEBUG] ¡Recargar completado!');
       } catch (err) {
@@ -572,7 +632,6 @@
     async function recargarUnaTabla(tabla, columnaFecha) {
       cargaCompleta[tabla] = false;
       await cargarTablaCompleta(tabla, columnaFecha || null);
-      await actualizarContadores();
       pintarTablaConFiltros('tabla-dinamica', filtrarPorFechaGlobal(cache[tabla], columnaFecha));
     }
 
@@ -668,7 +727,6 @@
       const v = input.dataset.val;
       if (input.checked) cfpState.seleccion.add(v);
       else cfpState.seleccion.delete(v);
-      // APLICA FILTRO AUTOMÁTICAMENTE (sin esperar a "Aceptar")
       cfpAceptar();
     }
 
@@ -677,7 +735,6 @@
       const filtrados = cfpState.valoresUnicos.filter(v => v.toLowerCase().includes(q));
       cfpPintarLista(filtrados);
       
-      // Aplicar automáticamente sin checkboxes
       if (q.length > 0) {
         cfpState.seleccion.clear();
         filtrados.forEach(v => cfpState.seleccion.add(v));
@@ -706,7 +763,6 @@
       } else {
         filtroColState[contId][col] = new Set(seleccion);
       }
-      // NO cierra el popup - el usuario puede seguir filtrando
       repintar(contId);
     }
     
@@ -919,8 +975,7 @@
         return {
           ...g,
           no_cumplieron: noCumplieron,
-          pct_cumplimiento: base > 0 ? pctNum.toFixed(1) + '%' : '—',
-          clasificacion_html: `<span class="badge ${clas.clase}">${clas.texto}</span>`
+          pct_cumplimiento: base > 0 ? pctNum.toFixed(1) + '%' : '—'
         };
       });
     }
@@ -949,7 +1004,6 @@
       total.pct_num = pctNum;
       total.pct_cumplimiento = base > 0 ? pctNum.toFixed(1) + '%' : '—';
       const clas = claseClasificacion(pctNum, total.evaluados);
-      total.clasificacion_html = `<span class="badge ${clas.clase}">${clas.texto}</span>`;
       return total;
     }
 
@@ -980,10 +1034,6 @@
       lineas.push({ titulo: 'Pendientes', texto: textoPendientes });
 
       return lineas;
-    }
-
-    function pctBadgeClase(pctNum, evaluados) {
-      return claseClasificacion(pctNum, evaluados).clase;
     }
 
     function pintarTablaResumenPais(datosPorPais, total, cruce) {
@@ -1021,27 +1071,6 @@
           </table>
         </div>`;
 
-      const baseTotal = total.evaluados - total.pendientes;
-      const kpiHtml = `
-        <div class="grid grid-cols-4 gap-3 mt-4">
-          <div class="bg-[#0e7490]/10 border border-cyan-900 rounded-lg p-4 text-center">
-            <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Leads telefónicos</div>
-            <div class="text-3xl font-extrabold text-white mt-1">${total.leads}</div>
-          </div>
-          <div class="bg-[#0e7490]/10 border border-cyan-900 rounded-lg p-4 text-center">
-            <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Evaluados</div>
-            <div class="text-3xl font-extrabold text-white mt-1">${total.evaluados}</div>
-          </div>
-          <div class="bg-[#0e7490]/10 border border-cyan-900 rounded-lg p-4 text-center">
-            <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Cumplieron</div>
-            <div class="text-3xl font-extrabold text-emerald-400 mt-1">${total.cumplieron}</div>
-          </div>
-          <div class="bg-[#0e7490]/10 border border-cyan-900 rounded-lg p-4 text-center">
-            <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">% Cumplimiento</div>
-            <div class="text-3xl font-extrabold ${total.pct_num >= 70 ? 'text-emerald-400' : total.pct_num > 0 ? 'text-amber-400' : 'text-red-400'} mt-1">${total.pct_cumplimiento}</div>
-          </div>
-        </div>`;
-
       const lectura = generarLecturaEjecutiva(datosPorPais, total, cruce);
       const lecturaHtml = `
         <div class="mt-4 bg-[#0d1526] border border-gray-800 rounded-lg overflow-hidden">
@@ -1055,7 +1084,7 @@
           </div>
         </div>`;
 
-      document.getElementById('tabla-resumen-pais').innerHTML = tablaHtml + kpiHtml + lecturaHtml;
+      document.getElementById('tabla-resumen-pais').innerHTML = tablaHtml + lecturaHtml;
     }
 
     async function renderResumenPais(main) {
@@ -1077,7 +1106,7 @@
       const total = calcularFilaTotal(datos);
       pintarTablaResumenPais(datos, total, cruce);
       document.getElementById('btn-exp-pais').onclick = () => exportarXLSXGenerico(
-        [...datos, total].map(({clasificacion_html, pct_num, ...r}) => r), 'resumen_por_pais'
+        [...datos, total].map(({pct_num, ...r}) => r), 'resumen_por_pais'
       );
     }
 
@@ -1130,7 +1159,6 @@
         g.pct_num = pctNum;
         g.pct_cumplimiento = base > 0 ? pctNum.toFixed(1) + '%' : '—';
         const clas = claseClasificacion(pctNum, g.evaluados);
-        g.clasificacion_html = `<span class="badge ${clas.clase}">${clas.texto}</span>`;
         return g;
       };
 
@@ -1157,7 +1185,6 @@
         { key: 'pendientes',        label: 'Pendientes' },
         { key: 'no_cumplieron',     label: 'No cumplieron' },
         { key: 'pct_cumplimiento',  label: '% cumplimiento' },
-        { key: 'clasificacion_html',label: 'Clasificación' },
       ];
 
       const filaHtml = (d, esTotal) => {
@@ -1202,7 +1229,7 @@
     async function renderResumenEjecutivo(main) {
       main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
         <div class="flex justify-between items-center mb-3">
-          <h2 class="text-sm font-bold text-gray-300">🧑‍💼 Cumplimiento por Ejecutivo y País</h2>
+          <h2 class="text-sm font-bold text-gray-300">🚀 Resumen Cumplimiento</h2>
           <div class="flex gap-2">
             <button onclick="calcularCruce(true).then(()=>renderResumenEjecutivo(document.getElementById('main-content')))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded">🔄 Recalcular</button>
             <button id="btn-exp-ejec" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded">⬇️ Exportar XLSX</button>
@@ -1218,17 +1245,9 @@
       const total = calcularFilaTotal([...filasCatalogo, ...filasSinCatalogo]);
       pintarTablaResumenEjecutivo(filasCatalogo, filasSinCatalogo, total);
       document.getElementById('btn-exp-ejec').onclick = () => exportarXLSXGenerico(
-        [...filasCatalogo, ...filasSinCatalogo, total].map(({clasificacion_html, pct_num, enCatalogo, ...r}) => r),
-        'resumen_por_ejecutivo'
+        [...filasCatalogo, ...filasSinCatalogo, total].map(({pct_num, enCatalogo, ...r}) => r),
+        'resumen_cumplimiento'
       );
-    }
-
-    function pintarResumenSimple(contId, datos, columnas) {
-      const cont = document.getElementById(contId);
-      if (!datos.length) { cont.innerHTML = '<p class="text-gray-500 p-4">Sin datos.</p>'; return; }
-      const thead = `<tr>${columnas.map(c => `<th class="p-2">${c==='clasificacion_html'?'clasificación':c.replace(/_/g,' ')}</th>`).join('')}</tr>`;
-      const filas = datos.map(f => `<tr class="hover:bg-slate-800/50">${columnas.map(c => `<td class="p-2 whitespace-nowrap text-gray-300">${f[c]}</td>`).join('')}</tr>`).join('');
-      cont.innerHTML = `<table class="w-full text-left"><thead>${thead}</thead><tbody>${filas}</tbody></table>`;
     }
 
     async function renderResumenDetalle(main) {
@@ -1240,7 +1259,7 @@
             <button onclick="exportarXLSX('tabla-detalle-cruce','detalle_llamadas')" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded">⬇️ Exportar XLSX</button>
           </div>
         </div>
-        <p class="text-[11px] text-gray-500 mb-2">Un renglón por cada lead telefónico evaluado. Mismos datos y reglas que "Resumen Llamadas" (últimos 8 dígitos del teléfono, ejecutivo por extensión/usuario, ±5 min de tolerancia).</p>
+        <p class="text-[11px] text-gray-500 mb-2">Un renglón por cada lead telefónico evaluado. Mismos datos y reglas que "Resumen Cumplimiento" (últimos 8 dígitos del teléfono, ejecutivo por extensión/usuario, ±5 min de tolerancia).</p>
         <span id="estado-tabla" class="text-xs text-cyan-400">Calculando cruce...</span>
         <div class="overflow-auto mt-2" style="max-height: 68vh;">
           <table class="w-full text-left text-xs" id="tabla-detalle-cruce"></table>
@@ -1271,7 +1290,6 @@
         'Datos en catálogo': r.catalogo_ok
       }));
 
-      // NUEVO: Separar y ordenar - "Sin llamada encontrada" al final
       const conLlamada = detalle.filter(d => d.Resultado !== 'Sin llamada encontrada');
       const sinLlamada = detalle.filter(d => d.Resultado === 'Sin llamada encontrada');
       const detalleOrdenado = [...conLlamada, ...sinLlamada];
@@ -1280,27 +1298,75 @@
       pintarTablaConFiltros('tabla-detalle-cruce', detalleOrdenado);
     }
 
+    // ==================================================================
+    // TEAMS - SINCRONIZACIÓN ENTRE TABLAS
+    // ==================================================================
     async function calcularTeams(forzar) {
       await asegurarCache('leads', 'fecha_agendada');
-      let leads = cache.leads.filter(l => !(l.tipo_reunion || '').toLowerCase().includes('llamada'));
+      await asegurarCache('teams_registro', null);
+      
+      let leads = cache.leads.filter(l => {
+        const tipo = (l.tipo_reunion || '').toLowerCase();
+        return tipo.includes('virtual') && !tipo.includes('llamada');
+      });
+      
       leads = filtrarPorFechaGlobal(leads, 'fecha_agendada');
-      const ahora = new Date();
+      
       return leads.map(lead => {
+        const leadCode = lead.codigo_prospecto;
+        const teamsData = cache.teams_registro.find(t => t.codigo_prospecto === leadCode) || {};
+        
         const progr = parseFechaHora(lead.fecha_agendada, lead.hora_agendada);
+        const ahora = new Date();
+        
         let estado = 'Sin evidencia Teams';
-        if (progr) {
+        if (teamsData.evidencia_url) {
+          estado = 'Cumplió fecha y horario';
+        } else if (progr) {
           const limite = new Date(progr.getTime() + 5 * 60000);
-          if (ahora < limite) estado = 'Pendiente';
+          if (ahora < limite) estado = 'Pendiente de evaluar';
         }
+        
         return {
+          id: teamsData.id,
           pais: lead.pais || 'N/D',
           ejecutivo: lead.asesor_nombre || 'Sin asignar',
           codigo_prospecto: lead.codigo_prospecto,
           lead: lead.nombre_prospecto,
-          fecha_reunion: lead.fecha_agendada,
-          hora_reunion: lead.hora_agendada,
+          cliente: lead.nombre_prospecto,
+          fecha_reunion_original: lead.fecha_agendada,
+          hora_reunion_original: lead.hora_agendada,
+          fecha_reunion: teamsData.fecha_reunion || lead.fecha_agendada,
+          hora_reunion: teamsData.hora_reunion || lead.hora_agendada,
+          evidencia_url: teamsData.evidencia_url || '',
           tipo_reunion: lead.tipo_reunion,
           estado_cruce: estado
+        };
+      });
+    }
+
+    function agregarTeams(registros) {
+      const grupos = {};
+      registros.forEach(r => {
+        const key = r.pais + '|' + r.ejecutivo;
+        if (!grupos[key]) grupos[key] = { pais: r.pais, ejecutivo: r.ejecutivo, leads: 0, evaluados: 0, pendientes: 0, cumplieron: 0 };
+        const g = grupos[key];
+        g.leads++;
+        if (r.estado_cruce === 'Pendiente de evaluar') {
+          g.pendientes++;
+        } else if (r.estado_cruce === 'Cumplió fecha y horario') {
+          g.cumplieron++;
+          g.evaluados++;
+        } else {
+          g.evaluados++;
+        }
+      });
+      
+      return Object.values(grupos).map(g => {
+        const pctNum = g.evaluados > 0 ? (g.cumplieron / g.evaluados) * 100 : 0;
+        return {
+          ...g,
+          pct_cumplimiento: g.evaluados > 0 ? pctNum.toFixed(1) + '%' : '—'
         };
       });
     }
@@ -1308,50 +1374,97 @@
     async function renderResumenTeams(main) {
       main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
         <div class="flex justify-between items-center mb-3">
-          <h2 class="text-sm font-bold text-gray-300">👥 Resumen de Reuniones TEAMS por Ejecutivo</h2>
+          <h2 class="text-sm font-bold text-gray-300">👥 Resumen de Reuniones Teams</h2>
           <div class="flex gap-2">
             <button onclick="renderResumenTeams(document.getElementById('main-content'))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded">🔄 Recalcular</button>
             <button id="btn-exp-teams" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded">⬇️ Exportar XLSX</button>
           </div>
         </div>
-        <p class="text-[11px] text-gray-500 mb-3">Leads con reunión Presencial / Virtual (no telefónica). Aún no tenemos una fuente de datos de Teams en Supabase, por eso se listan como "Sin evidencia Teams" salvo que estén pendientes.</p>
+        <p class="text-[11px] text-gray-500 mb-3">Leads con reunión Virtual (no telefónica). Los datos de fecha, hora y evidencia se sincronizan desde "Detalle Teams". Cumplimiento se marca cuando hay evidencia URL.</p>
         <div id="tabla-resumen-teams" class="overflow-auto text-xs"><span class="text-cyan-400">Calculando...</span></div>
       </div>`;
 
       const registros = await calcularTeams();
       const agrupado = agregarTeams(registros);
-      pintarResumenSimple('tabla-resumen-teams', agrupado, ['pais', 'ejecutivo', 'leads', 'evaluados', 'pendientes', 'clasificacion_html']);
-      document.getElementById('btn-exp-teams').onclick = () => exportarXLSXGenerico(agrupado.map(({clasificacion_html, ...r}) => r), 'resumen_teams');
+      pintarResumenSimple('tabla-resumen-teams', agrupado, ['pais', 'ejecutivo', 'leads', 'evaluados', 'cumplieron', 'pendientes', 'pct_cumplimiento']);
+      document.getElementById('btn-exp-teams').onclick = () => exportarXLSXGenerico(agrupado, 'resumen_teams');
     }
 
-    function agregarTeams(registros) {
-      const grupos = {};
-      registros.forEach(r => {
-        const key = r.pais + '|' + r.ejecutivo;
-        if (!grupos[key]) grupos[key] = { pais: r.pais, ejecutivo: r.ejecutivo, leads: 0, evaluados: 0, pendientes: 0 };
-        const g = grupos[key];
-        g.leads++;
-        if (r.estado_cruce === 'Pendiente') g.pendientes++;
-        else g.evaluados++;
-      });
-      return Object.values(grupos).map(g => ({
-        ...g,
-        clasificacion_html: g.evaluados > 0
-          ? `<span class="badge bg-red-900 text-red-300">Sin evidencia Teams</span>`
-          : `<span class="badge bg-sky-900 text-sky-300">Solo pendientes</span>`
-      }));
+    function pintarResumenSimple(contId, datos, columnas) {
+      const cont = document.getElementById(contId);
+      if (!datos.length) { cont.innerHTML = '<p class="text-gray-500 p-4">Sin datos.</p>'; return; }
+      const thead = `<tr>${columnas.map(c => `<th class="p-2 text-left text-[10px]">${c.replace(/_/g,' ').toUpperCase()}</th>`).join('')}</tr>`;
+      const filas = datos.map(f => `<tr class="hover:bg-slate-800/50">${columnas.map(c => `<td class="p-2 whitespace-nowrap text-gray-300">${f[c] ?? ''}</td>`).join('')}</tr>`).join('');
+      cont.innerHTML = `<table class="w-full text-left text-xs border-collapse"><thead class="bg-[#0e7490] text-white">${thead}</thead><tbody>${filas}</tbody></table>`;
+    }
+
+    function abrirModalTeams(id) {
+      const registro = cache.teams_registro.find(t => t.id === id);
+      if (!registro) return alert('Registro no encontrado');
+      
+      document.getElementById('teams-id').value = id;
+      document.getElementById('teams-pais').value = registro.pais || '';
+      document.getElementById('teams-ejecutivo').value = registro.ejecutivo || '';
+      document.getElementById('teams-lead').value = registro.codigo_prospecto || '';
+      document.getElementById('teams-cliente').value = registro.cliente || '';
+      document.getElementById('teams-fecha').value = registro.fecha_reunion || '';
+      document.getElementById('teams-hora').value = registro.hora_reunion || '';
+      document.getElementById('teams-evidencia').value = registro.evidencia_url || '';
+      
+      document.getElementById('modal-teams').classList.remove('modal-hidden');
+    }
+
+    function cerrarModalTeams() {
+      document.getElementById('modal-teams').classList.add('modal-hidden');
+      document.getElementById('form-teams').reset();
+    }
+
+    async function guardarTeamsModal(e) {
+      e.preventDefault();
+      const client = getSupabase();
+      
+      const id = document.getElementById('teams-id').value;
+      const datos = {
+        fecha_reunion: document.getElementById('teams-fecha').value,
+        hora_reunion: document.getElementById('teams-hora').value,
+        evidencia_url: document.getElementById('teams-evidencia').value,
+        pais: document.getElementById('teams-pais').value,
+        ejecutivo: document.getElementById('teams-ejecutivo').value,
+        codigo_prospecto: document.getElementById('teams-lead').value,
+        cliente: document.getElementById('teams-cliente').value
+      };
+
+      try {
+        if (id) {
+          const { error } = await client.from('teams_registro').update(datos).eq('id', parseInt(id));
+          if (error) throw error;
+          alert('✅ Reunión Teams actualizada');
+        } else {
+          const { error } = await client.from('teams_registro').insert([datos]);
+          if (error) throw error;
+          alert('✅ Reunión Teams agregada');
+        }
+        
+        cargaCompleta.teams_registro = false;
+        await cargarTablaCompleta('teams_registro', null);
+        cerrarModalTeams();
+        renderDetalleTeams(document.getElementById('main-content'));
+      } catch (err) {
+        alert('❌ Error: ' + err.message);
+      }
     }
 
     async function renderDetalleTeams(main) {
       main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
         <div class="flex justify-between items-center mb-3">
-          <h2 class="text-sm font-bold text-gray-300">📋 Detalle de Reuniones vía Teams</h2>
+          <h2 class="text-sm font-bold text-gray-300">📋 Detalle de Reuniones Teams</h2>
           <div class="flex gap-2">
             <button onclick="renderDetalleTeams(document.getElementById('main-content'))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded">🔄 Recalcular</button>
             <button onclick="exportarXLSX('tabla-detalle-teams','detalle_teams')" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded">⬇️ Exportar XLSX</button>
           </div>
         </div>
-        <span id="estado-tabla" class="text-xs text-cyan-400">Calculando...</span>
+        <p class="text-[11px] text-gray-500 mb-2">Edita los campos de Fecha reunión, Hora reunión y Evidencia (link) haciendo clic en el icono editar. Se guardan automáticamente en la BD y el Resumen Teams se actualiza al instante.</p>
+        <span id="estado-tabla" class="text-xs text-cyan-400">Cargando...</span>
         <div class="overflow-auto mt-2" style="max-height: 68vh;">
           <table class="w-full text-left text-xs" id="tabla-detalle-teams"></table>
         </div>
@@ -1359,7 +1472,20 @@
 
       const registros = await calcularTeams();
       document.getElementById('estado-tabla').classList.add('hidden');
-      pintarTablaConFiltros('tabla-detalle-teams', registros);
+      
+      const detalleConAcciones = registros.map(r => ({
+        'País': r.pais,
+        'Ejecutivo': r.ejecutivo,
+        'Lead': r.codigo_prospecto,
+        'Cliente': r.cliente,
+        'Fecha reunión': r.fecha_reunion,
+        'Hora reunión': r.hora_reunion,
+        'Evidencia': r.evidencia_url ? `<a href="${r.evidencia_url}" target="_blank" class="text-cyan-400 hover:underline">Ver</a>` : '(Vacío)',
+        'Estado': badgeEstadoCruce(r.estado_cruce),
+        'acciones': `<button onclick="abrirModalTeams(${r.id})" class="bg-blue-600 hover:bg-blue-700 text-xs px-2 py-1 rounded">✏️</button>`
+      }));
+      
+      pintarTablaConFiltros('tabla-detalle-teams', detalleConAcciones);
     }
 
     // ==================================================================
@@ -1368,7 +1494,6 @@
     window.addEventListener('DOMContentLoaded', async () => {
       supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
       irA('catalogo');
-      await actualizarContadores();
     });
   </script>
 </body>

@@ -1010,6 +1010,8 @@
         }).join('')}</tr>`;
       };
 
+      agregarBuscadorResumen('tabla-resumen-pais', datos, []);
+
       const thead = `<tr>${cols.map(c => `<th class="p-2.5 ${c.key==='pais'?'text-left':'text-right'} text-[10px]">${c.label}</th>`).join('')}</tr>`;
       const filas = datosPorPais.map(d => filaHtml(d, false)).join('') + filaHtml(total, true);
 
@@ -1171,6 +1173,8 @@
         }).join('')}</tr>`;
       };
 
+      agregarBuscadorResumen('tabla-resumen-ejec', [], []);
+
       const thead = `<tr>${cols.map(c => `<th class="p-2.5 ${(c.key==='pais'||c.key==='ejecutivo')?'text-left':'text-right'} text-[10px]">${c.label}</th>`).join('')}</tr>`;
       const filas = filasCatalogo.map(d => filaHtml(d, false)).join('') + filaHtml(total, true);
 
@@ -1229,6 +1233,35 @@
       const thead = `<tr>${columnas.map(c => `<th class="p-2">${c==='clasificacion_html'?'clasificación':c.replace(/_/g,' ')}</th>`).join('')}</tr>`;
       const filas = datos.map(f => `<tr class="hover:bg-slate-800/50">${columnas.map(c => `<td class="p-2 whitespace-nowrap text-gray-300">${f[c]}</td>`).join('')}</tr>`).join('');
       cont.innerHTML = `<table class="w-full text-left"><thead>${thead}</thead><tbody>${filas}</tbody></table>`;
+    }
+
+    function agregarBuscadorResumen(contId, datos, columnas) {
+      const cont = document.getElementById(contId);
+      const html = cont.innerHTML;
+      
+      const searchHtml = `
+        <div class="mb-3 flex gap-2">
+          <input type="text" id="buscar-${contId}" placeholder="🔍 Buscar en esta tabla..." 
+            class="flex-1 p-2 text-xs rounded bg-[#1e293b] border border-gray-700" 
+            oninput="filtrarResumenPorBusqueda('${contId}')">
+          <button onclick="document.getElementById('buscar-${contId}').value=''; filtrarResumenPorBusqueda('${contId}')" 
+            class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-xs">Limpiar</button>
+        </div>
+      `;
+      
+      cont.innerHTML = searchHtml + html;
+    }
+
+    function filtrarResumenPorBusqueda(contId) {
+      const q = document.getElementById(`buscar-${contId}`).value.toLowerCase().trim();
+      const tabla = document.querySelector(`#${contId} table`);
+      if (!tabla) return;
+      
+      const filas = tabla.querySelectorAll('tbody tr');
+      filas.forEach(fila => {
+        const texto = fila.innerText.toLowerCase();
+        fila.style.display = texto.includes(q) ? '' : 'none';
+      });
     }
 
     async function renderResumenDetalle(main) {
@@ -1342,6 +1375,8 @@
       }));
     }
 
+    agregarBuscadorResumen('tabla-resumen-teams', agrupado, ['pais', 'ejecutivo', 'leads', 'evaluados', 'pendientes', 'clasificacion_html']);
+
     async function renderDetalleTeams(main) {
       main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
         <div class="flex justify-between items-center mb-3">
@@ -1361,6 +1396,7 @@
       document.getElementById('estado-tabla').classList.add('hidden');
       pintarTablaConFiltros('tabla-detalle-teams', registros);
     }
+    
 
     // ==================================================================
     // INICIO

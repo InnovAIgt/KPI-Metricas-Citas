@@ -111,15 +111,14 @@
 
   <!-- POPUP DE FILTRO ESTILO EXCEL -->
   <div id="col-filter-popup" class="hidden fixed z-50 bg-[#1e293b] border border-gray-700 rounded-lg p-2 w-64 text-xs">
-    <input id="cfp-search" placeholder="Buscar valor..." oninput="cfpFiltrarLista()" class="w-full p-1.5 mb-2 text-xs rounded">
+    <input id="cfp-search" placeholder="Buscar y filtra automáticamente..." oninput="cfpFiltrarLista()" class="w-full p-1.5 mb-2 text-xs rounded">
     <div class="flex justify-between mb-1 px-1">
       <button onclick="cfpSeleccionarTodos()" class="text-cyan-400 hover:underline">Seleccionar todos</button>
       <button onclick="cfpBorrar()" class="text-cyan-400 hover:underline">Ninguno</button>
     </div>
     <div id="cfp-lista" class="max-h-52 overflow-y-auto space-y-0.5 border-t border-b border-gray-700 py-1 my-1"></div>
     <div class="flex justify-end gap-2 mt-2">
-      <button onclick="cfpCancelar()" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded">Cancelar</button>
-      <button onclick="cfpAceptar()" class="px-2 py-1 bg-cyan-600 hover:bg-cyan-500 rounded font-bold">Aceptar</button>
+      <button onclick="cfpCerrar()" class="px-2 py-1 bg-cyan-600 hover:bg-cyan-500 rounded font-bold">Cerrar</button>
     </div>
   </div>
 
@@ -626,7 +625,7 @@
           if (c === 'acciones') return `<td class="p-2">${v}</td>`;
           if (c === 'estado_cruce' || c === 'Resultado') return `<td class="p-2 whitespace-nowrap">${badgeEstadoCruce(v)}</td>`;
           if (c === 'Cumplió') return `<td class="p-2 whitespace-nowrap">${badgeCumplio(v)}</td>`;
-          if (v === null || v === undefined) v = '';
+          if (v === null || v === undefined || v === '') v = '<span class="text-gray-500 italic">no especificado</span>';
           return `<td class="p-2 whitespace-nowrap text-gray-300">${String(v).slice(0,120)}</td>`;
         }).join('')}</tr>`;
       }).join('');
@@ -669,12 +668,24 @@
       const v = input.dataset.val;
       if (input.checked) cfpState.seleccion.add(v);
       else cfpState.seleccion.delete(v);
+      // APLICA FILTRO AUTOMÁTICAMENTE (sin esperar a "Aceptar")
+      cfpAceptar();
     }
 
     function cfpFiltrarLista() {
       const q = document.getElementById('cfp-search').value.toLowerCase().trim();
       const filtrados = cfpState.valoresUnicos.filter(v => v.toLowerCase().includes(q));
       cfpPintarLista(filtrados);
+      
+      // Aplicar automáticamente sin checkboxes
+      if (q.length > 0) {
+        cfpState.seleccion.clear();
+        filtrados.forEach(v => cfpState.seleccion.add(v));
+      } else {
+        cfpState.seleccion.clear();
+        cfpState.valoresUnicos.forEach(v => cfpState.seleccion.add(v));
+      }
+      cfpAceptar();
     }
 
     function cfpSeleccionarTodos() {
@@ -686,8 +697,7 @@
       cfpFiltrarLista();
     }
     function cfpCancelar() {
-      document.getElementById('col-filter-popup').classList.add('hidden');
-      cfpState = null;
+      cfpCerrar();
     }
     function cfpAceptar() {
       const { contId, col, valoresUnicos, seleccion } = cfpState;
@@ -696,9 +706,13 @@
       } else {
         filtroColState[contId][col] = new Set(seleccion);
       }
+      // NO cierra el popup - el usuario puede seguir filtrando
+      repintar(contId);
+    }
+    
+    function cfpCerrar() {
       document.getElementById('col-filter-popup').classList.add('hidden');
       cfpState = null;
-      repintar(contId);
     }
     document.addEventListener('click', (e) => {
       const popup = document.getElementById('col-filter-popup');
@@ -910,8 +924,8 @@
         };
       });
     }
-    
-        // ==================================================================
+
+    // ==================================================================
     // VISTA: RESUMEN POR PAIS
     // ==================================================================
     const NOMBRES_PAIS = {
@@ -922,7 +936,7 @@
       if (!codigo || codigo === 'N/D') return 'Sin país';
       return NOMBRES_PAIS[codigo] || codigo;
     }
- 
+
     function calcularFilaTotal(datosPorPais) {
       const total = { pais: 'TOTAL', leads: 0, evaluados: 0, cumplieron: 0, fuera_horario: 0, otra_fecha: 0, sin_llamada: 0, pendientes: 0, no_cumplieron: 0 };
       datosPorPais.forEach(d => {
@@ -938,7 +952,7 @@
       total.clasificacion_html = `<span class="badge ${clas.clase}">${clas.texto}</span>`;
       return total;
     }
- 
+
     function generarLecturaEjecutiva(datosPorPais, total, cruce) {
       const lineas = [];
       const baseTotal = total.evaluados;
@@ -948,7 +962,7 @@
           ? `${total.cumplieron} de ${baseTotal} leads evaluados cumplieron dentro de ±5 minutos (${total.pct_cumplimiento}).`
           : `Aún no hay leads evaluados en el rango seleccionado.`
       });
- 
+
       datosPorPais.forEach(p => {
         const base = p.evaluados;
         lineas.push({
@@ -958,20 +972,20 @@
             : `Sin leads evaluados en el rango seleccionado.`
         });
       });
- 
+
       const pendientes = cruce.filter(r => r.estado_cruce === 'Pendiente');
       const textoPendientes = pendientes.length
         ? pendientes.map(r => `${r.codigo_prospecto || 'Lead sin código'} de ${r.ejecutivo || 'ejecutivo sin asignar'}`).join(', ') + '.'
         : 'Ninguno.';
       lineas.push({ titulo: 'Pendientes', texto: textoPendientes });
- 
+
       return lineas;
     }
- 
+
     function pctBadgeClase(pctNum, evaluados) {
       return claseClasificacion(pctNum, evaluados).clase;
     }
- 
+
     function pintarTablaResumenPais(datosPorPais, total, cruce) {
       const cols = [
         { key: 'pais',              label: 'País' },
@@ -985,7 +999,7 @@
         { key: 'no_cumplieron',     label: 'No cumplieron' },
         { key: 'pct_cumplimiento',  label: '% cumplimiento' },
       ];
- 
+
       const filaHtml = (d, esTotal) => {
         const base = esTotal ? 'bg-[#0f3a4a] text-white font-bold' : 'hover:bg-slate-800/50 text-gray-200';
         return `<tr class="${base}">${cols.map(c => {
@@ -995,10 +1009,10 @@
           return `<td class="p-2.5 whitespace-nowrap ${align}">${v ?? ''}</td>`;
         }).join('')}</tr>`;
       };
- 
+
       const thead = `<tr>${cols.map(c => `<th class="p-2.5 ${c.key==='pais'?'text-left':'text-right'} text-[10px]">${c.label}</th>`).join('')}</tr>`;
       const filas = datosPorPais.map(d => filaHtml(d, false)).join('') + filaHtml(total, true);
- 
+
       const tablaHtml = `
         <div class="overflow-auto rounded-lg border border-gray-800">
           <table class="w-full text-xs border-collapse">
@@ -1006,7 +1020,7 @@
             <tbody class="divide-y divide-gray-800">${filas}</tbody>
           </table>
         </div>`;
- 
+
       const baseTotal = total.evaluados - total.pendientes;
       const kpiHtml = `
         <div class="grid grid-cols-4 gap-3 mt-4">
@@ -1027,7 +1041,7 @@
             <div class="text-3xl font-extrabold ${total.pct_num >= 70 ? 'text-emerald-400' : total.pct_num > 0 ? 'text-amber-400' : 'text-red-400'} mt-1">${total.pct_cumplimiento}</div>
           </div>
         </div>`;
- 
+
       const lectura = generarLecturaEjecutiva(datosPorPais, total, cruce);
       const lecturaHtml = `
         <div class="mt-4 bg-[#0d1526] border border-gray-800 rounded-lg overflow-hidden">
@@ -1040,10 +1054,10 @@
               </div>`).join('')}
           </div>
         </div>`;
- 
+
       document.getElementById('tabla-resumen-pais').innerHTML = tablaHtml + kpiHtml + lecturaHtml;
     }
- 
+
     async function renderResumenPais(main) {
       main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
         <div class="flex justify-between items-center mb-3">
@@ -1056,7 +1070,7 @@
         <p class="text-[11px] text-gray-500 mb-3">Solo leads con tipo de reunión "Llamada Telefónica". Tolerancia ±5 min. Teléfonos comparados por los últimos 8 dígitos. Ejecutivo identificado por su extensión (PBX) o usuario (celular) según el catálogo.</p>
         <div id="tabla-resumen-pais" class="overflow-auto text-xs"><span class="text-cyan-400">Calculando cruce...</span></div>
       </div>`;
- 
+
       const cruce = await calcularCruce();
       const datos = agregar(cruce, r => ({ key: r.pais, datos: { pais: r.pais } }))
         .sort((a, b) => nombrePais(a.pais).localeCompare(nombrePais(b.pais)));
@@ -1066,10 +1080,7 @@
         [...datos, total].map(({clasificacion_html, pct_num, ...r}) => r), 'resumen_por_pais'
       );
     }
- 
-    // ==================================================================
-    // VISTA: RESUMEN POR EJECUTIVO
-    // ==================================================================
+
     function construirResumenPorEjecutivo(cruce) {
       const grupos = {};
       cache.ejecutivos.forEach(e => {
@@ -1083,9 +1094,9 @@
           enCatalogo: true
         };
       });
- 
+
       const sinCatalogo = {};
- 
+
       cruce.forEach(r => {
         const nombreLead = (r.ejecutivo || '').trim();
         const key = nombreLead.toLowerCase();
@@ -1111,7 +1122,7 @@
           else if (r.estado_cruce === 'Sin llamada') g.sin_llamada++;
         }
       });
- 
+
       const calcularFila = g => {
         g.no_cumplieron = g.fuera_horario + g.otra_fecha + g.sin_llamada;
         const base = g.evaluados;
@@ -1122,17 +1133,17 @@
         g.clasificacion_html = `<span class="badge ${clas.clase}">${clas.texto}</span>`;
         return g;
       };
- 
+
       const ordenar = arr => arr.map(calcularFila).sort((a, b) =>
         nombrePais(a.pais).localeCompare(nombrePais(b.pais)) || a.ejecutivo.localeCompare(b.ejecutivo)
       );
- 
+
       return {
         filasCatalogo: ordenar(Object.values(grupos)),
         filasSinCatalogo: ordenar(Object.values(sinCatalogo))
       };
     }
- 
+
     function pintarTablaResumenEjecutivo(filasCatalogo, filasSinCatalogo, total) {
       const cols = [
         { key: 'pais',              label: 'País' },
@@ -1148,7 +1159,7 @@
         { key: 'pct_cumplimiento',  label: '% cumplimiento' },
         { key: 'clasificacion_html',label: 'Clasificación' },
       ];
- 
+
       const filaHtml = (d, esTotal) => {
         const base = esTotal ? 'bg-[#0f3a4a] text-white font-bold' : 'hover:bg-slate-800/50 text-gray-200';
         return `<tr class="${base}">${cols.map(c => {
@@ -1159,10 +1170,10 @@
           return `<td class="p-2.5 whitespace-nowrap ${align}">${v ?? ''}</td>`;
         }).join('')}</tr>`;
       };
- 
+
       const thead = `<tr>${cols.map(c => `<th class="p-2.5 ${(c.key==='pais'||c.key==='ejecutivo')?'text-left':'text-right'} text-[10px]">${c.label}</th>`).join('')}</tr>`;
       const filas = filasCatalogo.map(d => filaHtml(d, false)).join('') + filaHtml(total, true);
- 
+
       let sinCatalogoHtml = '';
       if (filasSinCatalogo.length) {
         const filasSC = filasSinCatalogo.map(d => filaHtml(d, false)).join('');
@@ -1177,7 +1188,7 @@
             </table>
           </div>`;
       }
- 
+
       document.getElementById('tabla-resumen-ejec').innerHTML = `
         <div class="overflow-auto rounded-lg border border-gray-800">
           <table class="w-full text-xs border-collapse">
@@ -1187,7 +1198,7 @@
         </div>
         ${sinCatalogoHtml}`;
     }
- 
+
     async function renderResumenEjecutivo(main) {
       main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
         <div class="flex justify-between items-center mb-3">
@@ -1200,7 +1211,7 @@
         <p class="text-[11px] text-gray-500 mb-3">El porcentaje excluye pendientes. "No cumplieron" incluye fuera de horario, otra fecha y sin registro. País y ejecutivo tomados del catálogo oficial; se listan todos aunque tengan 0 leads.</p>
         <div id="tabla-resumen-ejec" class="overflow-auto text-xs"><span class="text-cyan-400">Calculando cruce...</span></div>
       </div>`;
- 
+
       const cruce = await calcularCruce();
       await asegurarCache('ejecutivos', null);
       const { filasCatalogo, filasSinCatalogo } = construirResumenPorEjecutivo(cruce);
@@ -1211,7 +1222,7 @@
         'resumen_por_ejecutivo'
       );
     }
- 
+
     function pintarResumenSimple(contId, datos, columnas) {
       const cont = document.getElementById(contId);
       if (!datos.length) { cont.innerHTML = '<p class="text-gray-500 p-4">Sin datos.</p>'; return; }
@@ -1219,10 +1230,7 @@
       const filas = datos.map(f => `<tr class="hover:bg-slate-800/50">${columnas.map(c => `<td class="p-2 whitespace-nowrap text-gray-300">${f[c]}</td>`).join('')}</tr>`).join('');
       cont.innerHTML = `<table class="w-full text-left"><thead>${thead}</thead><tbody>${filas}</tbody></table>`;
     }
- 
-    // ==================================================================
-    // VISTA: DETALLE DEL CRUCE (LLAMADAS)
-    // ==================================================================
+
     async function renderResumenDetalle(main) {
       main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
         <div class="flex justify-between items-center mb-3">
@@ -1238,9 +1246,9 @@
           <table class="w-full text-left text-xs" id="tabla-detalle-cruce"></table>
         </div>
       </div>`;
- 
+
       const cruce = await calcularCruce();
- 
+
       const detalle = cruce.map(r => ({
         'País': r.pais,
         'Ejecutivo': r.ejecutivo,
@@ -1262,14 +1270,16 @@
         'Intentos totales': r.intentos_totales,
         'Datos en catálogo': r.catalogo_ok
       }));
- 
+
+      // NUEVO: Separar y ordenar - "Sin llamada encontrada" al final
+      const conLlamada = detalle.filter(d => d.Resultado !== 'Sin llamada encontrada');
+      const sinLlamada = detalle.filter(d => d.Resultado === 'Sin llamada encontrada');
+      const detalleOrdenado = [...conLlamada, ...sinLlamada];
+
       document.getElementById('estado-tabla').classList.remove('hidden');
-      pintarTablaConFiltros('tabla-detalle-cruce', detalle);
+      pintarTablaConFiltros('tabla-detalle-cruce', detalleOrdenado);
     }
- 
-    // ==================================================================
-    // TEAMS
-    // ==================================================================
+
     async function calcularTeams(forzar) {
       await asegurarCache('leads', 'fecha_agendada');
       let leads = cache.leads.filter(l => !(l.tipo_reunion || '').toLowerCase().includes('llamada'));
@@ -1294,7 +1304,7 @@
         };
       });
     }
- 
+
     async function renderResumenTeams(main) {
       main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
         <div class="flex justify-between items-center mb-3">
@@ -1307,13 +1317,13 @@
         <p class="text-[11px] text-gray-500 mb-3">Leads con reunión Presencial / Virtual (no telefónica). Aún no tenemos una fuente de datos de Teams en Supabase, por eso se listan como "Sin evidencia Teams" salvo que estén pendientes.</p>
         <div id="tabla-resumen-teams" class="overflow-auto text-xs"><span class="text-cyan-400">Calculando...</span></div>
       </div>`;
- 
+
       const registros = await calcularTeams();
       const agrupado = agregarTeams(registros);
       pintarResumenSimple('tabla-resumen-teams', agrupado, ['pais', 'ejecutivo', 'leads', 'evaluados', 'pendientes', 'clasificacion_html']);
       document.getElementById('btn-exp-teams').onclick = () => exportarXLSXGenerico(agrupado.map(({clasificacion_html, ...r}) => r), 'resumen_teams');
     }
- 
+
     function agregarTeams(registros) {
       const grupos = {};
       registros.forEach(r => {
@@ -1331,7 +1341,7 @@
           : `<span class="badge bg-sky-900 text-sky-300">Solo pendientes</span>`
       }));
     }
- 
+
     async function renderDetalleTeams(main) {
       main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
         <div class="flex justify-between items-center mb-3">
@@ -1346,7 +1356,7 @@
           <table class="w-full text-left text-xs" id="tabla-detalle-teams"></table>
         </div>
       </div>`;
- 
+
       const registros = await calcularTeams();
       document.getElementById('estado-tabla').classList.add('hidden');
       pintarTablaConFiltros('tabla-detalle-teams', registros);

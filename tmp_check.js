@@ -1,178 +1,4 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard IntefFon - InnovaIGT</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <style>
-    body { background-color: #0b1120; color: #f3f4f6; }
-    input, select { background-color: #1e293b; color: #ffffff; border: 1px solid #334155; }
-    th { background-color: #1e293b; color: #94a3b8; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; white-space: nowrap; }
-    td { border-bottom: 1px solid #1e293b; }
-    .sidebar-btn { display:flex; align-items:center; gap:.5rem; width:100%; text-align:left; padding:.6rem .8rem; border-radius:.5rem; font-size:.82rem; color:#cbd5e1; }
-    .sidebar-btn:hover { background:#1e293b; }
-    .sidebar-btn.active { background:#0e7490; color:#fff; font-weight:600; }
-    .sub-btn { display:block; width:100%; text-align:left; padding:.4rem .8rem .4rem 2.2rem; border-radius:.4rem; font-size:.78rem; color:#94a3b8; }
-    .sub-btn:hover { background:#1e293b; color:#fff; }
-    .sub-btn.active { background:#164e63; color:#67e8f9; font-weight:600; }
-    .badge { padding:2px 9px; border-radius:9999px; font-size:.68rem; font-weight:700; white-space:nowrap; display:inline-block; }
-    .filtro-icono { cursor:pointer; margin-left:4px; opacity:.6; }
-    .filtro-icono:hover { opacity:1; }
-    .filtro-icono.activo { color:#22d3ee; opacity:1; }
-    #col-filter-popup { box-shadow: 0 10px 30px rgba(0,0,0,.5); }
-    .cfp-item { display:flex; align-items:center; gap:6px; padding:2px 4px; border-radius:4px; }
-    .cfp-item:hover { background:#0f172a; }
-    .modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:1000; }
-    .modal-content { background:#1e293b; border:1px solid #334155; border-radius:0.5rem; padding:2rem; max-width:500px; width:90%; max-height:90vh; overflow-y:auto; }
-    .modal-hidden { display:none; }
-    .form-group { margin-bottom:1rem; }
-    .form-group label { display:block; font-size:0.875rem; color:#cbd5e1; margin-bottom:0.25rem; font-weight:600; }
-    .form-group input, .form-group select { width:100%; padding:0.5rem; font-size:0.875rem; border-radius:0.375rem; }
-  </style>
-</head>
-<body class="font-sans">
 
-  <div class="flex h-screen overflow-hidden">
-
-    <!-- SIDEBAR -->
-    <aside class="w-64 bg-[#0f172a] border-r border-gray-800 flex flex-col shrink-0 overflow-y-auto">
-      <div class="p-4 border-b border-gray-800">
-        <h1 class="text-sm font-bold text-cyan-400">📊 Dashboard Intelfon</h1>
-        <p class="text-[10px] text-gray-500 mt-0.5">SCORECARD CITAS</p>
-      </div>
-      <nav class="p-3 space-y-1 flex-1">
-        <button class="sidebar-btn" data-view="config" onclick="irA('config')">⚙️ <span>Configuración</span></button>
-        <button class="sidebar-btn" data-view="criterios" onclick="irA('criterios')">📖 <span>Criterios</span></button>
-
-        <button class="sidebar-btn" onclick="toggleSubmenu('submenu-registros')">🗂️ <span>Registros</span> <span class="ml-auto text-xs">▾</span></button>
-        <div id="submenu-registros" class="space-y-0.5">
-          <button class="sub-btn" data-view="reg-pbx" onclick="irA('reg-pbx')">📞 Llamadas PBX</button>
-          <button class="sub-btn" data-view="reg-cel" onclick="irA('reg-cel')">📱 Llamadas Celular</button>
-          <button class="sub-btn" data-view="reg-leads" onclick="irA('reg-leads')">🎯 Leads Calificados</button>
-        </div>
-
-        <button class="sidebar-btn" data-view="catalogo" onclick="irA('catalogo')">📇 <span>Catálogo (CRUD)</span></button>
-
-        <button class="sidebar-btn" onclick="toggleSubmenu('submenu-resumen')">📈 <span>Resumen</span> <span class="ml-auto text-xs">▾</span></button>
-        <div id="submenu-resumen" class="space-y-0.5">
-          <button class="sub-btn" data-view="res-pais" onclick="irA('res-pais')">🌎 Resumen País</button>
-          <button class="sub-btn" data-view="res-ejecutivo" onclick="irA('res-ejecutivo')">🧑‍💼 Resumen Llamadas</button>
-          <button class="sub-btn" data-view="res-detalle" onclick="irA('res-detalle')">🔍 Detalle Llamadas</button>
-          <button class="sub-btn" data-view="res-teams" onclick="irA('res-teams')">👥 TEAMS</button>
-          <button class="sub-btn" data-view="res-detalle-teams" onclick="irA('res-detalle-teams')">📋 Detalle TEAMS</button>
-        </div>
-      </nav>
-    </aside>
-
-    <!-- MAIN -->
-    <div class="flex-1 flex flex-col overflow-hidden">
-
-      <!-- CONTADORES -->
-      <div class="grid grid-cols-4 gap-3 p-4 border-b border-gray-800 shrink-0">
-        <div class="bg-[#111827] p-3 rounded-lg border border-gray-800">
-          <span class="text-[10px] text-gray-400 font-bold tracking-wider uppercase">LEADS</span>
-          <div id="cant-leads" class="text-2xl font-extrabold text-cyan-400 mt-1">0</div>
-        </div>
-        <div class="bg-[#111827] p-3 rounded-lg border border-gray-800">
-          <span class="text-[10px] text-gray-400 font-bold tracking-wider uppercase">LLAMADAS CELULAR</span>
-          <div id="cant-hist" class="text-2xl font-extrabold text-cyan-400 mt-1">0</div>
-        </div>
-        <div class="bg-[#111827] p-3 rounded-lg border border-gray-800">
-          <span class="text-[10px] text-gray-400 font-bold tracking-wider uppercase">LLAMADAS PBX</span>
-          <div id="cant-llam" class="text-2xl font-extrabold text-cyan-400 mt-1">0</div>
-        </div>
-        <div class="bg-[#111827] p-3 rounded-lg border border-gray-800">
-          <span class="text-[10px] text-gray-400 font-bold tracking-wider uppercase">TOTAL GENERAL</span>
-          <div id="cant-total" class="text-2xl font-extrabold text-emerald-400 mt-1">0</div>
-        </div>
-      </div>
-
-      <!-- FILTRO DE FECHA GLOBAL -->
-      <div class="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-gray-800 bg-[#0d1526] shrink-0">
-        <span class="text-xs text-gray-400 font-bold">📅 Rango de fecha:</span>
-        <label class="text-[11px] text-gray-500">Desde</label>
-        <input type="date" id="global-desde" class="p-1.5 text-xs rounded">
-        <label class="text-[11px] text-gray-500">Hasta</label>
-        <input type="date" id="global-hasta" class="p-1.5 text-xs rounded">
-        <button onclick="render()" class="bg-cyan-700 hover:bg-cyan-600 text-xs px-3 py-1.5 rounded font-bold">Aplicar</button>
-        <button onclick="document.getElementById('global-desde').value='';document.getElementById('global-hasta').value='';render()" class="bg-gray-800 hover:bg-gray-700 text-xs px-3 py-1.5 rounded">Limpiar</button>
-        <span class="text-[10px] text-gray-500 ml-2">Se aplica a la vista actual y se mantiene al cambiar de pantalla.</span>
-      </div>
-
-      <!-- CONTENIDO DINAMICO -->
-      <main id="main-content" class="flex-1 overflow-y-auto p-4">
-        <!-- se llena por JS -->
-      </main>
-    </div>
-  </div>
-
-  <!-- POPUP DE FILTRO ESTILO EXCEL -->
-  <div id="col-filter-popup" class="hidden fixed z-50 bg-[#1e293b] border border-gray-700 rounded-lg p-2 w-64 text-xs">
-    <input id="cfp-search" placeholder="Buscar y filtra automáticamente..." oninput="cfpFiltrarLista()" class="w-full p-1.5 mb-2 text-xs rounded">
-    <div class="flex justify-between mb-1 px-1">
-      <button onclick="cfpSeleccionarTodos()" class="text-cyan-400 hover:underline">Seleccionar todos</button>
-      <button onclick="cfpBorrar()" class="text-cyan-400 hover:underline">Ninguno</button>
-    </div>
-    <div id="cfp-lista" class="max-h-52 overflow-y-auto space-y-0.5 border-t border-b border-gray-700 py-1 my-1"></div>
-    <div class="flex justify-end gap-2 mt-2">
-      <button onclick="cfpCerrar()" class="px-2 py-1 bg-cyan-600 hover:bg-cyan-500 rounded font-bold">Cerrar</button>
-    </div>
-  </div>
-
-  <!-- MODAL CRUD EJECUTIVOS -->
-  <div id="modal-crud" class="modal-overlay modal-hidden">
-    <div class="modal-content">
-      <h2 class="text-lg font-bold text-cyan-400 mb-4" id="modal-titulo">Nuevo Ejecutivo</h2>
-      <form id="form-ejecutivo" onsubmit="guardarEjecutivo(event)">
-        <input type="hidden" id="ejecutivo-id">
-        
-        <div class="form-group">
-          <label>País</label>
-          <select id="ejecutivo-pais" required>
-            <option value="">Seleccionar país</option>
-            <option value="SV">El Salvador</option>
-            <option value="GT">Guatemala</option>
-            <option value="HN">Honduras</option>
-            <option value="NI">Nicaragua</option>
-            <option value="CR">Costa Rica</option>
-            <option value="PA">Panamá</option>
-            <option value="MX">México</option>
-            <option value="US">Estados Unidos</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Nombre del Ejecutivo</label>
-          <input type="text" id="ejecutivo-nombre" placeholder="Ej: Juan Pérez" required>
-        </div>
-
-        <div class="form-group">
-          <label>Usuario (para PBX)</label>
-          <input type="text" id="ejecutivo-usuario" placeholder="Ej: JPEREZ">
-        </div>
-
-        <div class="form-group">
-          <label>Extensión (para PBX)</label>
-          <input type="text" id="ejecutivo-extension" placeholder="Ej: 4057">
-        </div>
-
-        <div class="form-group">
-          <label>Celular</label>
-          <input type="tel" id="ejecutivo-celular" placeholder="Ej: 7981 0573">
-        </div>
-
-        <div class="flex gap-2 justify-end mt-6">
-          <button type="button" onclick="cerrarModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">Cancelar</button>
-          <button type="submit" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded text-sm font-bold">Guardar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <script>
     // ==================================================================
     // ESTADO GLOBAL
     // ==================================================================
@@ -1118,9 +944,7 @@
           </div>
         </div>
         <p class="text-[11px] text-gray-500 mb-3">Solo leads con tipo de reunión "Llamada Telefónica". Tolerancia ±5 min. Teléfonos comparados por los últimos 8 dígitos. Ejecutivo identificado por su extensión (PBX) o usuario (celular) según el catálogo.</p>
-        <div class="overflow-auto mt-2" style="max-height: 68vh;">
-          <table class="w-full text-left text-xs" id="tabla-resumen-pais"></table>
-        </div>
+        <div id="tabla-resumen-pais" class="overflow-auto text-xs"><span class="text-cyan-400">Calculando cruce...</span></div>
         <div id="kpistats-resumen-pais" class="mt-4"></div>
         <div id="lectura-resumen-pais" class="mt-4"></div>
       </div>`;
@@ -1299,9 +1123,7 @@
           </div>
         </div>
         <p class="text-[11px] text-gray-500 mb-3">El porcentaje excluye pendientes. "No cumplieron" incluye fuera de horario, otra fecha y sin registro. País y ejecutivo tomados del catálogo oficial; se listan todos aunque tengan 0 leads.</p>
-        <div class="overflow-auto mt-2" style="max-height: 68vh;">
-          <table class="w-full text-left text-xs" id="tabla-resumen-ejec"></table>
-        </div>
+        <div id="tabla-resumen-ejec" class="overflow-auto text-xs"><span class="text-cyan-400">Calculando cruce...</span></div>
         <div id="nota-resumen-ejec" class="mt-3 text-[11px] text-amber-300"></div>
       </div>`;
 
@@ -1413,9 +1235,7 @@
           </div>
         </div>
         <p class="text-[11px] text-gray-500 mb-3">Leads con reunión Presencial / Virtual (no telefónica). Aún no tenemos una fuente de datos de Teams en Supabase, por eso se listan como "Sin evidencia Teams" salvo que estén pendientes.</p>
-        <div class="overflow-auto mt-2" style="max-height: 68vh;">
-          <table class="w-full text-left text-xs" id="tabla-resumen-teams"></table>
-        </div>
+        <div id="tabla-resumen-teams" class="overflow-auto text-xs"><span class="text-cyan-400">Calculando...</span></div>
       </div>`;
 
       const registros = await calcularTeams();
@@ -1471,6 +1291,4 @@
       irA('catalogo');
       await actualizarContadores();
     });
-  </script>
-</body>
-</html>
+  

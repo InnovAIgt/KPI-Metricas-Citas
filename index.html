@@ -782,7 +782,7 @@
           : `<th class="p-2">${c} <span class="filtro-icono ${activo}" onclick="abrirFiltroColumna('${contId}','${c}', this)">▾</span></th>`;
       }).join('')}</tr></thead>`;
 
-      const filas = filtrados.slice(0, 300).map(fila => {
+      const filas = filtrados.slice(0, 10000).map(fila => {
         return `<tr class="hover:bg-slate-800/50">${columnas.map(c => {
           let v = fila[c];
           if (c === 'acciones') return `<td class="p-2">${v}</td>`;
@@ -796,7 +796,7 @@
       cont.innerHTML = thead + `<tbody>${filas || `<tr><td class="p-4 text-center text-gray-500" colspan="${columnas.length}">Sin resultados con esos filtros.</td></tr>`}</tbody>`;
 
       const contador = document.getElementById('estado-tabla');
-      if (contador) { contador.classList.remove('hidden'); contador.innerText = `${filtrados.length.toLocaleString()} de ${datosBase.length.toLocaleString()} registros (mostrando máx. 300 en pantalla; XLSX exporta todo lo filtrado)`; }
+      if (contador) { contador.classList.remove('hidden'); contador.innerText = `${filtrados.length.toLocaleString()} de ${datosBase.length.toLocaleString()} registros (mostrando máx. 10000 en pantalla; XLSX exporta todo lo filtrado)`; }
     }
 
     let cfpState = null;

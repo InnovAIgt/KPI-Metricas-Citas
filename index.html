@@ -546,7 +546,16 @@
         await cargarTablaCompleta('llamadas', 'fecha');
         await cargarTablaCompleta('historiales', 'fecha');
         await cargarTablaCompleta('ejecutivos', null);
-        await cargarTablaCompleta('teams_registro', null);
+        
+        // Intentar cargar teams_registro, pero no bloquear si no existe
+        try {
+          await cargarTablaCompleta('teams_registro', null);
+        } catch (teamsErr) {
+          console.log('⚠️ [INFO] Tabla teams_registro no disponible aún (normal si es primera vez)');
+          cache.teams_registro = [];
+          cargaCompleta.teams_registro = true;
+        }
+        
         render();
         console.log('✨ [DEBUG] ¡Recargar completado!');
       } catch (err) {
@@ -1303,7 +1312,15 @@
     // ==================================================================
     async function calcularTeams(forzar) {
       await asegurarCache('leads', 'fecha_agendada');
-      await asegurarCache('teams_registro', null);
+      
+      // Intentar cargar teams_registro, pero no bloquear si no existe
+      try {
+        await asegurarCache('teams_registro', null);
+      } catch (err) {
+        console.log('⚠️ teams_registro no disponible, usando array vacío');
+        cache.teams_registro = [];
+        cargaCompleta.teams_registro = true;
+      }
       
       let leads = cache.leads.filter(l => {
         const tipo = (l.tipo_reunion || '').toLowerCase();
@@ -1314,7 +1331,7 @@
       
       return leads.map(lead => {
         const leadCode = lead.codigo_prospecto;
-        const teamsData = cache.teams_registro.find(t => t.codigo_prospecto === leadCode) || {};
+        const teamsData = (cache.teams_registro || []).find(t => t.codigo_prospecto === leadCode) || {};
         
         const progr = parseFechaHora(lead.fecha_agendada, lead.hora_agendada);
         const ahora = new Date();

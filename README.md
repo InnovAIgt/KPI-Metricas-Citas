@@ -1,6 +1,4 @@
-# 📊 Dashboard RED Intelfon - Reportes
-
-Un dashboard web moderno para gestionar y sincronizar reportes de **Leads, Historiales y Llamadas** desde Supabase.
+# 📊 Métricas de Citas telefónicas - Reportes
 
 ## 🎯 Características
 

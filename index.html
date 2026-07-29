@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard IntefFon - InnovaIGT</title>
+  <title>Dashboard IntelFon - InnovaIGT</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -74,6 +74,10 @@
             <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
             Leads Calificados
           </button>
+          <button class="sub-btn" data-view="reg-teams" onclick="irA('reg-teams')">
+            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM12 14a9 9 0 00-9 9m0 0h18a9 9 0 00-9-9m9 9H3"></path></svg>
+            Reuniones Teams
+          </button>
         </div>
 
         <button class="sidebar-btn" data-view="catalogo" onclick="irA('catalogo')">
@@ -88,7 +92,7 @@
         </button>
         <div id="submenu-resumen" class="space-y-0.5">
           <button class="sub-btn" data-view="res-pais" onclick="irA('res-pais')">
-            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064A7.969 7.969 0 0118 3V3.089A4.924 4.924 0 0023 7.5v6a4.924 4.924 0 01-4.055 4.89M8 3.935L8.5 9M3 17.988V21a2 2 0 002 2h14a2 2 0 002-2v-3.022A4.964 4.964 0 0016 12H8a4.964 4.964 0 00-5 4.988z"></path></svg>
+            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064A7.969 7.969 0 0118 3V3.089A4.924 4.924 0 0123 7.5v6a4.924 4.924 0 01-4.055 4.89M8 3.935L8.5 9M3 17.988V21a2 2 0 002 2h14a2 2 0 002-2v-3.022A4.964 4.964 0 0016 12H8a4.964 4.964 0 00-5 4.988z"></path></svg>
             Resumen País
           </button>
           <button class="sub-btn" data-view="res-ejecutivo" onclick="irA('res-ejecutivo')">
@@ -97,15 +101,7 @@
           </button>
           <button class="sub-btn" data-view="res-detalle" onclick="irA('res-detalle')">
             <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-            Detalle Llamadas
-          </button>
-          <button class="sub-btn" data-view="res-teams" onclick="irA('res-teams')">
-            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM12 14a9 9 0 00-9 9m0 0h18a9 9 0 00-9-9m9 9H3"></path></svg>
-            Resumen Teams
-          </button>
-          <button class="sub-btn" data-view="res-detalle-teams" onclick="irA('res-detalle-teams')">
-            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            Detalle Teams
+            Detalle Cumplimiento Leads
           </button>
         </div>
       </nav>
@@ -116,13 +112,22 @@
 
       <!-- FILTRO DE FECHA GLOBAL -->
       <div class="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-gray-800 bg-[#0d1526] shrink-0">
-        <span class="text-xs text-gray-400 font-bold">📅 Rango de fecha:</span>
+        <div class="flex items-center gap-1 text-xs text-gray-400 font-bold">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+          Rango de fecha:
+        </div>
         <label class="text-[11px] text-gray-500">Desde</label>
         <input type="date" id="global-desde" class="p-1.5 text-xs rounded">
         <label class="text-[11px] text-gray-500">Hasta</label>
         <input type="date" id="global-hasta" class="p-1.5 text-xs rounded">
-        <button onclick="render()" class="bg-cyan-700 hover:bg-cyan-600 text-xs px-3 py-1.5 rounded font-bold">Aplicar</button>
-        <button onclick="document.getElementById('global-desde').value='';document.getElementById('global-hasta').value='';render()" class="bg-gray-800 hover:bg-gray-700 text-xs px-3 py-1.5 rounded">Limpiar</button>
+        <button onclick="render()" class="bg-cyan-700 hover:bg-cyan-600 text-xs px-3 py-1.5 rounded font-bold flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+          Aplicar
+        </button>
+        <button onclick="document.getElementById('global-desde').value='';document.getElementById('global-hasta').value='';render()" class="bg-gray-800 hover:bg-gray-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          Limpiar
+        </button>
         <span class="text-[10px] text-gray-500 ml-2">Se aplica a la vista actual y se mantiene al cambiar de pantalla.</span>
       </div>
 
@@ -290,12 +295,11 @@
       if (vistaActual === 'reg-pbx') return renderRegistro(main, 'llamadas', 'Llamadas PBX', 'fecha');
       if (vistaActual === 'reg-cel') return renderRegistro(main, 'historiales', 'Llamadas Celular', 'fecha');
       if (vistaActual === 'reg-leads') return renderRegistro(main, 'leads', 'Leads Calificados', 'fecha_agendada');
+      if (vistaActual === 'reg-teams') return renderRegistroTeams(main);
       if (vistaActual === 'catalogo') return renderCatalogo(main);
       if (vistaActual === 'res-pais') return renderResumenPais(main);
       if (vistaActual === 'res-ejecutivo') return renderResumenEjecutivo(main);
-      if (vistaActual === 'res-detalle') return renderResumenDetalle(main);
-      if (vistaActual === 'res-teams') return renderResumenTeams(main);
-      if (vistaActual === 'res-detalle-teams') return renderDetalleTeams(main);
+      if (vistaActual === 'res-detalle') return renderDetalleUnificado(main);
     }
 
     // ==================================================================
@@ -317,13 +321,25 @@
             <input type="password" id="sb-key" value="${SB_KEY}" class="w-full p-2 text-xs rounded focus:outline-none focus:border-cyan-500">
           </div>
           <div class="flex gap-2">
-            <button onclick="toggleKey()" class="bg-gray-800 text-xs px-3 py-1.5 rounded hover:bg-gray-700">👁️ Mostrar/Ocultar</button>
-            <button onclick="refrescarClienteSupabase(); alert('Credenciales actualizadas.')" class="bg-slate-700 text-xs px-3 py-1.5 rounded hover:bg-slate-600">💾 Guardar credenciales</button>
+            <button onclick="toggleKey()" class="bg-gray-800 text-xs px-3 py-1.5 rounded hover:bg-gray-700 flex items-center gap-1">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+              Ver/Ocultar
+            </button>
+            <button onclick="refrescarClienteSupabase(); alert('Credenciales actualizadas.')" class="bg-slate-700 text-xs px-3 py-1.5 rounded hover:bg-slate-600 flex items-center gap-1">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7a4 4 0 100 8 4 4 0 000-8zM12 7v6m3-3H9"></path></svg>
+              Guardar credenciales
+            </button>
           </div>
           <hr class="border-gray-800">
           <h3 class="text-xs font-bold text-gray-400">Sincronización con la API externa</h3>
-          <button onclick="sincronizarAPI()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-3 text-xs rounded">⚡ Sincronizar API (Edge Function)</button>
-          <button onclick="recargarTodoYContadores()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 text-xs rounded">🔄 Recargar todos los datos</button>
+          <button onclick="sincronizarAPI()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-3 text-xs rounded flex items-center justify-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            Sincronizar API (Edge Function)
+          </button>
+          <button onclick="recargarTodoYContadores()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 text-xs rounded flex items-center justify-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            Recargar todos los datos
+          </button>
           <span id="estado-config" class="text-xs text-cyan-400 hidden">Procesando...</span>
         </div>`;
     }
@@ -373,16 +389,37 @@
       main.innerHTML = `
         <div class="max-w-4xl space-y-4">
           <div class="bg-[#0e7490]/10 border border-cyan-900 rounded-lg p-4">
-            <h2 class="text-sm font-bold text-cyan-300 mb-1">📖 Criterios de clasificación del dashboard</h2>
+            <h2 class="text-sm font-bold text-cyan-300 mb-1">Criterios de clasificación del dashboard</h2>
             <p class="text-xs text-gray-400">Esta pantalla explica los criterios del cruce, estados y columnas de los resúmenes. Sirve como referencia para entender por qué un lead cae en un grupo u otro.</p>
           </div>
-          ${seccion('Estados de cumplimiento (estado_cruce)', '🚦', `
+          ${seccion('Estados de cumplimiento (resultado)', '🎯', `
             <div class="space-y-2">
-              <div class="flex items-center gap-2"><span class="badge bg-emerald-900 text-emerald-300">Cumplió</span> <span class="text-gray-400">Llamada el mismo día, ±5 minutos de la hora agendada.</span></div>
-              <div class="flex items-center gap-2"><span class="badge bg-amber-900 text-amber-300">Mismo día fuera horario</span> <span class="text-gray-400">Llamada el mismo día, pero fuera de ±5 minutos.</span></div>
+              <div class="flex items-center gap-2"><span class="badge bg-emerald-900 text-emerald-300">Cumplió en fecha y horario</span> <span class="text-gray-400">Llamada/Teams el mismo día, ±5 minutos de la hora agendada. Para Teams: con evidencia URL.</span></div>
+              <div class="flex items-center gap-2"><span class="badge bg-amber-900 text-amber-300">Llamó el mismo día fuera de horario</span> <span class="text-gray-400">Llamada en el mismo día, pero fuera de ±5 minutos.</span></div>
               <div class="flex items-center gap-2"><span class="badge bg-orange-900 text-orange-300">Llamó en otra fecha</span> <span class="text-gray-400">Llamada en fecha distinta a la agendada.</span></div>
-              <div class="flex items-center gap-2"><span class="badge bg-red-900 text-red-300">Sin llamada</span> <span class="text-gray-400">No se encontró ninguna llamada coincidente.</span></div>
-              <div class="flex items-center gap-2"><span class="badge bg-sky-900 text-sky-300">Pendiente</span> <span class="text-gray-400">La hora agendada aún no ha pasado.</span></div>
+              <div class="flex items-center gap-2"><span class="badge bg-red-900 text-red-300">Sin llamada encontrada</span> <span class="text-gray-400">No se encontró ninguna llamada coincidente. Para Teams: sin evidencia URL.</span></div>
+              <div class="flex items-center gap-2"><span class="badge bg-sky-900 text-sky-300">Pendiente de evaluar</span> <span class="text-gray-400">La hora agendada aún no ha pasado o fecha pendiente.</span></div>
+              <div class="flex items-center gap-2"><span class="badge bg-violet-900 text-violet-300">Cumplió con evidencia en Teams</span> <span class="text-gray-400">Reunión Teams con link de evidencia registrado.</span></div>
+              <div class="flex items-center gap-2"><span class="badge bg-red-900 text-red-300">Sin evidencia en Teams</span> <span class="text-gray-400">Reunión Teams pendiente de evidencia.</span></div>
+            </div>
+          `)}
+          ${seccion('Metodología del cruce', '🔍', `
+            <div class="space-y-2">
+              <p><strong>Teléfono:</strong> Se comparan los últimos 8 dígitos del número de teléfono del lead con los registros de llamadas PBX/Celulares.</p>
+              <p><strong>Ejecutivo:</strong> Se identifica mediante la extensión (PBX) o usuario (celular) y se valida contra el catálogo de ejecutivos.</p>
+              <p><strong>Tolerancia:</strong> ±5 minutos alrededor de la hora agendada. Fuera de este rango es "mismo día fuera de horario".</p>
+              <p><strong>Teams:</strong> Se valida por fecha, hora y presencia de link de evidencia (URL).</p>
+            </div>
+          `)}
+          ${seccion('Columnas en Detalle Cumplimiento Leads', '📋', `
+            <div class="space-y-2">
+              <p><strong>País:</strong> País asignado al lead en el CRM.</p>
+              <p><strong>Ejecutivo:</strong> Nombre del ejecutivo asignado al lead.</p>
+              <p><strong>Lead / Cliente:</strong> Código y nombre del prospecto.</p>
+              <p><strong>Resultado:</strong> Clasificación del estado (Cumplió en fecha y horario, Llamó el mismo día fuera de horario, etc.).</p>
+              <p><strong>Fuente:</strong> De dónde se extrajo la llamada: PBX, Celular o Teams.</p>
+              <p><strong>Diferencia (min):</strong> Minutos entre la hora agendada y la hora de la llamada (puede ser negativo).</p>
+              <p><strong>Duración (seg):</strong> Duración de la llamada en segundos (solo para PBX y Celular).</p>
             </div>
           `)}
         </div>`;
@@ -400,9 +437,18 @@
               Catálogo de Ejecutivos (CRUD)
             </h2>
             <div class="flex flex-wrap gap-2 items-center">
-              <button onclick="abrirModalNuevo()" class="bg-teal-600 hover:bg-teal-700 text-xs px-3 py-1.5 rounded font-bold">➕ Nuevo Ejecutivo</button>
-              <button onclick="recargarUnaTabla('ejecutivos','null')" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded">🔄 Recargar</button>
-              <button onclick="exportarXLSX('tabla-ejecutivos','catalogo_ejecutivos')" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded">⬇️ Exportar XLSX</button>
+              <button onclick="abrirModalNuevo()" class="bg-teal-600 hover:bg-teal-700 text-xs px-3 py-1.5 rounded font-bold flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Nuevo Ejecutivo
+              </button>
+              <button onclick="recargarUnaTabla('ejecutivos','null')" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Recargar
+              </button>
+              <button onclick="exportarXLSX('tabla-ejecutivos','catalogo_ejecutivos')" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Exportar XLSX
+              </button>
             </div>
           </div>
           <p class="text-[11px] text-gray-500 mb-3">Gestiona la base de datos de ejecutivos. Estos datos se usan para la búsqueda inteligente en los resúmenes de llamadas. Agranda, edita o elimina directamente desde aquí.</p>
@@ -418,8 +464,12 @@
       const ejecutivosConAcciones = cache.ejecutivos.map(e => ({
         ...e,
         acciones: `<div class="flex gap-1" style="white-space: nowrap;">
-          <button onclick="abrirModalEditar(${e.id})" class="bg-blue-600 hover:bg-blue-700 text-xs px-2 py-1 rounded">✏️</button>
-          <button onclick="confirmarEliminar(${e.id})" class="bg-red-600 hover:bg-red-700 text-xs px-2 py-1 rounded">🗑️</button>
+          <button onclick="abrirModalEditar(${e.id})" class="bg-blue-600 hover:bg-blue-700 text-xs px-2 py-1 rounded flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+          </button>
+          <button onclick="confirmarEliminar(${e.id})" class="bg-red-600 hover:bg-red-700 text-xs px-2 py-1 rounded flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          </button>
         </div>`
       }));
 
@@ -440,7 +490,7 @@
     }
 
     function abrirModalNuevo() {
-      document.getElementById('modal-titulo').textContent = '➕ Nuevo Ejecutivo';
+      document.getElementById('modal-titulo').textContent = 'Nuevo Ejecutivo';
       document.getElementById('ejecutivo-id').value = '';
       document.getElementById('form-ejecutivo').reset();
       abrirModal();
@@ -450,7 +500,7 @@
       const ejec = cache.ejecutivos.find(e => e.id === id);
       if (!ejec) return alert('Ejecutivo no encontrado');
 
-      document.getElementById('modal-titulo').textContent = '✏️ Editar Ejecutivo';
+      document.getElementById('modal-titulo').textContent = 'Editar Ejecutivo';
       document.getElementById('ejecutivo-id').value = ejec.id;
       document.getElementById('ejecutivo-pais').value = ejec.pais || '';
       document.getElementById('ejecutivo-nombre').value = ejec.nombre_ejecutivo || '';
@@ -477,11 +527,11 @@
         if (id) {
           const { error } = await client.from('ejecutivos').update(datos).eq('id', parseInt(id));
           if (error) throw error;
-          alert('✅ Ejecutivo actualizado');
+          alert('Ejecutivo actualizado');
         } else {
           const { error } = await client.from('ejecutivos').insert([datos]);
           if (error) throw error;
-          alert('✅ Ejecutivo agregado');
+          alert('Ejecutivo agregado');
         }
         
         cargaCompleta.ejecutivos = false;
@@ -489,7 +539,7 @@
         cerrarModal();
         renderCatalogo(document.getElementById('main-content'));
       } catch (err) {
-        alert('❌ Error: ' + err.message);
+        alert('Error: ' + err.message);
       }
     }
 
@@ -500,13 +550,13 @@
       try {
         const { error } = await client.from('ejecutivos').delete().eq('id', id);
         if (error) throw error;
-        alert('✅ Ejecutivo eliminado');
+        alert('Ejecutivo eliminado');
         
         cargaCompleta.ejecutivos = false;
         await cargarTablaCompleta('ejecutivos', null);
         renderCatalogo(document.getElementById('main-content'));
       } catch (err) {
-        alert('❌ Error: ' + err.message);
+        alert('Error: ' + err.message);
       }
     }
 
@@ -538,7 +588,7 @@
     }
 
     async function recargarTodoYContadores() {
-      console.log('🔄 [DEBUG] Iniciando recargarTodoYContadores...');
+      console.log('Iniciando recargarTodoYContadores...');
       cargaCompleta = { leads: false, llamadas: false, historiales: false, ejecutivos: false, teams_registro: false };
       cruceCache = null;
       try {
@@ -547,19 +597,18 @@
         await cargarTablaCompleta('historiales', 'fecha');
         await cargarTablaCompleta('ejecutivos', null);
         
-        // Intentar cargar teams_registro, pero no bloquear si no existe
         try {
           await cargarTablaCompleta('teams_registro', null);
         } catch (teamsErr) {
-          console.log('⚠️ [INFO] Tabla teams_registro no disponible aún (normal si es primera vez)');
+          console.log('Tabla teams_registro no disponible aún (normal si es primera vez)');
           cache.teams_registro = [];
           cargaCompleta.teams_registro = true;
         }
         
         render();
-        console.log('✨ [DEBUG] ¡Recargar completado!');
+        console.log('Recargar completado!');
       } catch (err) {
-        console.error('❌ [ERROR]', err);
+        console.error('Error:', err);
         alert('Error al recargar: ' + err.message);
       }
     }
@@ -569,16 +618,13 @@
     // ==================================================================
     function badgeEstadoCruce(estado) {
       const map = {
-        'Cumplió': 'bg-emerald-900 text-emerald-300',
-        'Mismo día fuera horario': 'bg-amber-900 text-amber-300',
-        'Llamó en otra fecha': 'bg-orange-900 text-orange-300',
-        'Sin llamada': 'bg-red-900 text-red-300',
-        'Pendiente': 'bg-sky-900 text-sky-300',
-        'Sin evidencia Teams': 'bg-red-900 text-red-300',
-        'Cumplió fecha y horario': 'bg-emerald-900 text-emerald-300',
+        'Cumplió en fecha y horario': 'bg-emerald-900 text-emerald-300',
         'Llamó el mismo día fuera de horario': 'bg-amber-900 text-amber-300',
+        'Llamó en otra fecha': 'bg-orange-900 text-orange-300',
         'Sin llamada encontrada': 'bg-red-900 text-red-300',
-        'Pendiente de evaluar': 'bg-sky-900 text-sky-300'
+        'Pendiente de evaluar': 'bg-sky-900 text-sky-300',
+        'Cumplió con evidencia en Teams': 'bg-violet-900 text-violet-300',
+        'Sin evidencia en Teams': 'bg-red-900 text-red-300'
       };
       const cls = map[estado] || 'bg-gray-700 text-gray-300';
       return `<span class="badge ${cls}">${estado}</span>`;
@@ -621,10 +667,16 @@
       main.innerHTML = `
         <div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
           <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
-            <h2 class="text-sm font-bold text-gray-300">📂 ${titulo}</h2>
+            <h2 class="text-sm font-bold text-gray-300">${titulo}</h2>
             <div class="flex flex-wrap gap-2 items-center">
-              <button onclick="recargarUnaTabla('${tabla}','${columnaFecha||''}')" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded">🔄 Recargar</button>
-              <button onclick="exportarXLSX('tabla-dinamica','${tabla}')" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded">⬇️ Exportar XLSX</button>
+              <button onclick="recargarUnaTabla('${tabla}','${columnaFecha||''}')" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Recargar
+              </button>
+              <button onclick="exportarXLSX('tabla-dinamica','${tabla}')" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Exportar XLSX
+              </button>
             </div>
           </div>
           <span id="estado-tabla" class="text-xs text-cyan-400">Cargando...</span>
@@ -636,6 +688,49 @@
       await asegurarCache(tabla, columnaFecha);
       document.getElementById('estado-tabla').classList.add('hidden');
       pintarTablaConFiltros('tabla-dinamica', filtrarPorFechaGlobal(cache[tabla], columnaFecha));
+    }
+
+    async function renderRegistroTeams(main) {
+      main.innerHTML = `
+        <div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+            <h2 class="text-sm font-bold text-gray-300">Reuniones Teams</h2>
+            <div class="flex flex-wrap gap-2 items-center">
+              <button onclick="renderRegistroTeams(document.getElementById('main-content'))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Recalcular
+              </button>
+              <button onclick="exportarXLSX('tabla-detalle-teams','detalle_teams')" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Exportar XLSX
+              </button>
+            </div>
+          </div>
+          <p class="text-[11px] text-gray-500 mb-2">Edita los campos de Fecha reunión, Hora reunión y Evidencia (link) haciendo clic en el icono editar. Se guardan automáticamente en la BD.</p>
+          <span id="estado-tabla" class="text-xs text-cyan-400">Cargando...</span>
+          <div class="overflow-auto mt-2" style="max-height: 68vh;">
+            <table class="w-full text-left text-xs" id="tabla-detalle-teams"></table>
+          </div>
+        </div>`;
+
+      const registros = await calcularTeams();
+      document.getElementById('estado-tabla').classList.add('hidden');
+      
+      const detalleConAcciones = registros.map(r => ({
+        'País': r.pais,
+        'Ejecutivo': r.ejecutivo,
+        'Lead': r.codigo_prospecto,
+        'Cliente': r.cliente,
+        'Fecha reunión': r.fecha_reunion,
+        'Hora reunión': r.hora_reunion,
+        'Evidencia': r.evidencia_url ? `<a href="${r.evidencia_url}" target="_blank" class="text-cyan-400 hover:underline">Ver</a>` : '(Vacío)',
+        'Estado': badgeEstadoCruce(r.estado_cruce),
+        'acciones': `<button onclick="abrirModalTeams(${r.id})" class="bg-blue-600 hover:bg-blue-700 text-xs px-2 py-1 rounded flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+        </button>`
+      }));
+      
+      pintarTablaConFiltros('tabla-detalle-teams', detalleConAcciones);
     }
 
     async function recargarUnaTabla(tabla, columnaFecha) {
@@ -691,7 +786,7 @@
         return `<tr class="hover:bg-slate-800/50">${columnas.map(c => {
           let v = fila[c];
           if (c === 'acciones') return `<td class="p-2">${v}</td>`;
-          if (c === 'estado_cruce' || c === 'Resultado') return `<td class="p-2 whitespace-nowrap">${badgeEstadoCruce(v)}</td>`;
+          if (c === 'Estado' || c === 'Resultado') return `<td class="p-2 whitespace-nowrap">${badgeEstadoCruce(v)}</td>`;
           if (c === 'Cumplió') return `<td class="p-2 whitespace-nowrap">${badgeCumplio(v)}</td>`;
           if (v === null || v === undefined || v === '') v = '<span class="text-gray-500 italic">no especificado</span>';
           return `<td class="p-2 whitespace-nowrap text-gray-300">${String(v).slice(0,120)}</td>`;
@@ -808,7 +903,7 @@
     }
 
     // ==================================================================
-    // MOTOR DE CRUCE (RESUMIDO PARA BREVEDAD)
+    // MOTOR DE CRUCE UNIFICADO (LLAMADAS + TEAMS)
     // ==================================================================
     function normalizarTel(tel) {
       if (!tel) return '';
@@ -849,71 +944,86 @@
       return d.toTimeString().slice(0, 8);
     }
 
-    async function calcularCruce(forzar) {
+    async function calcularCruceUnificado() {
       await Promise.all([
         asegurarCache('leads', 'fecha_agendada'),
         asegurarCache('llamadas', 'fecha'),
         asegurarCache('historiales', 'fecha'),
-        asegurarCache('ejecutivos', null)
+        asegurarCache('ejecutivos', null),
+        asegurarCache('teams_registro', null)
       ]);
 
-      let leads = cache.leads.filter(l => (l.tipo_reunion || '').toLowerCase().includes('llamada'));
+      let leads = cache.leads.filter(l => (l.tipo_reunion || '').toLowerCase().includes('llamada') || (l.tipo_reunion || '').toLowerCase().includes('virtual'));
       leads = filtrarPorFechaGlobal(leads, 'fecha_agendada');
       const ahora = new Date();
 
       const resultado = leads.map(lead => {
         const telLead = normalizarTel(lead.telefono);
         const progr = parseFechaHora(lead.fecha_agendada, lead.hora_agendada);
+        const esTeams = (lead.tipo_reunion || '').toLowerCase().includes('virtual') && !(lead.tipo_reunion || '').toLowerCase().includes('llamada');
+        const esLlamada = (lead.tipo_reunion || '').toLowerCase().includes('llamada');
+        
         const ejec = cache.ejecutivos.find(e => (e.nombre_ejecutivo || '').trim().toLowerCase() === (lead.asesor_nombre || '').trim().toLowerCase());
         const usuario = ejec ? ejec.usuario : null;
 
-        const candPBX = cache.llamadas
-          .filter(c => normalizarTel(c.destino) === telLead && telLead && (!usuario || c.nombre === usuario))
-          .map(c => ({ fuente: 'PBX', fechaHora: c.fecha_hora ? new Date(c.fecha_hora) : null, raw: c }));
-
-        const candCel = cache.historiales
-          .filter(c => normalizarTel(c.destino) === telLead && telLead && (!usuario || c.usuario === usuario) && (c.tipo || '').toLowerCase() === 'saliente')
-          .map(c => {
-            const fBase = c.fecha ? String(c.fecha).split('T')[0] : null;
-            const fh = fBase && c.hora ? new Date(`${fBase}T${c.hora}`) : null;
-            return { fuente: 'Celular', fechaHora: fh, raw: c };
-          });
-
-        const candidatas = [...candPBX, ...candCel].filter(c => c.fechaHora && !isNaN(c.fechaHora.getTime()));
-
-        let estado = 'Sin llamada';
+        let estado = 'Sin llamada encontrada';
         let coincidencia = null;
         let diferenciaMin = null;
+        let fuente = '';
 
-        if (progr && candidatas.length) {
-          const delDia = candidatas.filter(c => mismoDia(c.fechaHora, progr));
-          if (delDia.length) {
-            delDia.sort((a, b) => Math.abs(a.fechaHora - progr) - Math.abs(b.fechaHora - progr));
-            coincidencia = delDia[0];
-            diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
-            estado = diferenciaMin <= 5 ? 'Cumplió' : 'Mismo día fuera horario';
+        if (esTeams) {
+          // Buscar en teams
+          const teamsData = (cache.teams_registro || []).find(t => t.codigo_prospecto === lead.codigo_prospecto);
+          if (teamsData && teamsData.evidencia_url) {
+            estado = 'Cumplió con evidencia en Teams';
+            fuente = 'Teams';
           } else {
-            candidatas.sort((a, b) => Math.abs(a.fechaHora - progr) - Math.abs(b.fechaHora - progr));
-            coincidencia = candidatas[0];
-            estado = 'Llamó en otra fecha';
+            estado = teamsData ? 'Sin evidencia en Teams' : 'Sin llamada encontrada';
+            if (!teamsData && progr) {
+              const limite = new Date(progr.getTime() + 5 * 60000);
+              if (ahora < limite) estado = 'Pendiente de evaluar';
+            }
+            fuente = 'Teams';
           }
-        } else if (progr) {
-          const limite = new Date(progr.getTime() + 5 * 60000);
-          estado = ahora < limite ? 'Pendiente' : 'Sin llamada';
+        } else if (esLlamada) {
+          // Buscar en llamadas PBX + Celular
+          const candPBX = cache.llamadas
+            .filter(c => normalizarTel(c.destino) === telLead && telLead && (!usuario || c.nombre === usuario))
+            .map(c => ({ fuente: 'PBX', fechaHora: c.fecha_hora ? new Date(c.fecha_hora) : null, raw: c }));
+
+          const candCel = cache.historiales
+            .filter(c => normalizarTel(c.destino) === telLead && telLead && (!usuario || c.usuario === usuario) && (c.tipo || '').toLowerCase() === 'saliente')
+            .map(c => {
+              const fBase = c.fecha ? String(c.fecha).split('T')[0] : null;
+              const fh = fBase && c.hora ? new Date(`${fBase}T${c.hora}`) : null;
+              return { fuente: 'Celular', fechaHora: fh, raw: c };
+            });
+
+          const candidatas = [...candPBX, ...candCel].filter(c => c.fechaHora && !isNaN(c.fechaHora.getTime()));
+
+          if (progr && candidatas.length) {
+            const delDia = candidatas.filter(c => mismoDia(c.fechaHora, progr));
+            if (delDia.length) {
+              delDia.sort((a, b) => Math.abs(a.fechaHora - progr) - Math.abs(b.fechaHora - progr));
+              coincidencia = delDia[0];
+              diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
+              estado = diferenciaMin <= 5 ? 'Cumplió en fecha y horario' : 'Llamó el mismo día fuera de horario';
+              fuente = coincidencia.fuente;
+            } else {
+              candidatas.sort((a, b) => Math.abs(a.fechaHora - progr) - Math.abs(b.fechaHora - progr));
+              coincidencia = candidatas[0];
+              estado = 'Llamó en otra fecha';
+              fuente = coincidencia.fuente;
+            }
+          } else if (progr) {
+            const limite = new Date(progr.getTime() + 5 * 60000);
+            estado = ahora < limite ? 'Pendiente de evaluar' : 'Sin llamada encontrada';
+          }
         }
 
         const diferenciaMinFirmada = coincidencia && progr
           ? Math.round(((coincidencia.fechaHora - progr) / 60000) * 10) / 10
           : null;
-
-        const RESULTADO_TEXTO = {
-          'Cumplió': 'Cumplió fecha y horario',
-          'Mismo día fuera horario': 'Llamó el mismo día fuera de horario',
-          'Llamó en otra fecha': 'Llamó en otra fecha',
-          'Sin llamada': 'Sin llamada encontrada',
-          'Pendiente': 'Pendiente de evaluar'
-        };
-        const cumplioTexto = estado === 'Cumplió' ? 'Sí' : (estado === 'Pendiente' ? 'Pendiente' : 'No');
 
         let duracionSeg = null;
         let estadoTipo = '';
@@ -921,7 +1031,7 @@
           if (coincidencia.fuente === 'PBX') {
             duracionSeg = coincidencia.raw.duracion_segundos != null ? Number(coincidencia.raw.duracion_segundos) : hhmmssASegundos(coincidencia.raw.duracion_hh_mm_ss);
             estadoTipo = coincidencia.raw.estado || '';
-          } else {
+          } else if (coincidencia.fuente === 'Celular') {
             duracionSeg = hhmmssASegundos(coincidencia.raw.duracion);
             estadoTipo = (coincidencia.raw.tipo || '').toUpperCase();
           }
@@ -932,78 +1042,58 @@
           ejecutivo: lead.asesor_nombre || 'Sin asignar',
           codigo_prospecto: lead.codigo_prospecto,
           lead: lead.nombre_prospecto,
+          cliente: lead.nombre_prospecto,
           telefono: lead.telefono,
           telefono_comparado: telLead || '',
           fecha_reunion: lead.fecha_agendada,
           hora_reunion: lead.hora_agendada,
           status_lead: lead.status,
-          opportunity_stage: lead.opportunity_stage,
-          estado_cruce: estado,
-          resultado_texto: RESULTADO_TEXTO[estado] || estado,
-          cumplio_texto: cumplioTexto,
-          diferencia_min: diferenciaMin,
-          diferencia_min_firmada: diferenciaMinFirmada,
-          fuente_llamada: coincidencia ? coincidencia.fuente : '',
+          resultado: estado,
+          fuente: fuente,
           fecha_llamada: coincidencia && coincidencia.fechaHora ? coincidencia.fechaHora.toISOString() : '',
           fecha_llamada_corta: coincidencia && coincidencia.fechaHora ? formatearFechaCorta(coincidencia.fechaHora) : '',
           hora_llamada_corta: coincidencia && coincidencia.fechaHora ? formatearHoraCorta(coincidencia.fechaHora) : '',
+          diferencia_min: diferenciaMin,
+          diferencia_min_firmada: diferenciaMinFirmada,
           duracion_seg: duracionSeg,
           estado_tipo: estadoTipo,
-          intentos_mismo_dia: progr ? candidatas.filter(c => mismoDia(c.fechaHora, progr)).length : 0,
-          intentos_totales: candidatas.length,
           catalogo_ok: ejec ? 'Sí' : 'No'
         };
       });
 
-      cruceCache = resultado;
       return resultado;
     }
 
-    function agregar(cruce, claveFn) {
+    function agregarPorPais(datos) {
       const grupos = {};
-      cruce.forEach(r => {
-        const k = claveFn(r);
-        if (!grupos[k.key]) grupos[k.key] = { ...k.datos, leads: 0, evaluados: 0, cumplieron: 0, fuera_horario: 0, otra_fecha: 0, sin_llamada: 0, pendientes: 0 };
-        const g = grupos[k.key];
+      datos.forEach(r => {
+        const k = r.pais;
+        if (!grupos[k]) grupos[k] = { pais: k, leads: 0, evaluados: 0, cumplieron: 0, fuera_horario: 0, otra_fecha: 0, sin_llamada: 0, pendientes: 0 };
+        const g = grupos[k];
         g.leads++;
-        if (r.estado_cruce === 'Pendiente') {
+        if (r.resultado === 'Pendiente de evaluar') {
           g.pendientes++;
         } else {
           g.evaluados++;
-          if (r.estado_cruce === 'Cumplió') g.cumplieron++;
-          else if (r.estado_cruce === 'Mismo día fuera horario') g.fuera_horario++;
-          else if (r.estado_cruce === 'Llamó en otra fecha') g.otra_fecha++;
-          else if (r.estado_cruce === 'Sin llamada') g.sin_llamada++;
+          if (r.resultado === 'Cumplió en fecha y horario' || r.resultado === 'Cumplió con evidencia en Teams') g.cumplieron++;
+          else if (r.resultado === 'Llamó el mismo día fuera de horario') g.fuera_horario++;
+          else if (r.resultado === 'Llamó en otra fecha') g.otra_fecha++;
+          else if (r.resultado === 'Sin llamada encontrada' || r.resultado === 'Sin evidencia en Teams') g.sin_llamada++;
         }
       });
       return Object.values(grupos).map(g => {
-        const noCumplieron = g.fuera_horario + g.otra_fecha + g.sin_llamada;
+        g.no_cumplieron = g.fuera_horario + g.otra_fecha + g.sin_llamada;
         const base = g.evaluados;
         const pctNum = base > 0 ? (g.cumplieron / base) * 100 : 0;
-        const clas = claseClasificacion(pctNum, g.evaluados);
-        return {
-          ...g,
-          no_cumplieron: noCumplieron,
-          pct_cumplimiento: base > 0 ? pctNum.toFixed(1) + '%' : '—'
-        };
-      });
+        g.pct_cumplimiento = base > 0 ? pctNum.toFixed(1) + '%' : '—';
+        g.pct_num = pctNum;
+        return g;
+      }).sort((a, b) => nombrePais(a.pais).localeCompare(nombrePais(b.pais)));
     }
 
-    // ==================================================================
-    // VISTA: RESUMEN POR PAIS
-    // ==================================================================
-    const NOMBRES_PAIS = {
-      SV: 'El Salvador', GT: 'Guatemala', HN: 'Honduras', NI: 'Nicaragua',
-      CR: 'Costa Rica', PA: 'Panamá', MX: 'México', US: 'Estados Unidos'
-    };
-    function nombrePais(codigo) {
-      if (!codigo || codigo === 'N/D') return 'Sin país';
-      return NOMBRES_PAIS[codigo] || codigo;
-    }
-
-    function calcularFilaTotal(datosPorPais) {
+    function calcularFilaTotal(datos) {
       const total = { pais: 'TOTAL', leads: 0, evaluados: 0, cumplieron: 0, fuera_horario: 0, otra_fecha: 0, sin_llamada: 0, pendientes: 0, no_cumplieron: 0 };
-      datosPorPais.forEach(d => {
+      datos.forEach(d => {
         total.leads += d.leads; total.evaluados += d.evaluados; total.cumplieron += d.cumplieron;
         total.fuera_horario += d.fuera_horario; total.otra_fecha += d.otra_fecha; total.sin_llamada += d.sin_llamada;
         total.pendientes += d.pendientes; total.no_cumplieron += d.no_cumplieron;
@@ -1012,51 +1102,29 @@
       const pctNum = base > 0 ? (total.cumplieron / base) * 100 : 0;
       total.pct_num = pctNum;
       total.pct_cumplimiento = base > 0 ? pctNum.toFixed(1) + '%' : '—';
-      const clas = claseClasificacion(pctNum, total.evaluados);
       return total;
     }
 
-    function generarLecturaEjecutiva(datosPorPais, total, cruce) {
-      const lineas = [];
-      const baseTotal = total.evaluados;
-      lineas.push({
-        titulo: 'Resultado general',
-        texto: baseTotal > 0
-          ? `${total.cumplieron} de ${baseTotal} leads evaluados cumplieron dentro de ±5 minutos (${total.pct_cumplimiento}).`
-          : `Aún no hay leads evaluados en el rango seleccionado.`
-      });
-
-      datosPorPais.forEach(p => {
-        const base = p.evaluados;
-        lineas.push({
-          titulo: nombrePais(p.pais),
-          texto: base > 0
-            ? `${p.cumplieron} de ${base} evaluados cumplieron; ${p.fuera_horario} fuera de horario, ${p.otra_fecha} en otra fecha y ${p.sin_llamada} sin llamada.`
-            : `Sin leads evaluados en el rango seleccionado.`
-        });
-      });
-
-      const pendientes = cruce.filter(r => r.estado_cruce === 'Pendiente');
-      const textoPendientes = pendientes.length
-        ? pendientes.map(r => `${r.codigo_prospecto || 'Lead sin código'} de ${r.ejecutivo || 'ejecutivo sin asignar'}`).join(', ') + '.'
-        : 'Ninguno.';
-      lineas.push({ titulo: 'Pendientes', texto: textoPendientes });
-
-      return lineas;
+    function nombrePais(codigo) {
+      const NOMBRES_PAIS = {
+        SV: 'El Salvador', GT: 'Guatemala', HN: 'Honduras', NI: 'Nicaragua',
+        CR: 'Costa Rica', PA: 'Panamá', MX: 'México', US: 'Estados Unidos'
+      };
+      if (!codigo || codigo === 'N/D') return 'Sin país';
+      return NOMBRES_PAIS[codigo] || codigo;
     }
 
-    function pintarTablaResumenPais(datosPorPais, total, cruce) {
+    function pintarTablaResumenPais(datos, total) {
       const cols = [
-        { key: 'pais',              label: 'País' },
-        { key: 'leads',             label: 'Leads telefónicos' },
-        { key: 'evaluados',         label: 'Evaluados' },
-        { key: 'cumplieron',        label: 'Cumplieron fecha y horario' },
-        { key: 'fuera_horario',     label: 'Mismo día fuera horario' },
-        { key: 'otra_fecha',        label: 'Llamó en otra fecha' },
-        { key: 'sin_llamada',       label: 'Sin llamada' },
-        { key: 'pendientes',        label: 'Pendientes' },
-        { key: 'no_cumplieron',     label: 'No cumplieron' },
-        { key: 'pct_cumplimiento',  label: '% cumplimiento' },
+        { key: 'pais', label: 'País' },
+        { key: 'leads', label: 'Leads telefónicos' },
+        { key: 'evaluados', label: 'Evaluados' },
+        { key: 'cumplieron', label: 'Cumplieron' },
+        { key: 'fuera_horario', label: 'Mismo día fuera horario' },
+        { key: 'otra_fecha', label: 'Otra fecha' },
+        { key: 'sin_llamada', label: 'Sin llamada' },
+        { key: 'pendientes', label: 'Pendientes' },
+        { key: 'pct_cumplimiento', label: '% cumplimiento' },
       ];
 
       const filaHtml = (d, esTotal) => {
@@ -1064,56 +1132,46 @@
         return `<tr class="${base}">${cols.map(c => {
           let v = d[c.key];
           if (c.key === 'pais') v = esTotal ? 'TOTAL' : nombrePais(v);
-          const align = (c.key === 'pais') ? 'text-left' : 'text-right';
+          const align = c.key === 'pais' ? 'text-left' : 'text-right';
           return `<td class="p-2.5 whitespace-nowrap ${align}">${v ?? ''}</td>`;
         }).join('')}</tr>`;
       };
 
       const thead = `<tr>${cols.map(c => `<th class="p-2.5 ${c.key==='pais'?'text-left':'text-right'} text-[10px]">${c.label}</th>`).join('')}</tr>`;
-      const filas = datosPorPais.map(d => filaHtml(d, false)).join('') + filaHtml(total, true);
+      const filas = datos.map(d => filaHtml(d, false)).join('') + filaHtml(total, true);
 
-      const tablaHtml = `
+      document.getElementById('tabla-resumen-pais').innerHTML = `
         <div class="overflow-auto rounded-lg border border-gray-800">
           <table class="w-full text-xs border-collapse">
             <thead class="bg-[#0e7490] text-white">${thead}</thead>
             <tbody class="divide-y divide-gray-800">${filas}</tbody>
           </table>
         </div>`;
-
-      const lectura = generarLecturaEjecutiva(datosPorPais, total, cruce);
-      const lecturaHtml = `
-        <div class="mt-4 bg-[#0d1526] border border-gray-800 rounded-lg overflow-hidden">
-          <div class="bg-[#1e293b] px-3 py-2 text-[11px] font-bold text-gray-300 uppercase tracking-wider">Lectura ejecutiva</div>
-          <div class="divide-y divide-gray-800">
-            ${lectura.map(l => `
-              <div class="flex gap-3 px-3 py-2 text-xs">
-                <span class="text-cyan-400 font-bold shrink-0 w-32">${l.titulo}</span>
-                <span class="text-gray-300">${l.texto}</span>
-              </div>`).join('')}
-          </div>
-        </div>`;
-
-      document.getElementById('tabla-resumen-pais').innerHTML = tablaHtml + lecturaHtml;
     }
 
     async function renderResumenPais(main) {
       main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
         <div class="flex justify-between items-center mb-3">
-          <h2 class="text-sm font-bold text-gray-300">🌎 Resumen de Cumplimiento por País</h2>
+          <h2 class="text-sm font-bold text-gray-300">Resumen de Cumplimiento por País</h2>
           <div class="flex gap-2">
-            <button onclick="calcularCruce(true).then(()=>renderResumenPais(document.getElementById('main-content')))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded">🔄 Recalcular</button>
-            <button id="btn-exp-pais" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded">⬇️ Exportar XLSX</button>
+            <button onclick="renderResumenPais(document.getElementById('main-content'))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              Recalcular
+            </button>
+            <button id="btn-exp-pais" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+              Exportar XLSX
+            </button>
           </div>
         </div>
-        <p class="text-[11px] text-gray-500 mb-3">Solo leads con tipo de reunión "Llamada Telefónica". Tolerancia ±5 min. Teléfonos comparados por los últimos 8 dígitos. Ejecutivo identificado por su extensión (PBX) o usuario (celular) según el catálogo.</p>
+        <p class="text-[11px] text-gray-500 mb-3">Incluye Llamadas PBX, Celulares y Teams. Teléfonos comparados por últimos 8 dígitos. ±5 min de tolerancia. Ejecutivo identificado por extensión/usuario según catálogo.</p>
         <div id="tabla-resumen-pais" class="overflow-auto text-xs"><span class="text-cyan-400">Calculando cruce...</span></div>
       </div>`;
 
-      const cruce = await calcularCruce();
-      const datos = agregar(cruce, r => ({ key: r.pais, datos: { pais: r.pais } }))
-        .sort((a, b) => nombrePais(a.pais).localeCompare(nombrePais(b.pais)));
+      const cruce = await calcularCruceUnificado();
+      const datos = agregarPorPais(cruce);
       const total = calcularFilaTotal(datos);
-      pintarTablaResumenPais(datos, total, cruce);
+      pintarTablaResumenPais(datos, total);
       document.getElementById('btn-exp-pais').onclick = () => exportarXLSXGenerico(
         [...datos, total].map(({pct_num, ...r}) => r), 'resumen_por_pais'
       );
@@ -1126,8 +1184,6 @@
         grupos[nombre.toLowerCase()] = {
           pais: e.pais || 'N/D',
           ejecutivo: nombre,
-          usuario: e.usuario || '',
-          extension: e.extension || '',
           leads: 0, evaluados: 0, cumplieron: 0, fuera_horario: 0, otra_fecha: 0, sin_llamada: 0, pendientes: 0,
           enCatalogo: true
         };
@@ -1142,7 +1198,7 @@
         if (!g) {
           if (!sinCatalogo[key]) {
             sinCatalogo[key] = {
-              pais: r.pais || 'N/D', ejecutivo: nombreLead || 'Sin asignar', usuario: '', extension: '',
+              pais: r.pais || 'N/D', ejecutivo: nombreLead || 'Sin asignar',
               leads: 0, evaluados: 0, cumplieron: 0, fuera_horario: 0, otra_fecha: 0, sin_llamada: 0, pendientes: 0,
               enCatalogo: false
             };
@@ -1150,14 +1206,14 @@
           g = sinCatalogo[key];
         }
         g.leads++;
-        if (r.estado_cruce === 'Pendiente') {
+        if (r.resultado === 'Pendiente de evaluar') {
           g.pendientes++;
         } else {
           g.evaluados++;
-          if (r.estado_cruce === 'Cumplió') g.cumplieron++;
-          else if (r.estado_cruce === 'Mismo día fuera horario') g.fuera_horario++;
-          else if (r.estado_cruce === 'Llamó en otra fecha') g.otra_fecha++;
-          else if (r.estado_cruce === 'Sin llamada') g.sin_llamada++;
+          if (r.resultado === 'Cumplió en fecha y horario' || r.resultado === 'Cumplió con evidencia en Teams') g.cumplieron++;
+          else if (r.resultado === 'Llamó el mismo día fuera de horario') g.fuera_horario++;
+          else if (r.resultado === 'Llamó en otra fecha') g.otra_fecha++;
+          else if (r.resultado === 'Sin llamada encontrada' || r.resultado === 'Sin evidencia en Teams') g.sin_llamada++;
         }
       });
 
@@ -1167,7 +1223,6 @@
         const pctNum = base > 0 ? (g.cumplieron / base) * 100 : 0;
         g.pct_num = pctNum;
         g.pct_cumplimiento = base > 0 ? pctNum.toFixed(1) + '%' : '—';
-        const clas = claseClasificacion(pctNum, g.evaluados);
         return g;
       };
 
@@ -1183,17 +1238,16 @@
 
     function pintarTablaResumenEjecutivo(filasCatalogo, filasSinCatalogo, total) {
       const cols = [
-        { key: 'pais',              label: 'País' },
-        { key: 'ejecutivo',         label: 'Ejecutivo' },
-        { key: 'leads',             label: 'Leads' },
-        { key: 'evaluados',         label: 'Evaluados' },
-        { key: 'cumplieron',        label: 'Cumplieron' },
-        { key: 'fuera_horario',     label: 'Mismo día fuera horario' },
-        { key: 'otra_fecha',        label: 'Otra fecha' },
-        { key: 'sin_llamada',       label: 'Sin llamada' },
-        { key: 'pendientes',        label: 'Pendientes' },
-        { key: 'no_cumplieron',     label: 'No cumplieron' },
-        { key: 'pct_cumplimiento',  label: '% cumplimiento' },
+        { key: 'pais', label: 'País' },
+        { key: 'ejecutivo', label: 'Ejecutivo' },
+        { key: 'leads', label: 'Leads' },
+        { key: 'evaluados', label: 'Evaluados' },
+        { key: 'cumplieron', label: 'Cumplieron' },
+        { key: 'fuera_horario', label: 'Mismo día fuera horario' },
+        { key: 'otra_fecha', label: 'Otra fecha' },
+        { key: 'sin_llamada', label: 'Sin llamada' },
+        { key: 'pendientes', label: 'Pendientes' },
+        { key: 'pct_cumplimiento', label: '% cumplimiento' },
       ];
 
       const filaHtml = (d, esTotal) => {
@@ -1216,7 +1270,7 @@
         sinCatalogoHtml = `
           <div class="mt-4 rounded-lg border border-amber-900 overflow-hidden">
             <div class="bg-amber-950 text-amber-300 text-[11px] font-bold px-3 py-2">
-              ⚠️ Nombres en Leads sin coincidencia en el catálogo de ejecutivos — revisar si falta darlos de alta
+              Nombres en Leads sin coincidencia en catálogo — revisar si falta darlos de alta
             </div>
             <table class="w-full text-xs border-collapse">
               <thead class="bg-[#1e293b] text-gray-400">${thead}</thead>
@@ -1238,17 +1292,23 @@
     async function renderResumenEjecutivo(main) {
       main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
         <div class="flex justify-between items-center mb-3">
-          <h2 class="text-sm font-bold text-gray-300">🚀 Resumen Cumplimiento</h2>
+          <h2 class="text-sm font-bold text-gray-300">Resumen Cumplimiento</h2>
           <div class="flex gap-2">
-            <button onclick="calcularCruce(true).then(()=>renderResumenEjecutivo(document.getElementById('main-content')))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded">🔄 Recalcular</button>
-            <button id="btn-exp-ejec" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded">⬇️ Exportar XLSX</button>
+            <button onclick="renderResumenEjecutivo(document.getElementById('main-content'))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              Recalcular
+            </button>
+            <button id="btn-exp-ejec" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+              Exportar XLSX
+            </button>
           </div>
         </div>
-        <p class="text-[11px] text-gray-500 mb-3">El porcentaje excluye pendientes. "No cumplieron" incluye fuera de horario, otra fecha y sin registro. País y ejecutivo tomados del catálogo oficial; se listan todos aunque tengan 0 leads.</p>
+        <p class="text-[11px] text-gray-500 mb-3">Evaluación por ejecutivo. El % excluye pendientes. Todos los ejecutivos en catálogo se listan aunque tengan 0 leads. Incluye Llamadas y Teams.</p>
         <div id="tabla-resumen-ejec" class="overflow-auto text-xs"><span class="text-cyan-400">Calculando cruce...</span></div>
       </div>`;
 
-      const cruce = await calcularCruce();
+      const cruce = await calcularCruceUnificado();
       await asegurarCache('ejecutivos', null);
       const { filasCatalogo, filasSinCatalogo } = construirResumenPorEjecutivo(cruce);
       const total = calcularFilaTotal([...filasCatalogo, ...filasSinCatalogo]);
@@ -1259,65 +1319,63 @@
       );
     }
 
-    async function renderResumenDetalle(main) {
+    async function renderDetalleUnificado(main) {
       main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
         <div class="flex justify-between items-center mb-3">
-          <h2 class="text-sm font-bold text-gray-300">🔍 Detalle Llamadas</h2>
+          <h2 class="text-sm font-bold text-gray-300">Detalle Cumplimiento Leads</h2>
           <div class="flex gap-2">
-            <button onclick="calcularCruce(true).then(()=>renderResumenDetalle(document.getElementById('main-content')))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded">🔄 Recalcular</button>
-            <button onclick="exportarXLSX('tabla-detalle-cruce','detalle_llamadas')" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded">⬇️ Exportar XLSX</button>
+            <button onclick="renderDetalleUnificado(document.getElementById('main-content'))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              Recalcular
+            </button>
+            <button onclick="exportarXLSX('tabla-detalle-unificado','detalle_cumplimiento_leads')" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+              Exportar XLSX
+            </button>
           </div>
         </div>
-        <p class="text-[11px] text-gray-500 mb-2">Un renglón por cada lead telefónico evaluado. Mismos datos y reglas que "Resumen Cumplimiento" (últimos 8 dígitos del teléfono, ejecutivo por extensión/usuario, ±5 min de tolerancia).</p>
+        <p class="text-[11px] text-gray-500 mb-2">Comparación unificada: Llamadas PBX, Celulares y Reuniones Teams. Un renglón por lead. Teléfono por últimos 8 dígitos. ±5 min tolerancia. Teams: con/sin evidencia.</p>
         <span id="estado-tabla" class="text-xs text-cyan-400">Calculando cruce...</span>
         <div class="overflow-auto mt-2" style="max-height: 68vh;">
-          <table class="w-full text-left text-xs" id="tabla-detalle-cruce"></table>
+          <table class="w-full text-left text-xs" id="tabla-detalle-unificado"></table>
         </div>
       </div>`;
 
-      const cruce = await calcularCruce();
+      const cruce = await calcularCruceUnificado();
 
       const detalle = cruce.map(r => ({
         'País': r.pais,
         'Ejecutivo': r.ejecutivo,
         'Lead': r.codigo_prospecto,
-        'Cliente': r.lead,
+        'Cliente': r.cliente,
         'Teléfono CRM': r.telefono,
         'Teléfono comparado': r.telefono_comparado,
         'Fecha reunión': r.fecha_reunion,
         'Hora reunión': r.hora_reunion,
-        'Resultado': r.resultado_texto,
-        'Cumplió': r.cumplio_texto,
-        'Fuente': r.fuente_llamada,
+        'Resultado': r.resultado,
+        'Fuente': r.fuente,
         'Fecha llamada': r.fecha_llamada_corta,
         'Hora llamada': r.hora_llamada_corta,
         'Diferencia (min)': r.diferencia_min_firmada,
         'Duración (seg)': r.duracion_seg,
         'Estado/tipo': r.estado_tipo,
-        'Intentos mismo día': r.intentos_mismo_dia,
-        'Intentos totales': r.intentos_totales,
-        'Datos en catálogo': r.catalogo_ok
+        'En catálogo': r.catalogo_ok
       }));
 
-      const conLlamada = detalle.filter(d => d.Resultado !== 'Sin llamada encontrada');
-      const sinLlamada = detalle.filter(d => d.Resultado === 'Sin llamada encontrada');
-      const detalleOrdenado = [...conLlamada, ...sinLlamada];
-
       document.getElementById('estado-tabla').classList.remove('hidden');
-      pintarTablaConFiltros('tabla-detalle-cruce', detalleOrdenado);
+      pintarTablaConFiltros('tabla-detalle-unificado', detalle);
     }
 
     // ==================================================================
-    // TEAMS - SINCRONIZACIÓN ENTRE TABLAS
+    // TEAMS - FUNCIONES
     // ==================================================================
-    async function calcularTeams(forzar) {
+    async function calcularTeams() {
       await asegurarCache('leads', 'fecha_agendada');
       
-      // Intentar cargar teams_registro, pero no bloquear si no existe
       try {
         await asegurarCache('teams_registro', null);
       } catch (err) {
-        console.log('⚠️ teams_registro no disponible, usando array vacío');
+        console.log('teams_registro no disponible, usando array vacío');
         cache.teams_registro = [];
         cargaCompleta.teams_registro = true;
       }
@@ -1336,9 +1394,9 @@
         const progr = parseFechaHora(lead.fecha_agendada, lead.hora_agendada);
         const ahora = new Date();
         
-        let estado = 'Sin evidencia Teams';
+        let estado = 'Sin evidencia en Teams';
         if (teamsData.evidencia_url) {
-          estado = 'Cumplió fecha y horario';
+          estado = 'Cumplió con evidencia en Teams';
         } else if (progr) {
           const limite = new Date(progr.getTime() + 5 * 60000);
           if (ahora < limite) estado = 'Pendiente de evaluar';
@@ -1360,59 +1418,6 @@
           estado_cruce: estado
         };
       });
-    }
-
-    function agregarTeams(registros) {
-      const grupos = {};
-      registros.forEach(r => {
-        const key = r.pais + '|' + r.ejecutivo;
-        if (!grupos[key]) grupos[key] = { pais: r.pais, ejecutivo: r.ejecutivo, leads: 0, evaluados: 0, pendientes: 0, cumplieron: 0 };
-        const g = grupos[key];
-        g.leads++;
-        if (r.estado_cruce === 'Pendiente de evaluar') {
-          g.pendientes++;
-        } else if (r.estado_cruce === 'Cumplió fecha y horario') {
-          g.cumplieron++;
-          g.evaluados++;
-        } else {
-          g.evaluados++;
-        }
-      });
-      
-      return Object.values(grupos).map(g => {
-        const pctNum = g.evaluados > 0 ? (g.cumplieron / g.evaluados) * 100 : 0;
-        return {
-          ...g,
-          pct_cumplimiento: g.evaluados > 0 ? pctNum.toFixed(1) + '%' : '—'
-        };
-      });
-    }
-
-    async function renderResumenTeams(main) {
-      main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
-        <div class="flex justify-between items-center mb-3">
-          <h2 class="text-sm font-bold text-gray-300">👥 Resumen de Reuniones Teams</h2>
-          <div class="flex gap-2">
-            <button onclick="renderResumenTeams(document.getElementById('main-content'))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded">🔄 Recalcular</button>
-            <button id="btn-exp-teams" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded">⬇️ Exportar XLSX</button>
-          </div>
-        </div>
-        <p class="text-[11px] text-gray-500 mb-3">Leads con reunión Virtual (no telefónica). Los datos de fecha, hora y evidencia se sincronizan desde "Detalle Teams". Cumplimiento se marca cuando hay evidencia URL.</p>
-        <div id="tabla-resumen-teams" class="overflow-auto text-xs"><span class="text-cyan-400">Calculando...</span></div>
-      </div>`;
-
-      const registros = await calcularTeams();
-      const agrupado = agregarTeams(registros);
-      pintarResumenSimple('tabla-resumen-teams', agrupado, ['pais', 'ejecutivo', 'leads', 'evaluados', 'cumplieron', 'pendientes', 'pct_cumplimiento']);
-      document.getElementById('btn-exp-teams').onclick = () => exportarXLSXGenerico(agrupado, 'resumen_teams');
-    }
-
-    function pintarResumenSimple(contId, datos, columnas) {
-      const cont = document.getElementById(contId);
-      if (!datos.length) { cont.innerHTML = '<p class="text-gray-500 p-4">Sin datos.</p>'; return; }
-      const thead = `<tr>${columnas.map(c => `<th class="p-2 text-left text-[10px]">${c.replace(/_/g,' ').toUpperCase()}</th>`).join('')}</tr>`;
-      const filas = datos.map(f => `<tr class="hover:bg-slate-800/50">${columnas.map(c => `<td class="p-2 whitespace-nowrap text-gray-300">${f[c] ?? ''}</td>`).join('')}</tr>`).join('');
-      cont.innerHTML = `<table class="w-full text-left text-xs border-collapse"><thead class="bg-[#0e7490] text-white">${thead}</thead><tbody>${filas}</tbody></table>`;
     }
 
     function abrirModalTeams(id) {
@@ -1455,54 +1460,20 @@
         if (id) {
           const { error } = await client.from('teams_registro').update(datos).eq('id', parseInt(id));
           if (error) throw error;
-          alert('✅ Reunión Teams actualizada');
+          alert('Reunión Teams actualizada');
         } else {
           const { error } = await client.from('teams_registro').insert([datos]);
           if (error) throw error;
-          alert('✅ Reunión Teams agregada');
+          alert('Reunión Teams agregada');
         }
         
         cargaCompleta.teams_registro = false;
         await cargarTablaCompleta('teams_registro', null);
         cerrarModalTeams();
-        renderDetalleTeams(document.getElementById('main-content'));
+        renderRegistroTeams(document.getElementById('main-content'));
       } catch (err) {
-        alert('❌ Error: ' + err.message);
+        alert('Error: ' + err.message);
       }
-    }
-
-    async function renderDetalleTeams(main) {
-      main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
-        <div class="flex justify-between items-center mb-3">
-          <h2 class="text-sm font-bold text-gray-300">📋 Detalle de Reuniones Teams</h2>
-          <div class="flex gap-2">
-            <button onclick="renderDetalleTeams(document.getElementById('main-content'))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded">🔄 Recalcular</button>
-            <button onclick="exportarXLSX('tabla-detalle-teams','detalle_teams')" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded">⬇️ Exportar XLSX</button>
-          </div>
-        </div>
-        <p class="text-[11px] text-gray-500 mb-2">Edita los campos de Fecha reunión, Hora reunión y Evidencia (link) haciendo clic en el icono editar. Se guardan automáticamente en la BD y el Resumen Teams se actualiza al instante.</p>
-        <span id="estado-tabla" class="text-xs text-cyan-400">Cargando...</span>
-        <div class="overflow-auto mt-2" style="max-height: 68vh;">
-          <table class="w-full text-left text-xs" id="tabla-detalle-teams"></table>
-        </div>
-      </div>`;
-
-      const registros = await calcularTeams();
-      document.getElementById('estado-tabla').classList.add('hidden');
-      
-      const detalleConAcciones = registros.map(r => ({
-        'País': r.pais,
-        'Ejecutivo': r.ejecutivo,
-        'Lead': r.codigo_prospecto,
-        'Cliente': r.cliente,
-        'Fecha reunión': r.fecha_reunion,
-        'Hora reunión': r.hora_reunion,
-        'Evidencia': r.evidencia_url ? `<a href="${r.evidencia_url}" target="_blank" class="text-cyan-400 hover:underline">Ver</a>` : '(Vacío)',
-        'Estado': badgeEstadoCruce(r.estado_cruce),
-        'acciones': `<button onclick="abrirModalTeams(${r.id})" class="bg-blue-600 hover:bg-blue-700 text-xs px-2 py-1 rounded">✏️</button>`
-      }));
-      
-      pintarTablaConFiltros('tabla-detalle-teams', detalleConAcciones);
     }
 
     // ==================================================================

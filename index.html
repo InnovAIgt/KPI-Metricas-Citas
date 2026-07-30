@@ -286,7 +286,7 @@
     let contenidoModalCelda = '';
 
     let SB_URL = "https://sbopifiiyezmvsadwkpg.supabase.co";
-    let SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNib3BpZmlpeWV6bXZzYWR3a3BnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MzM0OTYsImV4cCI6MjEwMDMwOTQ5Nn0.ZI5y8lroFF529Xr-Otm1fcq6H2lhbh9e3s-WU9O6I7A";
+    let SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNib3BpZmlieWV6bXZzYWR3a3BnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MzM0OTYsImV4cCI6MjEwMDMwOTQ5Nn0.ZI5y8lroFF529Xr-Otm1fcq6H2lhbh9e3s-WU9O6I7A";
 
     function getSupabase() {
       if (!supabaseClient) supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
@@ -871,7 +871,8 @@
           if (c === 'Estado' || c === 'Resultado') return `<td class="p-2 whitespace-nowrap">${badgeEstadoCruce(v)}</td>`;
           if (c === 'Cumplió') return `<td class="p-2 whitespace-nowrap">${badgeCumplio(v)}</td>`;
           if (columnasExpandibles.includes(c) && v && String(v).length > 50) {
-            return `<td class="p-2 max-w-xs"><span class="celda-expandible" onclick="abrirModalCelda('${c}', '${String(v).replace(/'/g, "\\'")}')">Ver contenido...</span></td>`;
+            const valorSafe = String(v).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            return `<td class="p-2 max-w-xs"><span class="celda-expandible" onclick="abrirModalCelda('${c}', '${valorSafe}')">Ver contenido...</span></td>`;
           }
           if (v === null || v === undefined || v === '') v = '<span class="text-gray-500 italic">no especificado</span>';
           return `<td class="p-2 whitespace-nowrap text-gray-300">${String(v).slice(0,120)}</td>`;
@@ -892,7 +893,7 @@
       const actual = filtroColState[contId][col];
       const seleccion = actual ? new Set(actual) : new Set(valoresUnicos);
 
-      cfpState = { contId, col, valoresUnicos, seleccion };
+      cfpState = { contId, col, valoresUnicos, seleccion, esResumen: false };
 
       const popup = document.getElementById('col-filter-popup');
       const rect = btnEl.getBoundingClientRect();
@@ -946,13 +947,17 @@
       cfpCerrar();
     }
     function cfpAceptar() {
-      const { contId, col, valoresUnicos, seleccion } = cfpState;
-      if (seleccion.size === valoresUnicos.length || seleccion.size === 0) {
-        delete filtroColState[contId][col];
+      if (cfpState.esResumen) {
+        aplicarFiltroResumen();
       } else {
-        filtroColState[contId][col] = new Set(seleccion);
+        const { contId, col, valoresUnicos, seleccion } = cfpState;
+        if (seleccion.size === valoresUnicos.length || seleccion.size === 0) {
+          delete filtroColState[contId][col];
+        } else {
+          filtroColState[contId][col] = new Set(seleccion);
+        }
+        repintar(contId);
       }
-      repintar(contId);
     }
     
     function cfpCerrar() {
@@ -1244,7 +1249,11 @@
         }).join('')}</tr>`;
       };
 
-      const thead = `<tr>${cols.map(c => `<th class="p-2.5 ${c.key==='pais'?'text-left':'text-right'} text-[10px]">${c.label} ${c.key!=='pais'?'<span class="filtro-icono" onclick="abrirFiltroColumnaResumen(\'tabla-resumen-pais\',\''+c.key+'\', this)">▾</span>':''}</th>`).join('')}</tr>`;
+      const thead = `<tr>${cols.map((c, idx) => {
+        const align = c.key === 'pais' ? 'text-left' : 'text-right';
+        const hasFilter = c.key !== 'pais';
+        return `<th class="p-2.5 ${align} text-[10px]">${c.label} ${hasFilter ? '<span class="filtro-icono" onclick="abrirFiltroColumnaResumen(\'tabla-resumen-pais\',\'' + c.key + '\', this)">▾</span>' : ''}</th>`;
+      }).join('')}</tr>`;
       const filas = datos.map(d => filaHtml(d, false)).join('') + filaHtml(total, true);
 
       document.getElementById('tabla-resumen-pais').innerHTML = `
@@ -1368,7 +1377,11 @@
         }).join('')}</tr>`;
       };
 
-      const thead = `<tr>${cols.map(c => `<th class="p-2.5 ${(c.key==='pais'||c.key==='ejecutivo')?'text-left':'text-right'} text-[10px]">${c.label} ${(c.key!=='pais'&&c.key!=='ejecutivo')?'<span class="filtro-icono" onclick="abrirFiltroColumnaResumen(\'tabla-resumen-ejec\',\''+c.key+'\', this)">▾</span>':''}</th>`).join('')}</tr>`;
+      const thead = `<tr>${cols.map((c, idx) => {
+        const align = (c.key === 'pais' || c.key === 'ejecutivo') ? 'text-left' : 'text-right';
+        const hasFilter = (c.key !== 'pais' && c.key !== 'ejecutivo');
+        return `<th class="p-2.5 ${align} text-[10px]">${c.label} ${hasFilter ? '<span class="filtro-icono" onclick="abrirFiltroColumnaResumen(\'tabla-resumen-ejec\',\'' + c.key + '\', this)">▾</span>' : ''}</th>`;
+      }).join('')}</tr>`;
       const filas = filasCatalogo.map(d => filaHtml(d, false)).join('') + filaHtml(total, true);
 
       let sinCatalogoHtml = '';
@@ -1586,8 +1599,66 @@
     }
 
     function abrirFiltroColumnaResumen(tablaId, col, btnEl) {
-      // Dummy function para compatibilidad con resúmenes por ahora
-      alert('Filtro en resúmenes: próximamente');
+      const tabla = document.getElementById(tablaId);
+      if (!tabla) return;
+      
+      // Extraer todos los valores de la columna de la tabla visible
+      const filas = tabla.querySelectorAll('tbody tr');
+      const valoresUnicos = new Set();
+      
+      filas.forEach(fila => {
+        const celdas = fila.querySelectorAll('td');
+        const colIndex = Array.from(tabla.querySelectorAll('thead th')).findIndex(th => {
+          const label = th.textContent.replace(/▾/, '').trim();
+          return label === col;
+        });
+        if (colIndex >= 0 && celdas[colIndex]) {
+          const valor = celdas[colIndex].textContent.trim();
+          if (valor && valor !== 'TOTAL' && valor !== '') valoresUnicos.add(valor);
+        }
+      });
+      
+      const valoresOrdenados = Array.from(valoresUnicos).sort((a,b) => a.localeCompare(b));
+      cfpState = { 
+        tablaId, 
+        col, 
+        valoresUnicos: valoresOrdenados, 
+        seleccion: new Set(valoresOrdenados),
+        esResumen: true
+      };
+
+      const popup = document.getElementById('col-filter-popup');
+      const rect = btnEl.getBoundingClientRect();
+      popup.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+      popup.style.left = Math.max(8, rect.left + window.scrollX - 200) + 'px';
+      popup.classList.remove('hidden');
+      document.getElementById('cfp-search').value = '';
+      cfpPintarLista(valoresOrdenados);
+    }
+
+    function aplicarFiltroResumen() {
+      if (!cfpState || !cfpState.esResumen) return;
+      
+      const { tablaId, col, seleccion } = cfpState;
+      const tabla = document.getElementById(tablaId);
+      if (!tabla) return;
+      
+      const filas = tabla.querySelectorAll('tbody tr');
+      filas.forEach(fila => {
+        const celdas = fila.querySelectorAll('td');
+        const colIndex = Array.from(tabla.querySelectorAll('thead th')).findIndex(th => {
+          const label = th.textContent.replace(/▾/, '').trim();
+          return label === col;
+        });
+        
+        if (colIndex >= 0 && celdas[colIndex]) {
+          const valor = celdas[colIndex].textContent.trim();
+          const mostrar = seleccion.size === 0 || seleccion.has(valor) || valor === 'TOTAL';
+          fila.style.display = mostrar ? '' : 'none';
+        }
+      });
+      
+      cfpCerrar();
     }
 
     // ==================================================================

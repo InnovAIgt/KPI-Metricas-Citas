@@ -29,11 +29,14 @@
     .modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:1000; }
     .modal-content { background:#1e293b; border:1px solid #334155; border-radius:0.5rem; padding:2rem; max-width:500px; width:90%; max-height:90vh; overflow-y:auto; }
     .modal-hidden { display:none; }
+    .modal-celda { background:#1e293b; border:1px solid #334155; border-radius:0.5rem; padding:2rem; max-width:700px; width:90%; max-height:80vh; overflow-y:auto; }
     .form-group { margin-bottom:1rem; }
     .form-group label { display:block; font-size:0.875rem; color:#cbd5e1; margin-bottom:0.25rem; font-weight:600; }
     .form-group input, .form-group select { width:100%; padding:0.5rem; font-size:0.875rem; border-radius:0.375rem; }
     .icon-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; cursor:pointer; }
     .teams-edit-input { background-color:#0f172a; color:#fff; border:1px solid #334155; padding:0.4rem; border-radius:0.3rem; font-size:0.85rem; }
+    .celda-expandible { cursor:pointer; color:#94a3b8; text-decoration:underline; }
+    .celda-expandible:hover { color:#cbd5e1; }
   </style>
 </head>
 <body class="font-sans">
@@ -92,7 +95,7 @@
         </button>
         <div id="submenu-resumen" class="space-y-0.5">
           <button class="sub-btn" data-view="res-pais" onclick="irA('res-pais')">
-            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064A7.969 7.969 0 0118 3V3.089A4.924 4.924 0 0123 7.5v6a4.924 4.924 0 01-4.055 4.89M8 3.935L8.5 9M3 17.988V21a2 2 0 002 2h14a2 2 0 002-2v-3.022A4.964 4.964 0 0016 12H8a4.964 4.964 0 00-5 4.988z"></path></svg>
+            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064A7.969 7.969 0 0118 3V3.089A4.924 4.924 0 0123 7.5v6a4.924 4.924 0 01-4.055 4.89M8 3.935L8.5 9M3 17.988V21a2 2 0 002 2h14a2 2 0 002-2v-3.022A4.964 4.964 0 0116 12H8a4.964 4.964 0 00-5 4.988z"></path></svg>
             Resumen País
           </button>
           <button class="sub-btn" data-view="res-ejecutivo" onclick="irA('res-ejecutivo')">
@@ -251,6 +254,26 @@
     </div>
   </div>
 
+  <!-- MODAL EXPANDIBLE PARA CELDAS LARGAS -->
+  <div id="modal-celda" class="modal-overlay modal-hidden">
+    <div class="modal-celda">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-bold text-cyan-400" id="modal-celda-titulo">Contenido de la celda</h2>
+        <button onclick="cerrarModalCelda()" class="text-gray-400 hover:text-gray-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div id="modal-celda-contenido" class="text-sm text-gray-300 whitespace-pre-wrap break-words"></div>
+      <div class="flex gap-2 justify-end mt-6">
+        <button onclick="copiarAlPortapapeles()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded text-sm font-bold flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+          Copiar
+        </button>
+        <button onclick="cerrarModalCelda()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ==================================================================
     // ESTADO GLOBAL
@@ -260,6 +283,7 @@
     let cargaCompleta = { leads: false, llamadas: false, historiales: false, ejecutivos: false, teams_registro: false };
     let cruceCache = null;
     let vistaActual = 'config';
+    let contenidoModalCelda = '';
 
     let SB_URL = "https://sbopifiiyezmvsadwkpg.supabase.co";
     let SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNib3BpZmlpeWV6bXZzYWR3a3BnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MzM0OTYsImV4cCI6MjEwMDMwOTQ5Nn0.ZI5y8lroFF529Xr-Otm1fcq6H2lhbh9e3s-WU9O6I7A";
@@ -273,6 +297,34 @@
       SB_URL = document.getElementById('sb-url').value.trim();
       SB_KEY = document.getElementById('sb-key').value.trim();
       supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+    }
+
+    // ==================================================================
+    // UTILIDADES DE FECHA
+    // ==================================================================
+    function obtenerSemanaActual() {
+      const hoy = new Date();
+      const dia = hoy.getDay();
+      const desdeEnDias = dia === 0 ? 6 : dia - 1; // Lunes es 1, domingo es 0
+      
+      const desde = new Date(hoy);
+      desde.setDate(hoy.getDate() - desdeEnDias);
+      desde.setHours(0, 0, 0, 0);
+      
+      const hasta = new Date(desde);
+      hasta.setDate(desde.getDate() + 6);
+      hasta.setHours(23, 59, 59, 999);
+      
+      return {
+        desde: desde.toISOString().split('T')[0],
+        hasta: hasta.toISOString().split('T')[0]
+      };
+    }
+
+    function establecerFechasPorDefecto() {
+      const semana = obtenerSemanaActual();
+      document.getElementById('global-desde').value = semana.desde;
+      document.getElementById('global-hasta').value = semana.hasta;
     }
 
     // ==================================================================
@@ -687,7 +739,13 @@
 
       await asegurarCache(tabla, columnaFecha);
       document.getElementById('estado-tabla').classList.add('hidden');
-      pintarTablaConFiltros('tabla-dinamica', filtrarPorFechaGlobal(cache[tabla], columnaFecha));
+      
+      let datosFiltrados = filtrarPorFechaGlobal(cache[tabla], columnaFecha);
+      
+      // Eliminar columna ID si existe
+      datosFiltrados = datosFiltrados.map(({ id, ...resto }) => resto);
+      
+      pintarTablaConFiltros('tabla-dinamica', datosFiltrados);
     }
 
     async function renderRegistroTeams(main) {
@@ -736,7 +794,9 @@
     async function recargarUnaTabla(tabla, columnaFecha) {
       cargaCompleta[tabla] = false;
       await cargarTablaCompleta(tabla, columnaFecha || null);
-      pintarTablaConFiltros('tabla-dinamica', filtrarPorFechaGlobal(cache[tabla], columnaFecha));
+      let datosFiltrados = filtrarPorFechaGlobal(cache[tabla], columnaFecha);
+      datosFiltrados = datosFiltrados.map(({ id, ...resto }) => resto);
+      pintarTablaConFiltros('tabla-dinamica', datosFiltrados);
     }
 
     let filtroColState = {};
@@ -752,6 +812,26 @@
       window.__datosBase[contId] = datosBase;
       filtroColState[contId] = filtroColState[contId] || {};
       repintar(contId);
+    }
+
+    function abrirModalCelda(titulo, contenido) {
+      contenidoModalCelda = contenido;
+      document.getElementById('modal-celda-titulo').textContent = titulo;
+      document.getElementById('modal-celda-contenido').textContent = contenido;
+      document.getElementById('modal-celda').classList.remove('modal-hidden');
+    }
+
+    function cerrarModalCelda() {
+      document.getElementById('modal-celda').classList.add('modal-hidden');
+      contenidoModalCelda = '';
+    }
+
+    function copiarAlPortapapeles() {
+      navigator.clipboard.writeText(contenidoModalCelda).then(() => {
+        alert('¡Copiado al portapapeles!');
+      }).catch(err => {
+        alert('Error al copiar: ' + err);
+      });
     }
 
     function repintar(contId) {
@@ -782,12 +862,17 @@
           : `<th class="p-2">${c} <span class="filtro-icono ${activo}" onclick="abrirFiltroColumna('${contId}','${c}', this)">▾</span></th>`;
       }).join('')}</tr></thead>`;
 
+      const columnasExpandibles = ['resumen_qa', 'transcripcion'];
+
       const filas = filtrados.slice(0, 10000).map(fila => {
         return `<tr class="hover:bg-slate-800/50">${columnas.map(c => {
           let v = fila[c];
           if (c === 'acciones') return `<td class="p-2">${v}</td>`;
           if (c === 'Estado' || c === 'Resultado') return `<td class="p-2 whitespace-nowrap">${badgeEstadoCruce(v)}</td>`;
           if (c === 'Cumplió') return `<td class="p-2 whitespace-nowrap">${badgeCumplio(v)}</td>`;
+          if (columnasExpandibles.includes(c) && v && String(v).length > 50) {
+            return `<td class="p-2 max-w-xs"><span class="celda-expandible" onclick="abrirModalCelda('${c}', '${String(v).replace(/'/g, "\\'")}')">Ver contenido...</span></td>`;
+          }
           if (v === null || v === undefined || v === '') v = '<span class="text-gray-500 italic">no especificado</span>';
           return `<td class="p-2 whitespace-nowrap text-gray-300">${String(v).slice(0,120)}</td>`;
         }).join('')}</tr>`;
@@ -933,6 +1018,21 @@
       return null;
     }
 
+    function segundosAMinutos(seg) {
+      if (seg === null || seg === undefined) return null;
+      return Math.round(seg / 60 * 10) / 10;
+    }
+
+    function segundosAHoras(seg) {
+      if (seg === null || seg === undefined) return null;
+      return Math.round(seg / 3600 * 10) / 10;
+    }
+
+    function minutosAHoras(min) {
+      if (min === null || min === undefined) return null;
+      return Math.round(min / 60 * 10) / 10;
+    }
+
     function formatearFechaCorta(d) {
       if (!d) return '';
       const dd = String(d.getDate()).padStart(2, '0');
@@ -1025,14 +1125,19 @@
           ? Math.round(((coincidencia.fechaHora - progr) / 60000) * 10) / 10
           : null;
 
+        const diferenciaHoras = minutosAHoras(diferenciaMinFirmada);
+
         let duracionSeg = null;
+        let duracionMin = null;
         let estadoTipo = '';
         if (coincidencia) {
           if (coincidencia.fuente === 'PBX') {
             duracionSeg = coincidencia.raw.duracion_segundos != null ? Number(coincidencia.raw.duracion_segundos) : hhmmssASegundos(coincidencia.raw.duracion_hh_mm_ss);
+            duracionMin = segundosAMinutos(duracionSeg);
             estadoTipo = coincidencia.raw.estado || '';
           } else if (coincidencia.fuente === 'Celular') {
             duracionSeg = hhmmssASegundos(coincidencia.raw.duracion);
+            duracionMin = segundosAMinutos(duracionSeg);
             estadoTipo = (coincidencia.raw.tipo || '').toUpperCase();
           }
         }
@@ -1055,7 +1160,9 @@
           hora_llamada_corta: coincidencia && coincidencia.fechaHora ? formatearHoraCorta(coincidencia.fechaHora) : '',
           diferencia_min: diferenciaMin,
           diferencia_min_firmada: diferenciaMinFirmada,
+          diferencia_horas: diferenciaHoras,
           duracion_seg: duracionSeg,
+          duracion_min: duracionMin,
           estado_tipo: estadoTipo,
           catalogo_ok: ejec ? 'Sí' : 'No'
         };
@@ -1137,7 +1244,7 @@
         }).join('')}</tr>`;
       };
 
-      const thead = `<tr>${cols.map(c => `<th class="p-2.5 ${c.key==='pais'?'text-left':'text-right'} text-[10px]">${c.label}</th>`).join('')}</tr>`;
+      const thead = `<tr>${cols.map(c => `<th class="p-2.5 ${c.key==='pais'?'text-left':'text-right'} text-[10px]">${c.label} ${c.key!=='pais'?'<span class="filtro-icono" onclick="abrirFiltroColumnaResumen(\'tabla-resumen-pais\',\''+c.key+'\', this)">▾</span>':''}</th>`).join('')}</tr>`;
       const filas = datos.map(d => filaHtml(d, false)).join('') + filaHtml(total, true);
 
       document.getElementById('tabla-resumen-pais').innerHTML = `
@@ -1261,7 +1368,7 @@
         }).join('')}</tr>`;
       };
 
-      const thead = `<tr>${cols.map(c => `<th class="p-2.5 ${(c.key==='pais'||c.key==='ejecutivo')?'text-left':'text-right'} text-[10px]">${c.label}</th>`).join('')}</tr>`;
+      const thead = `<tr>${cols.map(c => `<th class="p-2.5 ${(c.key==='pais'||c.key==='ejecutivo')?'text-left':'text-right'} text-[10px]">${c.label} ${(c.key!=='pais'&&c.key!=='ejecutivo')?'<span class="filtro-icono" onclick="abrirFiltroColumnaResumen(\'tabla-resumen-ejec\',\''+c.key+'\', this)">▾</span>':''}</th>`).join('')}</tr>`;
       const filas = filasCatalogo.map(d => filaHtml(d, false)).join('') + filaHtml(total, true);
 
       let sinCatalogoHtml = '';
@@ -1334,7 +1441,7 @@
             </button>
           </div>
         </div>
-        <p class="text-[11px] text-gray-500 mb-2">Comparación unificada: Llamadas PBX, Celulares y Reuniones Teams. Un renglón por lead. Teléfono por últimos 8 dígitos. ±5 min tolerancia. Teams: con/sin evidencia.</p>
+        <p class="text-[11px] text-gray-500 mb-2">Comparación unificada: Llamadas PBX, Celulares y Reuniones Teams. Un renglón por lead. Teléfono por últimos 8 dígitos. ±5 min tolerancia. Teams: con/sin evidencia. Nuevas columnas: diferencia en horas y duración en minutos.</p>
         <span id="estado-tabla" class="text-xs text-cyan-400">Calculando cruce...</span>
         <div class="overflow-auto mt-2" style="max-height: 68vh;">
           <table class="w-full text-left text-xs" id="tabla-detalle-unificado"></table>
@@ -1357,7 +1464,9 @@
         'Fecha llamada': r.fecha_llamada_corta,
         'Hora llamada': r.hora_llamada_corta,
         'Diferencia (min)': r.diferencia_min_firmada,
+        'Diferencia (hs)': r.diferencia_horas,
         'Duración (seg)': r.duracion_seg,
+        'Duración (min)': r.duracion_min,
         'Estado/tipo': r.estado_tipo,
         'En catálogo': r.catalogo_ok
       }));
@@ -1476,11 +1585,17 @@
       }
     }
 
+    function abrirFiltroColumnaResumen(tablaId, col, btnEl) {
+      // Dummy function para compatibilidad con resúmenes por ahora
+      alert('Filtro en resúmenes: próximamente');
+    }
+
     // ==================================================================
     // INICIO
     // ==================================================================
     window.addEventListener('DOMContentLoaded', async () => {
       supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+      establecerFechasPorDefecto();
       irA('catalogo');
     });
   </script>

@@ -73,7 +73,7 @@ body.theme-light .modal-celda {
   color: #0f172a !important;
 }
 body.theme-light .modal-overlay {
-  background: rgba(15,23,42,0.15) !important;
+  background: rgba(15,23,42,0.12) !important;
 }
 body.theme-light .cfp-item:hover { background:#f1f5f9 !important; }
 body.theme-light .icon-btn { background: #f8fafc !important; }
@@ -91,6 +91,22 @@ body.theme-light .bg-[#111827] { background-color: #ffffff !important; }
 body.theme-light .bg-[#0f172a]\/10 { background-color: rgba(239,246,255,0.95) !important; }
 body.theme-light .bg-[#1e293b]\/10 { background-color: rgba(248,251,255,0.95) !important; }
 body.theme-light .bg-[#0d1526]\/10 { background-color: rgba(239,246,255,0.95) !important; }
+body.theme-light .bg-[#111827] .text-white,
+body.theme-light .bg-[#1e293b] .text-white,
+body.theme-light .bg-[#0d1526] .text-white,
+body.theme-light .bg-[#0f172a] .text-white {
+  color: #0f172a !important;
+}
+body.theme-light .bg-[#111827] .text-gray-400,
+body.theme-light .bg-[#1e293b] .text-gray-400,
+body.theme-light .bg-[#0d1526] .text-gray-400,
+body.theme-light .bg-[#0f172a] .text-gray-400 {
+  color: #475569 !important;
+}
+body.theme-light .bg-[#111827] { background-color: #ffffff !important; }
+body.theme-light .bg-[#1e293b] { background-color: #f8fbff !important; }
+body.theme-light .bg-[#0d1526] { background-color: #f8fbff !important; }
+body.theme-light .bg-[#0f172a] { background-color: #eff6ff !important; }
 
 .logo-wrapper { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
 .app-logo { width: 44px; height: 44px; object-fit: contain; }

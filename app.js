@@ -822,6 +822,16 @@ function formatearHoraCorta(d) {
   return d.toTimeString().slice(0, 8);
 }
 
+function esReunionVirtual(tipo) {
+  const valor = (tipo || '').toLowerCase();
+  return (valor.includes('virtual') || valor.includes('teams') || valor.includes('team')) && !valor.includes('llamada');
+}
+
+function esLlamadaVirtual(tipo) {
+  const valor = (tipo || '').toLowerCase();
+  return valor.includes('llamada');
+}
+
 async function calcularCruceUnificado() {
   await Promise.all([
     asegurarCache('leads', 'fecha_agendada'),
@@ -831,15 +841,15 @@ async function calcularCruceUnificado() {
     asegurarCache('teams_registro', null)
   ]);
 
-  let leads = cache.leads.filter(l => (l.tipo_reunion || '').toLowerCase().includes('llamada') || (l.tipo_reunion || '').toLowerCase().includes('virtual'));
+  let leads = cache.leads.filter(l => esLlamadaVirtual(l.tipo_reunion) || esReunionVirtual(l.tipo_reunion));
   leads = filtrarPorFechaGlobal(leads, 'fecha_agendada');
   const ahora = new Date();
 
   const resultado = leads.map(lead => {
     const telLead = normalizarTel(lead.telefono);
     const progr = parseFechaHora(lead.fecha_agendada, lead.hora_agendada);
-    const esTeams = (lead.tipo_reunion || '').toLowerCase().includes('virtual') && !(lead.tipo_reunion || '').toLowerCase().includes('llamada');
-    const esLlamada = (lead.tipo_reunion || '').toLowerCase().includes('llamada');
+    const esTeams = esReunionVirtual(lead.tipo_reunion);
+    const esLlamada = esLlamadaVirtual(lead.tipo_reunion);
     
     const ejec = cache.ejecutivos.find(e => (e.nombre_ejecutivo || '').trim().toLowerCase() === (lead.asesor_nombre || '').trim().toLowerCase());
     const usuario = ejec ? ejec.usuario : null;
@@ -1269,10 +1279,7 @@ async function calcularTeams() {
     cargaCompleta.teams_registro = true;
   }
   
-  let leads = cache.leads.filter(l => {
-    const tipo = (l.tipo_reunion || '').toLowerCase();
-    return tipo.includes('virtual') && !tipo.includes('llamada');
-  });
+  let leads = cache.leads.filter(l => esReunionVirtual(l.tipo_reunion));
   
   leads = filtrarPorFechaGlobal(leads, 'fecha_agendada');
   

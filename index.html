@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard IntelFon - InnovaIGT</title>
+  <title>Dashboard Citas - InnovaIGT</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -15,14 +15,14 @@
     td { border-bottom: 1px solid #1e293b; }
     .sidebar-btn { display:flex; align-items:center; gap:.5rem; width:100%; text-align:left; padding:.6rem .8rem; border-radius:.5rem; font-size:.82rem; color:#cbd5e1; cursor:pointer; border:none; background:none; }
     .sidebar-btn:hover { background:#1e293b; }
-    .sidebar-btn.active { background:#0e7490; color:#fff; font-weight:600; }
+    .sidebar-btn.active { background:#58151a; color:#fff; font-weight:600; }
     .sub-btn { display:block; width:100%; text-align:left; padding:.4rem .8rem .4rem 2.2rem; border-radius:.4rem; font-size:.78rem; color:#94a3b8; cursor:pointer; border:none; background:none; }
     .sub-btn:hover { background:#1e293b; color:#fff; }
-    .sub-btn.active { background:#164e63; color:#67e8f9; font-weight:600; }
+    .sub-btn.active { background:#3b0f12; color:#fff; font-weight:600; }
     .badge { padding:2px 9px; border-radius:9999px; font-size:.68rem; font-weight:700; white-space:nowrap; display:inline-block; }
     .filtro-icono { cursor:pointer; margin-left:4px; opacity:.6; width:16px; height:16px; display:inline-block; }
     .filtro-icono:hover { opacity:1; }
-    .filtro-icono.activo { color:#22d3ee; opacity:1; }
+    .filtro-icono.activo { color:#f87171; opacity:1; }
     #col-filter-popup { box-shadow: 0 10px 30px rgba(0,0,0,.5); }
     .cfp-item { display:flex; align-items:center; gap:6px; padding:2px 4px; border-radius:4px; }
     .cfp-item:hover { background:#0f172a; }
@@ -45,9 +45,25 @@
 
     <!-- SIDEBAR -->
     <aside class="w-64 bg-[#0f172a] border-r border-gray-800 flex flex-col shrink-0 overflow-y-auto">
-      <div class="p-4 border-b border-gray-800">
-        <h1 class="text-sm font-bold text-cyan-400">Dashboard Intelfon</h1>
-        <p class="text-[10px] text-gray-500 mt-0.5">SCORECARD CITAS</p>
+      <div class="p-4 border-b border-gray-800 flex items-center gap-3">
+        <div aria-hidden style="width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:8px;background:linear-gradient(#7f1d1d,#4b0f12);box-shadow:inset 0 -3px 6px rgba(0,0,0,.4);">
+          <!-- simple inline red logo -->
+          <svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="logo">
+            <defs>
+              <radialGradient id="g1" cx="50%" cy="35%" r="80%">
+                <stop offset="0%" stop-color="#ff6b6b" />
+                <stop offset="60%" stop-color="#c81d1d" />
+                <stop offset="100%" stop-color="#7f1d1d" />
+              </radialGradient>
+            </defs>
+            <circle cx="50" cy="50" r="45" fill="url(#g1)" stroke="#3b0f12" stroke-width="4" />
+            <text x="50" y="57" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="36" fill="#fff" text-anchor="middle">RED</text>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-sm font-bold text-red-300">Dashboard Citas</h1>
+          <p class="text-[10px] text-gray-400 mt-0.5">metricas</p>
+        </div>
       </div>
       <nav class="p-3 space-y-1 flex-1">
         <button class="sidebar-btn" data-view="config" onclick="irA('config')">
@@ -123,7 +139,7 @@
         <input type="date" id="global-desde" class="p-1.5 text-xs rounded">
         <label class="text-[11px] text-gray-500">Hasta</label>
         <input type="date" id="global-hasta" class="p-1.5 text-xs rounded">
-        <button onclick="render()" class="bg-cyan-700 hover:bg-cyan-600 text-xs px-3 py-1.5 rounded font-bold flex items-center gap-1">
+        <button onclick="render()" class="bg-red-700 hover:bg-red-600 text-xs px-3 py-1.5 rounded font-bold flex items-center gap-1">
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
           Aplicar
         </button>
@@ -142,22 +158,22 @@
   </div>
 
   <!-- POPUP DE FILTRO ESTILO EXCEL -->
-  <div id="col-filter-popup" class="hidden fixed z-50 bg-[#1e293b] border border-gray-700 rounded-lg p-2 w-64 text-xs">
+    <div id="col-filter-popup" class="hidden fixed z-50 bg-[#1e293b] border border-gray-700 rounded-lg p-2 w-64 text-xs">
     <input id="cfp-search" placeholder="Buscar y filtra automáticamente..." oninput="cfpFiltrarLista()" class="w-full p-1.5 mb-2 text-xs rounded">
     <div class="flex justify-between mb-1 px-1">
-      <button onclick="cfpSeleccionarTodos()" class="text-cyan-400 hover:underline">Seleccionar todos</button>
-      <button onclick="cfpBorrar()" class="text-cyan-400 hover:underline">Ninguno</button>
+      <button onclick="cfpSeleccionarTodos()" class="text-red-300 hover:underline">Seleccionar todos</button>
+      <button onclick="cfpBorrar()" class="text-red-300 hover:underline">Ninguno</button>
     </div>
     <div id="cfp-lista" class="max-h-52 overflow-y-auto space-y-0.5 border-t border-b border-gray-700 py-1 my-1"></div>
     <div class="flex justify-end gap-2 mt-2">
-      <button onclick="cfpCerrar()" class="px-2 py-1 bg-cyan-600 hover:bg-cyan-500 rounded font-bold">Cerrar</button>
+      <button onclick="cfpCerrar()" class="px-2 py-1 bg-red-600 hover:bg-red-500 rounded font-bold">Cerrar</button>
     </div>
   </div>
 
   <!-- MODAL CRUD EJECUTIVOS -->
   <div id="modal-crud" class="modal-overlay modal-hidden">
     <div class="modal-content">
-      <h2 class="text-lg font-bold text-cyan-400 mb-4" id="modal-titulo">Nuevo Ejecutivo</h2>
+      <h2 class="text-lg font-bold text-red-300 mb-4" id="modal-titulo">Nuevo Ejecutivo</h2>
       <form id="form-ejecutivo" onsubmit="guardarEjecutivo(event)">
         <input type="hidden" id="ejecutivo-id">
         
@@ -198,7 +214,7 @@
 
         <div class="flex gap-2 justify-end mt-6">
           <button type="button" onclick="cerrarModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">Cancelar</button>
-          <button type="submit" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded text-sm font-bold">Guardar</button>
+          <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded text-sm font-bold">Guardar</button>
         </div>
       </form>
     </div>
@@ -207,7 +223,7 @@
   <!-- MODAL EDITAR TEAMS -->
   <div id="modal-teams" class="modal-overlay modal-hidden">
     <div class="modal-content">
-      <h2 class="text-lg font-bold text-cyan-400 mb-4">Editar Reunión Teams</h2>
+      <h2 class="text-lg font-bold text-red-300 mb-4">Editar Reunión Teams</h2>
       <form id="form-teams" onsubmit="guardarTeamsModal(event)">
         <input type="hidden" id="teams-id">
         
@@ -248,7 +264,7 @@
 
         <div class="flex gap-2 justify-end mt-6">
           <button type="button" onclick="cerrarModalTeams()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">Cancelar</button>
-          <button type="submit" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded text-sm font-bold">Guardar</button>
+          <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded text-sm font-bold">Guardar</button>
         </div>
       </form>
     </div>
@@ -258,14 +274,14 @@
   <div id="modal-celda" class="modal-overlay modal-hidden">
     <div class="modal-celda">
       <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-bold text-cyan-400" id="modal-celda-titulo">Contenido de la celda</h2>
+        <h2 class="text-lg font-bold text-red-300" id="modal-celda-titulo">Contenido de la celda</h2>
         <button onclick="cerrarModalCelda()" class="text-gray-400 hover:text-gray-300">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
       </div>
       <div id="modal-celda-contenido" class="text-sm text-gray-300 whitespace-pre-wrap break-words"></div>
       <div class="flex gap-2 justify-end mt-6">
-        <button onclick="copiarAlPortapapeles()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded text-sm font-bold flex items-center gap-2">
+        <button onclick="copiarAlPortapapeles()" class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded text-sm font-bold flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
           Copiar
         </button>
@@ -366,11 +382,11 @@
           </h2>
           <div>
             <label class="block text-xs text-gray-400 mb-1">URL de Supabase</label>
-            <input type="text" id="sb-url" value="${SB_URL}" class="w-full p-2 text-xs rounded focus:outline-none focus:border-cyan-500">
+            <input type="text" id="sb-url" value="${SB_URL}" class="w-full p-2 text-xs rounded focus:outline-none focus:border-red-500">
           </div>
           <div>
             <label class="block text-xs text-gray-400 mb-1">Anon Key de Supabase</label>
-            <input type="password" id="sb-key" value="${SB_KEY}" class="w-full p-2 text-xs rounded focus:outline-none focus:border-cyan-500">
+            <input type="password" id="sb-key" value="${SB_KEY}" class="w-full p-2 text-xs rounded focus:outline-none focus:border-red-500">
           </div>
           <div class="flex gap-2">
             <button onclick="toggleKey()" class="bg-gray-800 text-xs px-3 py-1.5 rounded hover:bg-gray-700 flex items-center gap-1">
@@ -384,15 +400,15 @@
           </div>
           <hr class="border-gray-800">
           <h3 class="text-xs font-bold text-gray-400">Sincronización con la API externa</h3>
-          <button onclick="sincronizarAPI()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-3 text-xs rounded flex items-center justify-center gap-1">
+          <button onclick="sincronizarAPI()" class="w-full bg-red-700 hover:bg-red-700 text-white font-bold py-2 px-3 text-xs rounded flex items-center justify-center gap-1">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
             Sincronizar API (Edge Function)
           </button>
-          <button onclick="recargarTodoYContadores()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 text-xs rounded flex items-center justify-center gap-1">
+          <button onclick="recargarTodoYContadores()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 text-xs rounded flex items-center justify-center gap-1">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             Recargar todos los datos
           </button>
-          <span id="estado-config" class="text-xs text-cyan-400 hidden">Procesando...</span>
+          <span id="estado-config" class="text-xs text-red-300 hidden">Procesando...</span>
         </div>`;
     }
 
@@ -434,14 +450,14 @@
 
       const filaCol = (nombre, explicacion) => `
         <div class="flex gap-3 py-1.5 border-b border-gray-800/60 last:border-0">
-          <span class="text-cyan-400 font-mono font-bold shrink-0 w-44">${nombre}</span>
+          <span class="text-red-300 font-mono font-bold shrink-0 w-44">${nombre}</span>
           <span class="text-gray-400">${explicacion}</span>
         </div>`;
 
       main.innerHTML = `
         <div class="max-w-4xl space-y-4">
-          <div class="bg-[#0e7490]/10 border border-cyan-900 rounded-lg p-4">
-            <h2 class="text-sm font-bold text-cyan-300 mb-1">Criterios de clasificación del dashboard</h2>
+          <div class="bg-[#7f1d1d]/10 border border-red-900 rounded-lg p-4">
+            <h2 class="text-sm font-bold text-red-300 mb-1">Criterios de clasificación del dashboard</h2>
             <p class="text-xs text-gray-400">Esta pantalla explica los criterios del cruce, estados y columnas de los resúmenes. Sirve como referencia para entender por qué un lead cae en un grupo u otro.</p>
           </div>
           ${seccion('Estados de cumplimiento (resultado)', '🎯', `
@@ -489,22 +505,22 @@
               Catálogo de Ejecutivos (CRUD)
             </h2>
             <div class="flex flex-wrap gap-2 items-center">
-              <button onclick="abrirModalNuevo()" class="bg-teal-600 hover:bg-teal-700 text-xs px-3 py-1.5 rounded font-bold flex items-center gap-1">
+              <button onclick="abrirModalNuevo()" class="bg-red-700 hover:bg-red-700 text-xs px-3 py-1.5 rounded font-bold flex items-center gap-1">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                 Nuevo Ejecutivo
               </button>
-              <button onclick="recargarUnaTabla('ejecutivos','null')" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+              <button onclick="recargarUnaTabla('ejecutivos','null')" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 Recargar
               </button>
-              <button onclick="exportarXLSX('tabla-ejecutivos','catalogo_ejecutivos')" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+              <button onclick="exportarXLSX('tabla-ejecutivos','catalogo_ejecutivos')" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                 Exportar XLSX
               </button>
             </div>
           </div>
           <p class="text-[11px] text-gray-500 mb-3">Gestiona la base de datos de ejecutivos. Estos datos se usan para la búsqueda inteligente en los resúmenes de llamadas. Agranda, edita o elimina directamente desde aquí.</p>
-          <span id="estado-tabla" class="text-xs text-cyan-400">Cargando...</span>
+          <span id="estado-tabla" class="text-xs text-red-300">Cargando...</span>
           <div class="overflow-auto mt-2" style="max-height: 68vh;">
             <table class="w-full text-left text-xs" id="tabla-ejecutivos"></table>
           </div>
@@ -516,7 +532,7 @@
       const ejecutivosConAcciones = cache.ejecutivos.map(e => ({
         ...e,
         acciones: `<div class="flex gap-1" style="white-space: nowrap;">
-          <button onclick="abrirModalEditar(${e.id})" class="bg-blue-600 hover:bg-blue-700 text-xs px-2 py-1 rounded flex items-center gap-1">
+          <button onclick="abrirModalEditar(${e.id})" class="bg-red-600 hover:bg-red-700 text-xs px-2 py-1 rounded flex items-center gap-1">
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
           </button>
           <button onclick="confirmarEliminar(${e.id})" class="bg-red-600 hover:bg-red-700 text-xs px-2 py-1 rounded flex items-center gap-1">
@@ -721,17 +737,17 @@
           <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
             <h2 class="text-sm font-bold text-gray-300">${titulo}</h2>
             <div class="flex flex-wrap gap-2 items-center">
-              <button onclick="recargarUnaTabla('${tabla}','${columnaFecha||''}')" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+              <button onclick="recargarUnaTabla('${tabla}','${columnaFecha||''}')" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 Recargar
               </button>
-              <button onclick="exportarXLSX('tabla-dinamica','${tabla}')" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+              <button onclick="exportarXLSX('tabla-dinamica','${tabla}')" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                 Exportar XLSX
               </button>
             </div>
           </div>
-          <span id="estado-tabla" class="text-xs text-cyan-400">Cargando...</span>
+          <span id="estado-tabla" class="text-xs text-red-300">Cargando...</span>
           <div class="overflow-auto mt-2" style="max-height: 68vh;">
             <table class="w-full text-left text-xs" id="tabla-dinamica"></table>
           </div>
@@ -754,18 +770,18 @@
           <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
             <h2 class="text-sm font-bold text-gray-300">Reuniones Teams</h2>
             <div class="flex flex-wrap gap-2 items-center">
-              <button onclick="renderRegistroTeams(document.getElementById('main-content'))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+              <button onclick="renderRegistroTeams(document.getElementById('main-content'))" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 Recalcular
               </button>
-              <button onclick="exportarXLSX('tabla-detalle-teams','detalle_teams')" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+              <button onclick="exportarXLSX('tabla-detalle-teams','detalle_teams')" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                 Exportar XLSX
               </button>
             </div>
           </div>
           <p class="text-[11px] text-gray-500 mb-2">Edita los campos de Fecha reunión, Hora reunión y Evidencia (link) haciendo clic en el icono editar. Se guardan automáticamente en la BD.</p>
-          <span id="estado-tabla" class="text-xs text-cyan-400">Cargando...</span>
+          <span id="estado-tabla" class="text-xs text-red-300">Cargando...</span>
           <div class="overflow-auto mt-2" style="max-height: 68vh;">
             <table class="w-full text-left text-xs" id="tabla-detalle-teams"></table>
           </div>
@@ -781,9 +797,9 @@
         'Cliente': r.cliente,
         'Fecha reunión': r.fecha_reunion,
         'Hora reunión': r.hora_reunion,
-        'Evidencia': r.evidencia_url ? `<a href="${r.evidencia_url}" target="_blank" class="text-cyan-400 hover:underline">Ver</a>` : '(Vacío)',
+        'Evidencia': r.evidencia_url ? `<a href="${r.evidencia_url}" target="_blank" class="text-red-300 hover:underline">Ver</a>` : '(Vacío)',
         'Estado': badgeEstadoCruce(r.estado_cruce),
-        'acciones': `<button onclick="abrirModalTeams(${r.id})" class="bg-blue-600 hover:bg-blue-700 text-xs px-2 py-1 rounded flex items-center gap-1">
+        'acciones': `<button onclick="abrirModalTeams(${r.id})" class="bg-red-600 hover:bg-red-700 text-xs px-2 py-1 rounded flex items-center gap-1">
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
         </button>`
       }));
@@ -1293,18 +1309,18 @@
         <div class="flex justify-between items-center mb-3">
           <h2 class="text-sm font-bold text-gray-300">Resumen de Cumplimiento por País</h2>
           <div class="flex gap-2">
-            <button onclick="renderResumenPais(document.getElementById('main-content'))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+            <button onclick="renderResumenPais(document.getElementById('main-content'))" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
               Recalcular
             </button>
-            <button id="btn-exp-pais" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+            <button id="btn-exp-pais" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
               Exportar XLSX
             </button>
           </div>
         </div>
         <p class="text-[11px] text-gray-500 mb-3">Incluye Llamadas PBX, Celulares y Teams. Teléfonos comparados por últimos 8 dígitos. ±5 min de tolerancia. Ejecutivo identificado por extensión/usuario según catálogo.</p>
-        <div id="tabla-resumen-pais" class="overflow-auto text-xs"><span class="text-cyan-400">Calculando cruce...</span></div>
+        <div id="tabla-resumen-pais" class="overflow-auto text-xs"><span class="text-red-300">Calculando cruce...</span></div>
       </div>`;
 
       const cruce = await calcularCruceUnificado();
@@ -1437,18 +1453,18 @@
         <div class="flex justify-between items-center mb-3">
           <h2 class="text-sm font-bold text-gray-300">Resumen Cumplimiento</h2>
           <div class="flex gap-2">
-            <button onclick="renderResumenEjecutivo(document.getElementById('main-content'))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+            <button onclick="renderResumenEjecutivo(document.getElementById('main-content'))" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
               Recalcular
             </button>
-            <button id="btn-exp-ejec" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+            <button id="btn-exp-ejec" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
               Exportar XLSX
             </button>
           </div>
         </div>
         <p class="text-[11px] text-gray-500 mb-3">Evaluación por ejecutivo. El % excluye pendientes. Todos los ejecutivos en catálogo se listan aunque tengan 0 leads. Incluye Llamadas y Teams.</p>
-        <div id="tabla-resumen-ejec" class="overflow-auto text-xs"><span class="text-cyan-400">Calculando cruce...</span></div>
+        <div id="tabla-resumen-ejec" class="overflow-auto text-xs"><span class="text-red-300">Calculando cruce...</span></div>
       </div>`;
 
       const cruce = await calcularCruceUnificado();
@@ -1467,18 +1483,18 @@
         <div class="flex justify-between items-center mb-3">
           <h2 class="text-sm font-bold text-gray-300">Detalle Cumplimiento Leads</h2>
           <div class="flex gap-2">
-            <button onclick="renderDetalleUnificado(document.getElementById('main-content'))" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+            <button onclick="renderDetalleUnificado(document.getElementById('main-content'))" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
               Recalcular
             </button>
-            <button onclick="exportarXLSX('tabla-detalle-unificado','detalle_cumplimiento_leads')" class="bg-emerald-600 hover:bg-emerald-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+            <button onclick="exportarXLSX('tabla-detalle-unificado','detalle_cumplimiento_leads')" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
               Exportar XLSX
             </button>
           </div>
         </div>
         <p class="text-[11px] text-gray-500 mb-2">Comparación unificada: Llamadas PBX, Celulares y Reuniones Teams. Un renglón por lead. Teléfono por últimos 8 dígitos. ±5 min tolerancia. Teams: con/sin evidencia. Nuevas columnas: diferencia en horas y duración en minutos.</p>
-        <span id="estado-tabla" class="text-xs text-cyan-400">Calculando cruce...</span>
+        <span id="estado-tabla" class="text-xs text-red-300">Calculando cruce...</span>
         <div class="overflow-auto mt-2" style="max-height: 68vh;">
           <table class="w-full text-left text-xs" id="tabla-detalle-unificado"></table>
         </div>

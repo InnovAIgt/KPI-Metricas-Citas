@@ -50,6 +50,27 @@ function establecerFechasPorDefecto() {
   document.getElementById('global-hasta').value = semana.hasta;
 }
 
+function aplicarTema(tema) {
+  document.body.classList.remove('theme-dark', 'theme-light');
+  document.body.classList.add(`theme-${tema}`);
+  localStorage.setItem('dashboard-theme', tema);
+  const btn = document.getElementById('btn-theme-toggle');
+  if (btn) {
+    btn.innerHTML = tema === 'dark' ? '🌙 Oscuro' : '☀️ Claro';
+  }
+}
+
+function toggleTheme() {
+  const temaActual = document.body.classList.contains('theme-dark') ? 'dark' : 'light';
+  aplicarTema(temaActual === 'dark' ? 'light' : 'dark');
+}
+
+function initTheme() {
+  const temaGuardado = localStorage.getItem('dashboard-theme');
+  const temaPredeterminado = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  aplicarTema(temaGuardado || temaPredeterminado);
+}
+
 // ==================================================================
 // NAVEGACION
 // ==================================================================
@@ -1394,6 +1415,7 @@ function aplicarFiltroResumen() {
 
 window.addEventListener('DOMContentLoaded', async () => {
   supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+  initTheme();
   establecerFechasPorDefecto();
   irA('catalogo');
 });

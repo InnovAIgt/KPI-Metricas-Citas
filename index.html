@@ -815,10 +815,22 @@
     }
 
     function abrirModalCelda(titulo, contenido) {
-      contenidoModalCelda = contenido;
+      // Strip any HTML tags from the contenido and show plain text
+      const plain = stripHtml(contenido);
+      contenidoModalCelda = plain;
       document.getElementById('modal-celda-titulo').textContent = titulo;
-      document.getElementById('modal-celda-contenido').textContent = contenido;
+      document.getElementById('modal-celda-contenido').textContent = plain;
       document.getElementById('modal-celda').classList.remove('modal-hidden');
+    }
+
+    function stripHtml(html) {
+      try {
+        const d = document.createElement('div');
+        d.innerHTML = html || '';
+        return d.textContent || d.innerText || '';
+      } catch (err) {
+        return String(html || '');
+      }
     }
 
     function abrirModalCeldaFromEl(el) {
@@ -1262,8 +1274,8 @@
 
       const thead = `<tr>${cols.map((c, idx) => {
         const align = c.key === 'pais' ? 'text-left' : 'text-right';
-        const hasFilter = c.key !== 'pais';
-        return `<th class="p-2.5 ${align} text-[10px]">${c.label} ${hasFilter ? '<span class="filtro-icono" onclick="abrirFiltroColumnaResumen(\'tabla-resumen-pais\',\'' + c.key + '\', this)">▾</span>' : ''}</th>`;
+        const hasFilter = true; // permitir filtro en todas las columnas
+        return `<th data-key="${c.key}" class="p-2.5 ${align} text-[10px]">${c.label} ${hasFilter ? '<span class="filtro-icono" onclick="abrirFiltroColumnaResumen(\'tabla-resumen-pais\',\'' + c.key + '\', this)">▾</span>' : ''}</th>`;
       }).join('')}</tr>`;
       const filas = datos.map(d => filaHtml(d, false)).join('') + filaHtml(total, true);
 
@@ -1390,8 +1402,8 @@
 
       const thead = `<tr>${cols.map((c, idx) => {
         const align = (c.key === 'pais' || c.key === 'ejecutivo') ? 'text-left' : 'text-right';
-        const hasFilter = (c.key !== 'pais' && c.key !== 'ejecutivo');
-        return `<th class="p-2.5 ${align} text-[10px]">${c.label} ${hasFilter ? '<span class="filtro-icono" onclick="abrirFiltroColumnaResumen(\'tabla-resumen-ejec\',\'' + c.key + '\', this)">▾</span>' : ''}</th>`;
+        const hasFilter = true; // habilitar filtros en País y Ejecutivo
+        return `<th data-key="${c.key}" class="p-2.5 ${align} text-[10px]">${c.label} ${hasFilter ? '<span class="filtro-icono" onclick="abrirFiltroColumnaResumen(\'tabla-resumen-ejec\',\'' + c.key + '\', this)">▾</span>' : ''}</th>`;
       }).join('')}</tr>`;
       const filas = filasCatalogo.map(d => filaHtml(d, false)).join('') + filaHtml(total, true);
 
@@ -1616,19 +1628,18 @@
       // Extraer todos los valores de la columna de la tabla visible
       const filas = tabla.querySelectorAll('tbody tr');
       const valoresUnicos = new Set();
-      
+
+      const ths = Array.from(tabla.querySelectorAll('thead th'));
+      const colIndex = ths.findIndex(th => (th.dataset && th.dataset.key === col) || th.textContent.replace(/▾/, '').trim() === col);
+
       filas.forEach(fila => {
         const celdas = fila.querySelectorAll('td');
-        const colIndex = Array.from(tabla.querySelectorAll('thead th')).findIndex(th => {
-          const label = th.textContent.replace(/▾/, '').trim();
-          return label === col;
-        });
         if (colIndex >= 0 && celdas[colIndex]) {
           const valor = celdas[colIndex].textContent.trim();
           if (valor && valor !== 'TOTAL' && valor !== '') valoresUnicos.add(valor);
         }
       });
-      
+
       const valoresOrdenados = Array.from(valoresUnicos).sort((a,b) => a.localeCompare(b));
       cfpState = { 
         tablaId, 
@@ -1653,22 +1664,19 @@
       const { tablaId, col, seleccion } = cfpState;
       const tabla = document.getElementById(tablaId);
       if (!tabla) return;
-      
       const filas = tabla.querySelectorAll('tbody tr');
+      const ths = Array.from(tabla.querySelectorAll('thead th'));
+      const colIndex = ths.findIndex(th => (th.dataset && th.dataset.key === col) || th.textContent.replace(/▾/, '').trim() === col);
+
       filas.forEach(fila => {
         const celdas = fila.querySelectorAll('td');
-        const colIndex = Array.from(tabla.querySelectorAll('thead th')).findIndex(th => {
-          const label = th.textContent.replace(/▾/, '').trim();
-          return label === col;
-        });
-        
         if (colIndex >= 0 && celdas[colIndex]) {
           const valor = celdas[colIndex].textContent.trim();
           const mostrar = seleccion.size === 0 || seleccion.has(valor) || valor === 'TOTAL';
           fila.style.display = mostrar ? '' : 'none';
         }
       });
-      
+
       cfpCerrar();
     }
 

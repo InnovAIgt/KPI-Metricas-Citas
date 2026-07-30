@@ -1,0 +1,28 @@
+﻿body { background-color: #0b1120; color: #f3f4f6; }
+input, select { background-color: #1e293b; color: #ffffff; border: 1px solid #334155; }
+th { background-color: #1e293b; color: #94a3b8; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; white-space: nowrap; }
+td { border-bottom: 1px solid #1e293b; }
+.sidebar-btn { display:flex; align-items:center; gap:.5rem; width:100%; text-align:left; padding:.6rem .8rem; border-radius:.5rem; font-size:.82rem; color:#cbd5e1; cursor:pointer; border:none; background:none; }
+.sidebar-btn:hover { background:#1e293b; }
+.sidebar-btn.active { background:#58151a; color:#fff; font-weight:600; }
+.sub-btn { display:block; width:100%; text-align:left; padding:.4rem .8rem .4rem 2.2rem; border-radius:.4rem; font-size:.78rem; color:#94a3b8; cursor:pointer; border:none; background:none; }
+.sub-btn:hover { background:#1e293b; color:#fff; }
+.sub-btn.active { background:#3b0f12; color:#fff; font-weight:600; }
+.badge { padding:2px 9px; border-radius:9999px; font-size:.68rem; font-weight:700; white-space:nowrap; display:inline-block; }
+.filtro-icono { cursor:pointer; margin-left:4px; opacity:.6; width:16px; height:16px; display:inline-block; }
+.filtro-icono:hover { opacity:1; }
+.filtro-icono.activo { color:#f87171; opacity:1; }
+#col-filter-popup { box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+.cfp-item { display:flex; align-items:center; gap:6px; padding:2px 4px; border-radius:4px; }
+.cfp-item:hover { background:#0f172a; }
+.modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:1000; }
+.modal-content { background:#1e293b; border:1px solid #334155; border-radius:0.5rem; padding:2rem; max-width:500px; width:90%; max-height:90vh; overflow-y:auto; }
+.modal-hidden { display:none; }
+.modal-celda { background:#1e293b; border:1px solid #334155; border-radius:0.5rem; padding:2rem; max-width:700px; width:90%; max-height:80vh; overflow-y:auto; }
+.form-group { margin-bottom:1rem; }
+.form-group label { display:block; font-size:0.875rem; color:#cbd5e1; margin-bottom:0.25rem; font-weight:600; }
+.form-group input, .form-group select { width:100%; padding:0.5rem; font-size:0.875rem; border-radius:0.375rem; }
+.icon-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; cursor:pointer; }
+.teams-edit-input { background-color:#0f172a; color:#fff; border:1px solid #334155; padding:0.4rem; border-radius:0.3rem; font-size:0.85rem; }
+.celda-expandible { cursor:pointer; color:#94a3b8; text-decoration:underline; }
+.celda-expandible:hover { color:#cbd5e1; }

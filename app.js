@@ -54,9 +54,18 @@ function aplicarTema(tema) {
   document.body.classList.remove('theme-dark', 'theme-light');
   document.body.classList.add(`theme-${tema}`);
   localStorage.setItem('dashboard-theme', tema);
-  const btn = document.getElementById('btn-theme-toggle');
-  if (btn) {
-    btn.innerHTML = tema === 'dark' ? '🌙 Oscuro' : '☀️ Claro';
+  const icon = document.getElementById('theme-icon');
+  const label = document.getElementById('theme-label');
+  if (icon && label) {
+    if (tema === 'dark') {
+      icon.setAttribute('viewBox', '0 0 24 24');
+      icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z"></path>';
+      label.textContent = 'Oscuro';
+    } else {
+      icon.setAttribute('viewBox', '0 0 24 24');
+      icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.36-6.36l-1.42 1.42M7.05 16.95l-1.42 1.42M18.36 18.36l-1.42-1.42M7.05 7.05L5.64 5.64M12 8a4 4 0 100 8 4 4 0 000-8z"></path>';
+      label.textContent = 'Claro';
+    }
   }
 }
 

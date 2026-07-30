@@ -44,15 +44,23 @@ body.theme-light .bg-[#111827] { background-color: #ffffff !important; }
 body.theme-light .bg-[#1e293b] { background-color: #f1f5f9 !important; }
 body.theme-light .bg-[#0d1526] { background-color: #e2e8f0 !important; }
 body.theme-light .bg-[#0f172a] { background-color: #ffffff !important; }
+body.theme-light .bg-[#111827] { background-color: #f8fafc !important; }
 body.theme-light .bg-[#1e293b]/10 { background-color: rgba(241,245,249,0.1) !important; }
 body.theme-light .bg-gray-800 { background-color: #e2e8f0 !important; }
 body.theme-light .bg-gray-700 { background-color: #cbd5e1 !important; }
 body.theme-light .border-gray-800 { border-color: #cbd5e1 !important; }
-body.theme-light .border-gray-700 { border-color: #cbd5e1 !important; }
+body.theme-light .border-gray-700 { border-color: #e2e8f0 !important; }
+body.theme-light .border-gray-600 { border-color: #e2e8f0 !important; }
+body.theme-light .text-gray-400 { color: #475569 !important; }
+body.theme-light .text-gray-500 { color: #64748b !important; }
+body.theme-light .text-gray-600 { color: #475569 !important; }
+body.theme-light .text-gray-700 { color: #334155 !important; }
 body.theme-light .bg-red-700 { background-color: #b91c1c !important; }
 body.theme-light .bg-red-600 { background-color: #dc2626 !important; }
 body.theme-light .bg-slate-700 { background-color: #94a3b8 !important; }
 body.theme-light .bg-slate-800 { background-color: #64748b !important; }
+body.theme-light .text-white { color: #0f172a !important; }
+body.theme-light .border-gray-800 { border-color: #cbd5e1 !important; }
 
 .logo-wrapper { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
 .app-logo { width: 44px; height: 44px; object-fit: contain; }

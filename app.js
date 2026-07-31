@@ -641,7 +641,12 @@ function repintar(contId) {
         return `<td class="p-2 max-w-xs"><span class="celda-expandible" data-col="${c}" data-val="${encoded}" onclick="abrirModalCeldaFromEl(this)">Ver contenido...</span></td>`;
       }
       if (v === null || v === undefined || v === '') v = '<span class="text-gray-500 italic">no especificado</span>';
-      return `<td class="p-2 whitespace-nowrap text-gray-300">${String(v).slice(0,120)}</td>`;
+      const rawValue = String(v);
+      const contenidoCelda = /<[^>]+>/.test(rawValue) ? rawValue : rawValue.slice(0,120);
+      if (c === 'Evidencia') {
+        return `<td class="p-2 text-gray-300 align-top">${contenidoCelda}</td>`;
+      }
+      return `<td class="p-2 whitespace-nowrap text-gray-300">${contenidoCelda}</td>`;
     }).join('')}</tr>`;
   }).join('');
 

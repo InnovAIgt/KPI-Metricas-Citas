@@ -822,14 +822,14 @@ function formatearHoraCorta(d) {
   return d.toTimeString().slice(0, 8);
 }
 
-function esReunionVirtual(tipo) {
+function esReunionTeams(tipo) {
   const valor = (tipo || '').toLowerCase();
-  return (valor.includes('virtual') || valor.includes('teams') || valor.includes('team')) && !valor.includes('llamada');
+  return valor.includes('teams') || valor.includes('virtual');
 }
 
-function esLlamadaVirtual(tipo) {
+function esLlamadaTelefonica(tipo) {
   const valor = (tipo || '').toLowerCase();
-  return valor.includes('llamada');
+  return valor.includes('llamada') && !valor.includes('teams');
 }
 
 async function calcularCruceUnificado() {
@@ -841,15 +841,15 @@ async function calcularCruceUnificado() {
     asegurarCache('teams_registro', null)
   ]);
 
-  let leads = cache.leads.filter(l => esLlamadaVirtual(l.tipo_reunion) || esReunionVirtual(l.tipo_reunion));
+  let leads = cache.leads.filter(l => esLlamadaTelefonica(l.tipo_reunion) || esReunionTeams(l.tipo_reunion));
   leads = filtrarPorFechaGlobal(leads, 'fecha_agendada');
   const ahora = new Date();
 
   const resultado = leads.map(lead => {
     const telLead = normalizarTel(lead.telefono);
     const progr = parseFechaHora(lead.fecha_agendada, lead.hora_agendada);
-    const esTeams = esReunionVirtual(lead.tipo_reunion);
-    const esLlamada = esLlamadaVirtual(lead.tipo_reunion);
+    const esTeams = esReunionTeams(lead.tipo_reunion);
+    const esLlamada = esLlamadaTelefonica(lead.tipo_reunion);
     
     const ejec = cache.ejecutivos.find(e => (e.nombre_ejecutivo || '').trim().toLowerCase() === (lead.asesor_nombre || '').trim().toLowerCase());
     const usuario = ejec ? ejec.usuario : null;
@@ -1279,7 +1279,7 @@ async function calcularTeams() {
     cargaCompleta.teams_registro = true;
   }
   
-  let leads = cache.leads.filter(l => esReunionVirtual(l.tipo_reunion));
+  let leads = cache.leads.filter(l => esReunionTeams(l.tipo_reunion));
   
   leads = filtrarPorFechaGlobal(leads, 'fecha_agendada');
   

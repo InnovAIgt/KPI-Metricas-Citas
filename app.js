@@ -535,10 +535,12 @@ async function renderRegistroTeams(main) {
     'Evidencia': r.evidencia_url ? `<a href="${r.evidencia_url}" target="_blank" class="text-red-300 hover:underline">Ver</a>` : '(Vacío)',
     'Estado': badgeEstadoCruce(r.estado_cruce),
     'acciones': `<button onclick="abrirModalTeams('${r.teams_codigo}')" class="bg-red-600 hover:bg-red-700 text-xs px-2 py-1 rounded flex items-center gap-1">
-  await cargarTablaCompleta(tabla, columnaFecha || null);
-  let datosFiltrados = filtrarPorFechaGlobal(cache[tabla], columnaFecha);
-  datosFiltrados = datosFiltrados.map(({ id, ...resto }) => resto);
-  pintarTablaConFiltros('tabla-dinamica', datosFiltrados);
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l8.768-8.768a2 2 0 112.828 2.828L11.828 13.828a2 2 0 01-.878.515l-4.242 1.060a1 1 0 01-1.213-1.213l1.060-4.242a2 2 0 01.515-.878z"></path></svg>
+      Editar
+    </button>`
+  }));
+
+  pintarTablaConFiltros('tabla-detalle-teams', detalleConAcciones);
 }
 
 let filtroColState = {};

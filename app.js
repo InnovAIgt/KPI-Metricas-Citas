@@ -1352,6 +1352,15 @@ async function guardarTeamsModal(e) {
     cliente: document.getElementById('teams-cliente').value
   };
 
+  try {
+    if (id) {
+      const { error } = await client.from('teams_registro').update(datos).eq('id', parseInt(id));
+      if (error) throw error;
+      alert('Reunión Teams actualizada');
+    } else {
+      const { error } = await client.from('teams_registro').insert([datos]);
+      if (error) throw error;
+      alert('Reunión Teams agregada');
     }
     
     cargaCompleta.teams_registro = false;

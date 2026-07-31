@@ -202,6 +202,15 @@
           <label>Evidencia (Link)</label>
           <input type="url" id="teams-evidencia" placeholder="https://..." required>
         </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="teams-estado" required class="w-full p-2 rounded border border-gray-700">
+            <option value="">Selecciona un estado</option>
+            <option value="Si se hizo y tiene evidencia">Si se hizo y tiene evidencia</option>
+            <option value="No se hizo y tiene evidencia">No se hizo y tiene evidencia</option>
+            <option value="Se hizo pero no tiene evidencia">Se hizo pero no tiene evidencia</option>
+          </select>
+        </div>
         <div class="flex gap-2 justify-end mt-6">
           <button type="button" onclick="cerrarModalTeams()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">Cancelar</button>
           <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded text-sm font-bold">Guardar</button>

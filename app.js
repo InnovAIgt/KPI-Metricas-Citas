@@ -534,16 +534,7 @@ async function renderRegistroTeams(main) {
     'Hora reunión': r.hora_reunion,
     'Evidencia': r.evidencia_url ? `<a href="${r.evidencia_url}" target="_blank" class="text-red-300 hover:underline">Ver</a>` : '(Vacío)',
     'Estado': badgeEstadoCruce(r.estado_cruce),
-    'acciones': `<button onclick="abrirModalTeams(${r.id})" class="bg-red-600 hover:bg-red-700 text-xs px-2 py-1 rounded flex items-center gap-1">
-      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-    </button>`
-  }));
-  
-  pintarTablaConFiltros('tabla-detalle-teams', detalleConAcciones);
-}
-
-async function recargarUnaTabla(tabla, columnaFecha) {
-  cargaCompleta[tabla] = false;
+    'acciones': `<button onclick="abrirModalTeams('${r.teams_codigo}')" class="bg-red-600 hover:bg-red-700 text-xs px-2 py-1 rounded flex items-center gap-1">
   await cargarTablaCompleta(tabla, columnaFecha || null);
   let datosFiltrados = filtrarPorFechaGlobal(cache[tabla], columnaFecha);
   datosFiltrados = datosFiltrados.map(({ id, ...resto }) => resto);
@@ -1290,16 +1281,17 @@ async function calcularTeams() {
     const progr = parseFechaHora(lead.fecha_agendada, lead.hora_agendada);
     const ahora = new Date();
     
-    let estado = 'Sin evidencia en Teams';
-    if (teamsData.evidencia_url) {
-      estado = 'Cumplió con evidencia en Teams';
-    } else if (progr) {
-      const limite = new Date(progr.getTime() + 5 * 60000);
-      if (ahora < limite) estado = 'Pendiente de evaluar';
+    let estado = teamsData.estado_teams || 'Sin evidencia en Teams';
+    if (!teamsData.estado_teams) {
+      if (teamsData.evidencia_url) {
+        estado = 'Cumplió con evidencia en Teams';
+      } else if (progr) {
+        const limite = new Date(progr.getTime() + 5 * 60000);
+        if (ahora < limite) estado = 'Pendiente de evaluar';
+      }
     }
     
     return {
-      id: teamsData.id,
       pais: lead.pais || 'N/D',
       ejecutivo: lead.asesor_nombre || 'Sin asignar',
       codigo_prospecto: lead.codigo_prospecto,
@@ -1311,24 +1303,31 @@ async function calcularTeams() {
       hora_reunion: teamsData.hora_reunion || lead.hora_agendada,
       evidencia_url: teamsData.evidencia_url || '',
       tipo_reunion: lead.tipo_reunion,
-      estado_cruce: estado
+      estado_cruce: estado,
+      teams_codigo: leadCode,
+      teams_id: teamsData.id || ''
     };
   });
 }
 
-function abrirModalTeams(id) {
-  const registro = cache.teams_registro.find(t => t.id === id);
-  if (!registro) return alert('Registro no encontrado');
-  
-  document.getElementById('teams-id').value = id;
-  document.getElementById('teams-pais').value = registro.pais || '';
-  document.getElementById('teams-ejecutivo').value = registro.ejecutivo || '';
-  document.getElementById('teams-lead').value = registro.codigo_prospecto || '';
-  document.getElementById('teams-cliente').value = registro.cliente || '';
-  document.getElementById('teams-fecha').value = registro.fecha_reunion || '';
-  document.getElementById('teams-hora').value = registro.hora_reunion || '';
-  document.getElementById('teams-evidencia').value = registro.evidencia_url || '';
-  
+function abrirModalTeams(key) {
+  let registro = cache.teams_registro.find(t => String(t.id) === String(key));
+  let lead = null;
+  if (!registro) {
+    lead = cache.leads.find(l => String(l.codigo_prospecto) === String(key));
+    if (!lead) return alert('Registro no encontrado');
+  }
+
+  document.getElementById('teams-id').value = registro?.id || '';
+  document.getElementById('teams-pais').value = registro?.pais || lead?.pais || '';
+  document.getElementById('teams-ejecutivo').value = registro?.ejecutivo || lead?.asesor_nombre || '';
+  document.getElementById('teams-lead').value = registro?.codigo_prospecto || lead?.codigo_prospecto || '';
+  document.getElementById('teams-cliente').value = registro?.cliente || lead?.nombre_prospecto || '';
+  document.getElementById('teams-fecha').value = registro?.fecha_reunion || lead?.fecha_agendada || '';
+  document.getElementById('teams-hora').value = registro?.hora_reunion || lead?.hora_agendada || '';
+  document.getElementById('teams-evidencia').value = registro?.evidencia_url || '';
+  document.getElementById('teams-estado').value = registro?.estado_teams || '';
+
   document.getElementById('modal-teams').classList.remove('modal-hidden');
 }
 
@@ -1346,21 +1345,13 @@ async function guardarTeamsModal(e) {
     fecha_reunion: document.getElementById('teams-fecha').value,
     hora_reunion: document.getElementById('teams-hora').value,
     evidencia_url: document.getElementById('teams-evidencia').value,
+    estado_teams: document.getElementById('teams-estado').value,
     pais: document.getElementById('teams-pais').value,
     ejecutivo: document.getElementById('teams-ejecutivo').value,
     codigo_prospecto: document.getElementById('teams-lead').value,
     cliente: document.getElementById('teams-cliente').value
   };
 
-  try {
-    if (id) {
-      const { error } = await client.from('teams_registro').update(datos).eq('id', parseInt(id));
-      if (error) throw error;
-      alert('Reunión Teams actualizada');
-    } else {
-      const { error } = await client.from('teams_registro').insert([datos]);
-      if (error) throw error;
-      alert('Reunión Teams agregada');
     }
     
     cargaCompleta.teams_registro = false;

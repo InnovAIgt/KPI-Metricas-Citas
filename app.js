@@ -1457,6 +1457,10 @@ function normalizarFilaLeads(item) {
   if (salida.KPI_ETAPAS === undefined) salida.KPI_ETAPAS = 0;
   if (salida.KPI_SLA === undefined) salida.KPI_SLA = 0;
   return salida;
+}
+
+async function actualizarLeadKPI(id, col, valor) {
+  if (!id || !editableColumnsSet.has(String(col).toLowerCase())) return;
   try {
     const cliente = getSupabase();
     const updateData = {};

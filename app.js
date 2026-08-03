@@ -1105,11 +1105,7 @@ async function calcularCruceUnificado() {
         });
 
       let candidatas = [...candPBX, ...candCel].filter(c => c.fechaHora && !isNaN(c.fechaHora.getTime()));
-      if (usuario) {
-        const usuarioNorm = String(usuario).trim().toLowerCase();
-        const candidatasUsuario = candidatas.filter(c => c.operador === usuarioNorm);
-        if (candidatasUsuario.length) candidatas = candidatasUsuario;
-      }
+      const usuarioNorm = usuario ? String(usuario).trim().toLowerCase() : '';
 
       if (progr && candidatas.length) {
         const delDia = candidatas.filter(c => mismoDia(c.fechaHora, progr));
@@ -1120,23 +1116,29 @@ async function calcularCruceUnificado() {
           return diffActual < diffMejor ? actual : mejor;
         }, null);
 
+        const elegirConPreferenciaOperador = (arr) => {
+          if (!usuarioNorm) return elegirMasCercana(arr);
+          const byOp = arr.filter(c => (c.operador || '').toLowerCase() === usuarioNorm);
+          return byOp.length ? elegirMasCercana(byOp) : elegirMasCercana(arr);
+        };
+
         // 1) Prefer calls on the same day and same hour as scheduled
         const sameHour = candidatas.filter(c => mismoDia(c.fechaHora, progr) && c.fechaHora.getHours() === progr.getHours());
         if (sameHour.length) {
-          coincidencia = elegirMasCercana(sameHour);
+          coincidencia = elegirConPreferenciaOperador(sameHour);
           diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
           estado = diferenciaMin <= 5 ? 'Cumplió en fecha y horario' : 'Llamó el mismo día fuera de horario';
           fuente = coincidencia.fuente;
         } else {
           // 2) Then prefer any call on the same day
           if (delDia.length) {
-            coincidencia = elegirMasCercana(delDia);
+            coincidencia = elegirConPreferenciaOperador(delDia);
             diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
             estado = diferenciaMin <= 5 ? 'Cumplió en fecha y horario' : 'Llamó el mismo día fuera de horario';
             fuente = coincidencia.fuente;
           } else {
             // 3) fallback: closest overall
-            coincidencia = elegirMasCercana(candidatas);
+            coincidencia = elegirConPreferenciaOperador(candidatas);
             diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
             estado = 'Llamó en otra fecha';
             fuente = coincidencia.fuente;

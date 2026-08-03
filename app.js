@@ -1393,6 +1393,15 @@ document.addEventListener('input', event => {
   if (target.innerText !== clean) target.innerText = clean;
 });
 
+document.addEventListener('keydown', event => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement) || !target.classList.contains('editable-cell')) return;
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    target.blur();
+  }
+});
+
 document.addEventListener('focusout', event => {
   const target = event.target;
   if (!(target instanceof HTMLElement) || !target.classList.contains('editable-cell')) return;

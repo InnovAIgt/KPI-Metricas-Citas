@@ -1149,24 +1149,24 @@ async function calcularCruceUnificado() {
         const limite = new Date(progr.getTime() + 5 * 60000);
         estado = ahora < limite ? 'Pendiente de evaluar' : 'Sin llamada encontrada';
       }
-        // prepare detailed debug info string listing candidate parsed times, raw values and epoch
-        try {
-          const usuarioNorm = usuario ? String(usuario).trim().toLowerCase() : '';
-          const progrDebug = progr ? `${formatearFechaCorta(progr)} ${formatearHoraCorta(progr)} (ISO:${progr.toISOString()}, H:${progr.getHours()})` : 'SIN_PROG';
-          const detalles = candidatas.map(c => {
-            const parsedISO = c.fechaHora ? c.fechaHora.toISOString() : '';
-            const epoch = c.fechaHora ? c.fechaHora.getTime() : '';
-            const rawStr = c.raw ? (c.raw.fecha_hora || c.raw.fecha || c.raw.hora || JSON.stringify(c.raw)) : '';
-            const operadorMatch = usuarioNorm ? (String(c.operador || '').trim().toLowerCase() === usuarioNorm) : 'NA';
-            return `${c.fuente}:${c.operador || '-'}@parsed=${parsedISO}|epoch=${epoch}|raw=${rawStr}|opMatch=${operadorMatch}`;
-          }).join(' || ');
-          if (coincidencia) {
-            const selISO = coincidencia.fechaHora ? coincidencia.fechaHora.toISOString() : '';
-            debugCandidates = `PROG -> ${progrDebug} -- SELECCIONADA -> ${coincidencia.fuente}:${coincidencia.operador || '-'}@parsed=${selISO} -- Todas: ${detalles}`;
-          } else {
-            debugCandidates = `PROG -> ${progrDebug} -- Ninguna seleccionada -- Todas: ${detalles}`;
-          }
-        } catch (e) { debugCandidates = 'ERROR DEBUG';}
+
+      // prepare detailed debug info string listing candidate parsed times, raw values and epoch
+      try {
+        const progrDebug = progr ? `${formatearFechaCorta(progr)} ${formatearHoraCorta(progr)} (ISO:${progr.toISOString()}, H:${progr.getHours()})` : 'SIN_PROG';
+        const detalles = candidatas.map(c => {
+          const parsedISO = c.fechaHora ? c.fechaHora.toISOString() : '';
+          const epoch = c.fechaHora ? c.fechaHora.getTime() : '';
+          const rawStr = c.raw ? (c.raw.fecha_hora || c.raw.fecha || c.raw.hora || JSON.stringify(c.raw)) : '';
+          const operadorMatch = usuarioNorm ? (String(c.operador || '').trim().toLowerCase() === usuarioNorm) : 'NA';
+          return `${c.fuente}:${c.operador || '-'}@parsed=${parsedISO}|epoch=${epoch}|raw=${rawStr}|opMatch=${operadorMatch}`;
+        }).join(' || ');
+        if (coincidencia) {
+          const selISO = coincidencia.fechaHora ? coincidencia.fechaHora.toISOString() : '';
+          debugCandidates = `PROG -> ${progrDebug} -- SELECCIONADA -> ${coincidencia.fuente}:${coincidencia.operador || '-'}@parsed=${selISO} -- Todas: ${detalles}`;
+        } else {
+          debugCandidates = `PROG -> ${progrDebug} -- Ninguna seleccionada -- Todas: ${detalles}`;
+        }
+      } catch (e) { debugCandidates = 'ERROR DEBUG';}
     }
 
     const diferenciaMinFirmada = coincidencia && progr

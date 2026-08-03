@@ -1099,19 +1099,43 @@ async function calcularCruceUnificado() {
         .filter(c => normalizarTel(c.destino) === telLead && telLead)
         .map(c => ({ fuente: 'PBX', fechaHora: parseFechaHoraString(c.fecha_hora), raw: c, operador: String(c.nombre || '').trim().toLowerCase() }));
 
-      const candCel = cache.historiales
-        .filter(c => normalizarTel(c.destino) === telLead && telLead && (c.tipo || '').toLowerCase() === 'saliente')
+      const candCelRaw = cache.historiales
+        .filter(c => telLead && normalizarTel(c.destino) === telLead)
+        .map(c => ({
+          destino: c.destino,
+          destinoNorm: normalizarTel(c.destino),
+          tipo: c.tipo,
+          usuario: c.usuario,
+          fecha: c.fecha,
+          hora: c.hora,
+          raw: c
+        }));
+      const candCel = candCelRaw
+        .filter(c => (c.raw.tipo || '').toLowerCase() === 'saliente')
         .map(c => {
-          const fBase = c.fecha ? String(c.fecha).split('T')[0] : null;
-          const fh = fBase && c.hora ? new Date(`${fBase}T${c.hora}`) : null;
-          return { fuente: 'Celular', fechaHora: fh, raw: c, operador: String(c.usuario || '').trim().toLowerCase() };
+          const fBase = c.raw.fecha ? String(c.raw.fecha).split('T')[0] : null;
+          const fh = fBase && c.raw.hora ? new Date(`${fBase}T${c.raw.hora}`) : null;
+          return { fuente: 'Celular', fechaHora: fh, raw: c.raw, operador: String(c.raw.usuario || '').trim().toLowerCase() };
         });
+      if (lead.codigo_prospecto === 'LD226' || String(lead.codigo_prospecto).toUpperCase() === 'LD226') {
+        console.log('LD226 telLead', telLead, 'candCelRaw', candCelRaw);
+      }
 
       candidatas = [...candPBX, ...candCel].filter(c => c.fechaHora && !isNaN(c.fechaHora.getTime()));
       usuarioNorm = usuario ? String(usuario).trim().toLowerCase() : '';
 
       if (progr && candidatas.length) {
         const delDia = candidatas.filter(c => mismoDia(c.fechaHora, progr));
+        const horaProgr = progr.getHours();
+        const horaCruda = c => {
+          const raw = c.raw;
+          if (!raw) return null;
+          const valor = String(raw.fecha_hora || raw.hora || raw.fecha || '');
+          const match = valor.match(/(\d{2}):(\d{2})(?::\d{2})?/);
+          return match ? Number(match[1]) : null;
+        };
+        const obtenerHora = c => c.fechaHora ? c.fechaHora.getHours() : horaCruda(c);
+
         const elegirMasCercana = arr => arr.reduce((mejor, actual) => {
           if (!mejor) return actual;
           const diffMejor = Math.abs(mejor.fechaHora - progr);
@@ -1125,15 +1149,15 @@ async function calcularCruceUnificado() {
           return byOp.length ? elegirMasCercana(byOp) : elegirMasCercana(arr);
         };
 
-        // 1) Prefer calls on the same day and same hour as scheduled
-        const sameHour = candidatas.filter(c => mismoDia(c.fechaHora, progr) && c.fechaHora.getHours() === progr.getHours());
+        // 1) Prefer any call at the scheduled hour, regardless of date
+        const sameHour = candidatas.filter(c => obtenerHora(c) === horaProgr);
         if (sameHour.length) {
           coincidencia = elegirConPreferenciaOperador(sameHour);
           diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
           estado = diferenciaMin <= 5 ? 'Cumplió en fecha y horario' : 'Llamó el mismo día fuera de horario';
           fuente = coincidencia.fuente;
         } else {
-          // 2) Then prefer any call on the same day
+          // 2) Prefer any call on the same day
           if (delDia.length) {
             coincidencia = elegirConPreferenciaOperador(delDia);
             diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);

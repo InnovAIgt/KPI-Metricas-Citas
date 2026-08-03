@@ -7,6 +7,7 @@ let cargaCompleta = { leads: false, llamadas: false, historiales: false, ejecuti
 let cruceCache = null;
 let vistaActual = 'config';
 let contenidoModalCelda = '';
+let detalleFiltro = null;
 
 let SB_URL = "https://sbopifiiyezmvsadwkpg.supabase.co";
 let SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNib3BpZmlieWV6bXZzYWR3c3BnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MzM0OTYsImV4cCI6MjEwMDMwOTQ5Nn0.ZI5y8lroFF529Xr-Otm1fcq6H2lhbh9e3s-WU9O6I7A";
@@ -525,6 +526,16 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
     datosFiltrados = datosFiltrados.map(({ opportunity_stage, stage, opportunityStage, ...rest }) => rest);
   }
 
+  if (detalleFiltro && detalleFiltro.tabla === tabla) {
+    datosFiltrados = aplicarFiltroDetalleRegistro(datosFiltrados, tabla);
+    const filtroText = `Mostrando registros de ${tabla === 'llamadas' ? 'PBX' : 'Celular'} para ${detalleFiltro.telefono}` + (detalleFiltro.fecha ? ` en ${detalleFiltro.fecha}` : '');
+    const estadoEl = document.getElementById('estado-tabla');
+    if (estadoEl) {
+      estadoEl.classList.remove('hidden');
+      estadoEl.innerText = filtroText;
+    }
+  }
+
   pintarTablaConFiltros('tabla-dinamica', datosFiltrados);
 }
 
@@ -616,6 +627,39 @@ function abrirModalCeldaFromEl(el) {
   }
 }
 
+function abrirDetalleFuente(event, fila) {
+  if (!fila) return;
+  const fuente = fila.dataset.fuente || '';
+  const telefono = fila.dataset.tel || '';
+  const fecha = fila.dataset.fecha || '';
+
+  if (fuente.toLowerCase() === 'pbx') {
+    detalleFiltro = { tabla: 'llamadas', telefono, fecha };
+    irA('reg-pbx');
+  } else if (fuente.toLowerCase() === 'celular') {
+    detalleFiltro = { tabla: 'historiales', telefono, fecha };
+    irA('reg-cel');
+  } else {
+    alert('No hay detalle directo para esta fuente: ' + fuente);
+  }
+}
+
+function aplicarFiltroDetalleRegistro(datos, tabla) {
+  if (!detalleFiltro || detalleFiltro.tabla !== tabla) return datos;
+  const telefonoFiltro = normalizarTel(detalleFiltro.telefono);
+  const fechaFiltro = detalleFiltro.fecha ? String(detalleFiltro.fecha).split('T')[0] : '';
+
+  return datos.filter(item => {
+    const destino = normalizarTel(item.destino);
+    if (!destino || destino !== telefonoFiltro) return false;
+    if (!fechaFiltro) return true;
+    const itemFecha = tabla === 'llamadas'
+      ? (item.fecha_hora || '').split('T')[0]
+      : (item.fecha || '').split('T')[0];
+    return itemFecha === fechaFiltro;
+  });
+}
+
 function cerrarModalCelda() {
   document.getElementById('modal-celda').classList.add('modal-hidden');
   contenidoModalCelda = '';
@@ -662,7 +706,7 @@ function repintar(contId) {
   const columnasExpandibles = ['resumen_qa', 'transcripcion'];
 
   const filas = filtrados.slice(0, 10000).map(fila => {
-    return `<tr class="hover:bg-slate-800/50">${columnas.map(c => {
+    return `<tr class="hover:bg-slate-800/50" data-fuente="${fila['Fuente cruda'] || fila['Fuente'] || ''}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_reunion'] || ''}" onclick="abrirDetalleFuente(event, this)">${columnas.map(c => {
       let v = fila[c];
       if (c === 'acciones') return `<td class="p-2">${v}</td>`;
       if (c === 'Estado' || c === 'Resultado') return `<td class="p-2 whitespace-nowrap">${badgeEstadoCruce(v)}</td>`;
@@ -687,7 +731,7 @@ function repintar(contId) {
       }
       if (editableColumns.includes(c)) {
         const rawValue = v === null || v === undefined || v === '' ? '0' : String(v).replace(/\D/g, '').slice(0, 1) || '0';
-        return `<td class="p-2 whitespace-nowrap"><div contenteditable="true" spellcheck="false" class="editable-cell rounded bg-slate-900 px-2 py-1 text-right" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}">${rawValue}</div></td>`;
+        return `<td class="p-2 whitespace-nowrap"><div contenteditable="true" spellcheck="false" class="editable-cell rounded bg-slate-900 px-2 py-1 text-right" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}" onclick="event.stopPropagation()">${rawValue}</div></td>`;
       }
       return `<td class="p-2 whitespace-nowrap text-gray-300">${contenidoCelda}</td>`;
     }).join('')}</tr>`;
@@ -1305,7 +1349,10 @@ async function renderDetalleUnificado(main) {
     'KPI_ETAPAS': 0,
     'KPI_SLA': 0,
     'En catálogo': r.catalogo_ok,
-    __rowId: idx
+    'Fuente cruda': r.fuente,
+    '__rowId': idx,
+    '__telefono_comparado': r.telefono_comparado,
+    '__fecha_reunion': r.fecha_reunion
   }));
 
   document.getElementById('estado-tabla').classList.remove('hidden');

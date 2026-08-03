@@ -1146,17 +1146,24 @@ async function calcularCruceUnificado() {
         const limite = new Date(progr.getTime() + 5 * 60000);
         estado = ahora < limite ? 'Pendiente de evaluar' : 'Sin llamada encontrada';
       }
-        // prepare debug info string listing candidate parsed times and operator
+        // prepare detailed debug info string listing candidate parsed times, raw values and epoch
         try {
-          debugCandidates = candidatas.map(c => {
-            const when = c.fechaHora ? `${formatearFechaCorta(c.fechaHora)} ${formatearHoraCorta(c.fechaHora)}` : (c.raw && (c.raw.fecha_hora || c.raw.fecha || c.raw.hora) || '');
-            return `${c.fuente}:${c.operador || '-'}@${when}`;
-          }).join(' | ');
+          const usuarioNorm = usuario ? String(usuario).trim().toLowerCase() : '';
+          const progrDebug = progr ? `${formatearFechaCorta(progr)} ${formatearHoraCorta(progr)} (ISO:${progr.toISOString()}, H:${progr.getHours()})` : 'SIN_PROG';
+          const detalles = candidatas.map(c => {
+            const parsedISO = c.fechaHora ? c.fechaHora.toISOString() : '';
+            const epoch = c.fechaHora ? c.fechaHora.getTime() : '';
+            const rawStr = c.raw ? (c.raw.fecha_hora || c.raw.fecha || c.raw.hora || JSON.stringify(c.raw)) : '';
+            const operadorMatch = usuarioNorm ? (String(c.operador || '').trim().toLowerCase() === usuarioNorm) : 'NA';
+            return `${c.fuente}:${c.operador || '-'}@parsed=${parsedISO}|epoch=${epoch}|raw=${rawStr}|opMatch=${operadorMatch}`;
+          }).join(' || ');
           if (coincidencia) {
-            const whenSel = coincidencia.fechaHora ? `${formatearFechaCorta(coincidencia.fechaHora)} ${formatearHoraCorta(coincidencia.fechaHora)}` : (coincidencia.raw && (coincidencia.raw.fecha_hora || coincidencia.raw.fecha || coincidencia.raw.hora) || '');
-            debugCandidates = `SELECCIONADA -> ${coincidencia.fuente}:${coincidencia.operador || '-'}@${whenSel} -- Todas: ${debugCandidates}`;
+            const selISO = coincidencia.fechaHora ? coincidencia.fechaHora.toISOString() : '';
+            debugCandidates = `PROG -> ${progrDebug} -- SELECCIONADA -> ${coincidencia.fuente}:${coincidencia.operador || '-'}@parsed=${selISO} -- Todas: ${detalles}`;
+          } else {
+            debugCandidates = `PROG -> ${progrDebug} -- Ninguna seleccionada -- Todas: ${detalles}`;
           }
-        } catch (e) { debugCandidates = '';} 
+        } catch (e) { debugCandidates = 'ERROR DEBUG';}
     }
 
     const diferenciaMinFirmada = coincidencia && progr

@@ -1073,6 +1073,8 @@ async function calcularCruceUnificado() {
     
     const ejec = cache.ejecutivos.find(e => (e.nombre_ejecutivo || '').trim().toLowerCase() === (lead.asesor_nombre || '').trim().toLowerCase());
     const usuario = ejec ? ejec.usuario : null;
+    let usuarioNorm = '';
+    let candidatas = [];
 
     let estado = 'Sin llamada encontrada';
     let coincidencia = null;
@@ -1105,8 +1107,8 @@ async function calcularCruceUnificado() {
           return { fuente: 'Celular', fechaHora: fh, raw: c, operador: String(c.usuario || '').trim().toLowerCase() };
         });
 
-      let candidatas = [...candPBX, ...candCel].filter(c => c.fechaHora && !isNaN(c.fechaHora.getTime()));
-      const usuarioNorm = usuario ? String(usuario).trim().toLowerCase() : '';
+      candidatas = [...candPBX, ...candCel].filter(c => c.fechaHora && !isNaN(c.fechaHora.getTime()));
+      usuarioNorm = usuario ? String(usuario).trim().toLowerCase() : '';
 
       if (progr && candidatas.length) {
         const delDia = candidatas.filter(c => mismoDia(c.fechaHora, progr));

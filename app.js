@@ -688,8 +688,20 @@ function copiarAlPortapapeles() {
   });
 }
 
-const editableColumns = ['KPI_ETAPAS', 'KPI_SLA'];
+const editableColumns = [
+  'KPI SLA ETAPA 1',
+  'KPI SLA ETAPA 2',
+  'KPI SLA ETAPA 3',
+  'KPI RETROALIMENTACION ETAPA 1',
+  'KPI RETROALIMENTACION ETAPA 2',
+  'KPI RETROALIMENTACION ETAPA 3',
+  'KPI RETROALIMENTACION ETAPA 4'
+];
 const editableColumnsSet = new Set(editableColumns.map(c => String(c).toLowerCase()));
+const colToDbField = {
+  'KPI SLA ETAPA 1': 'KPI_SLA',
+  'KPI RETROALIMENTACION ETAPA 1': 'KPI_ETAPAS'
+};
 
 function normalizarNombreColumna(col) {
   return String(col || '').trim().replace(/\s+/g, '_').toLowerCase();
@@ -1432,8 +1444,9 @@ function actualizarEditable(contId, rowId, col, valor) {
     if (fila2) fila2[col] = valor;
   }
 
-  if (contId === 'tabla-dinamica' && editableColumnsSet.has(String(col).toLowerCase()) && fila.id) {
-    actualizarLeadKPI(fila.id, col, Number(valor));
+  const dbCol = colToDbField[col];
+  if (contId === 'tabla-dinamica' && dbCol && fila.id) {
+    actualizarLeadKPI(fila.id, dbCol, Number(valor));
   }
 }
 
@@ -1444,27 +1457,52 @@ function normalizarFilaLeads(item) {
     const columna = normalizarNombreColumna(key);
     if (columna === 'opportunity_stage' || columna === 'stage' || columna === 'opportunitystage') continue;
     if (columna === 'kpi_etapas') {
-      if (salida.KPI_ETAPAS === undefined) salida.KPI_ETAPAS = valor;
+      if (salida['KPI RETROALIMENTACION ETAPA 1'] === undefined) salida['KPI RETROALIMENTACION ETAPA 1'] = valor;
       continue;
     }
     if (columna === 'kpi_sla') {
-      if (salida.KPI_SLA === undefined) salida.KPI_SLA = valor;
+      if (salida['KPI SLA ETAPA 1'] === undefined) salida['KPI SLA ETAPA 1'] = valor;
+      continue;
+    }
+    if (columna === 'kpi_sla_etapa_2') {
+      salida['KPI SLA ETAPA 2'] = valor;
+      continue;
+    }
+    if (columna === 'kpi_sla_etapa_3') {
+      salida['KPI SLA ETAPA 3'] = valor;
+      continue;
+    }
+    if (columna === 'kpi_retroalimentacion_etapa_2') {
+      salida['KPI RETROALIMENTACION ETAPA 2'] = valor;
+      continue;
+    }
+    if (columna === 'kpi_retroalimentacion_etapa_3') {
+      salida['KPI RETROALIMENTACION ETAPA 3'] = valor;
+      continue;
+    }
+    if (columna === 'kpi_retroalimentacion_etapa_4') {
+      salida['KPI RETROALIMENTACION ETAPA 4'] = valor;
       continue;
     }
     if (salida.hasOwnProperty(key)) continue;
     salida[key] = valor;
   }
-  if (salida.KPI_ETAPAS === undefined) salida.KPI_ETAPAS = 0;
-  if (salida.KPI_SLA === undefined) salida.KPI_SLA = 0;
+  salida['KPI SLA ETAPA 1'] = salida['KPI SLA ETAPA 1'] ?? 0;
+  salida['KPI SLA ETAPA 2'] = salida['KPI SLA ETAPA 2'] ?? 0;
+  salida['KPI SLA ETAPA 3'] = salida['KPI SLA ETAPA 3'] ?? 0;
+  salida['KPI RETROALIMENTACION ETAPA 1'] = salida['KPI RETROALIMENTACION ETAPA 1'] ?? 0;
+  salida['KPI RETROALIMENTACION ETAPA 2'] = salida['KPI RETROALIMENTACION ETAPA 2'] ?? 0;
+  salida['KPI RETROALIMENTACION ETAPA 3'] = salida['KPI RETROALIMENTACION ETAPA 3'] ?? 0;
+  salida['KPI RETROALIMENTACION ETAPA 4'] = salida['KPI RETROALIMENTACION ETAPA 4'] ?? 0;
   return salida;
 }
 
-async function actualizarLeadKPI(id, col, valor) {
-  if (!id || !editableColumnsSet.has(String(col).toLowerCase())) return;
+async function actualizarLeadKPI(id, dbCol, valor) {
+  if (!id || !dbCol) return;
   try {
     const cliente = getSupabase();
     const updateData = {};
-    updateData[col] = Number.isNaN(valor) ? 0 : valor;
+    updateData[dbCol] = Number.isNaN(valor) ? 0 : valor;
     const { error } = await cliente.from('leads').update(updateData).eq('id', id);
     if (error) {
       console.error('Error guardando KPI en leads:', error.message);

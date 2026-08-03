@@ -632,12 +632,14 @@ function abrirDetalleFuente(event, fila) {
   const fuente = fila.dataset.fuente || '';
   const telefono = fila.dataset.tel || '';
   const fecha = fila.dataset.fecha || '';
+  const registro = fila.dataset.registro || '';
+  const registroTabla = fila.dataset.registroTabla || '';
 
   if (fuente.toLowerCase() === 'pbx') {
-    detalleFiltro = { tabla: 'llamadas', telefono, fecha };
+    detalleFiltro = { tabla: 'llamadas', telefono, fecha, registroId: registro, registroTabla: registroTabla };
     irA('reg-pbx');
   } else if (fuente.toLowerCase() === 'celular') {
-    detalleFiltro = { tabla: 'historiales', telefono, fecha };
+    detalleFiltro = { tabla: 'historiales', telefono, fecha, registroId: registro, registroTabla: registroTabla };
     irA('reg-cel');
   } else {
     alert('No hay detalle directo para esta fuente: ' + fuente);
@@ -648,8 +650,13 @@ function aplicarFiltroDetalleRegistro(datos, tabla) {
   if (!detalleFiltro || detalleFiltro.tabla !== tabla) return datos;
   const telefonoFiltro = normalizarTel(detalleFiltro.telefono);
   const fechaFiltro = detalleFiltro.fecha ? String(detalleFiltro.fecha).split('T')[0] : '';
+  const registroFiltro = detalleFiltro.registroId ? String(detalleFiltro.registroId) : '';
 
   return datos.filter(item => {
+    if (registroFiltro) {
+      const idMatch = String(item.uniqueid || item.id || '').trim() === registroFiltro.trim();
+      if (idMatch) return true;
+    }
     const destino = normalizarTel(item.destino);
     if (!destino || destino !== telefonoFiltro) return false;
     if (!fechaFiltro) return true;
@@ -706,7 +713,7 @@ function repintar(contId) {
   const columnasExpandibles = ['resumen_qa', 'transcripcion'];
 
   const filas = filtrados.slice(0, 10000).map(fila => {
-    return `<tr class="hover:bg-slate-800/50" data-fuente="${fila['Fuente cruda'] || fila['Fuente'] || ''}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_reunion'] || ''}" onclick="abrirDetalleFuente(event, this)">${columnas.map(c => {
+    return `<tr class="hover:bg-slate-800/50" data-fuente="${fila['Fuente cruda'] || fila['Fuente'] || ''}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_llamada'] || ''}" data-registro="${fila['__registro_id'] || ''}" data-registro-tabla="${fila['__registro_tabla'] || ''}" onclick="abrirDetalleFuente(event, this)">${columnas.map(c => {
       let v = fila[c];
       if (c === 'acciones') return `<td class="p-2">${v}</td>`;
       if (c === 'Estado' || c === 'Resultado') return `<td class="p-2 whitespace-nowrap">${badgeEstadoCruce(v)}</td>`;
@@ -1035,6 +1042,8 @@ async function calcularCruceUnificado() {
       duracion_seg: duracionSeg,
       duracion_min: duracionMin,
       estado_tipo: estadoTipo,
+      registro_origen_id: coincidencia?.raw?.uniqueid ?? coincidencia?.raw?.id ?? '',
+      registro_origen_tabla: coincidencia?.fuente ?? '',
       catalogo_ok: ejec ? 'Sí' : 'No'
     };
   });
@@ -1352,7 +1361,9 @@ async function renderDetalleUnificado(main) {
     'Fuente cruda': r.fuente,
     '__rowId': idx,
     '__telefono_comparado': r.telefono_comparado,
-    '__fecha_reunion': r.fecha_reunion
+    '__fecha_llamada': r.fecha_llamada ? String(r.fecha_llamada).split('T')[0] : '',
+    '__registro_id': r.registro_origen_id || '',
+    '__registro_tabla': r.registro_origen_tabla || ''
   }));
 
   document.getElementById('estado-tabla').classList.remove('hidden');

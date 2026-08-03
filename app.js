@@ -1036,6 +1036,7 @@ async function calcularCruceUnificado() {
   const ahora = new Date();
 
   const resultado = leads.map(lead => {
+    let debugCandidates = '';
     const telLead = normalizarTel(lead.telefono);
     const progr = parseFechaHora(lead.fecha_agendada, lead.hora_agendada);
     const esTeams = esReunionTeams(lead.tipo_reunion);
@@ -1106,6 +1107,13 @@ async function calcularCruceUnificado() {
         const limite = new Date(progr.getTime() + 5 * 60000);
         estado = ahora < limite ? 'Pendiente de evaluar' : 'Sin llamada encontrada';
       }
+        // prepare debug info string listing candidate times and operator
+        try {
+          debugCandidates = candidatas.map(c => `${c.fuente}:${c.operador || '-'}@${c.raw && (c.raw.fecha_hora || c.raw.fecha || c.raw.hora) || ''}`).join(' | ');
+          if (coincidencia) {
+            debugCandidates = `SELECCIONADA -> ${coincidencia.fuente}:${coincidencia.operador || '-'}@${coincidencia.raw && (coincidencia.raw.fecha_hora || coincidencia.raw.fecha || coincidencia.raw.hora) || ''} -- Todas: ${debugCandidates}`;
+          }
+        } catch (e) { debugCandidates = '';} 
     }
 
     const diferenciaMinFirmada = coincidencia && progr
@@ -1138,7 +1146,7 @@ async function calcularCruceUnificado() {
       }
     }
 
-    return {
+    const outObj = {
       pais: lead.pais || 'N/D',
       codigo_prospecto: lead.codigo_prospecto,
       lead: lead.nombre_prospecto,
@@ -1170,6 +1178,10 @@ async function calcularCruceUnificado() {
       kpi_retroalimentacion_etapa_4: Boolean(lead.kpi_retroalimentacion_etapa_4),
       fuente: fuente
     };
+    if (lead.codigo_prospecto === 'LD226' || String(lead.codigo_prospecto).toUpperCase() === 'LD226') {
+      outObj.debug_llamadas = debugCandidates || '';
+    }
+    return outObj;
   });
 
   return resultado;
@@ -1719,6 +1731,7 @@ async function renderDetalleUnificado(main) {
     'Estado/tipo': r.estado_tipo,
     'En catálogo': r.catalogo_ok,
     'Fuente': r.fuente,
+    'Debug llamadas': r.debug_llamadas || '',
     '__rowId': idx,
     '__telefono_comparado': r.telefono_comparado,
     '__fecha_llamada': r.fecha_llamada ? String(r.fecha_llamada).split('T')[0] : '',
@@ -1775,15 +1788,33 @@ function actualizarEditable(contId, rowId, col, valor) {
     const parsed = String(valor).toLowerCase() === 'true';
     actualizarLeadKPI(fila.id, dbCol, parsed);
   }
+  // Update select visual class if present in the DOM
+  try {
+    const sel = document.querySelector(`select[data-cont="${contId}"][data-row="${rowId}"][data-col="${col}"]`);
+    if (sel) {
+      if (String(valor).toLowerCase() === 'true') {
+        sel.classList.remove('kpi-no'); sel.classList.add('kpi-yes');
+      } else {
+        sel.classList.remove('kpi-yes'); sel.classList.add('kpi-no');
+      }
+    }
+  } catch (e) { /* ignore DOM errors */ }
 }
 
 function normalizarFilaLeads(item) {
   const salida = {};
-  // Ensure primary columns first
-  const clavesPrincipales = ['lead', 'pais', 'cliente', 'ejecutivo', 'resultado'];
-  for (const k of clavesPrincipales) {
+  // Ensure primary columns first — accept multiple source key variants
+  const mapAliases = {
+    lead: ['codigo_prospecto', 'lead', 'nombre_prospecto'],
+    pais: ['pais', 'country'],
+    cliente: ['cliente', 'nombre_prospecto', 'contacto'],
+    ejecutivo: ['asesor_nombre', 'ejecutivo', 'asesor', 'asesor_name'],
+    resultado: ['resultado', 'status', 'status_lead']
+  };
+  for (const [canon, aliases] of Object.entries(mapAliases)) {
     for (const key of Object.keys(item)) {
-      if (normalizarNombreColumna(key) === k && salida[key] === undefined) {
+      const colNorm = normalizarNombreColumna(key);
+      if (aliases.includes(colNorm) && salida[key] === undefined) {
         salida[key] = item[key];
       }
     }
@@ -1813,6 +1844,7 @@ function normalizarFilaLeads(item) {
   }
   return salida;
 }
+
 
 async function actualizarLeadKPI(id, dbCol, valor) {
   if (!id || !dbCol) return;

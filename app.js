@@ -753,6 +753,20 @@ function repintar(contId) {
     columnasVistas.add(clave);
     columnasUnicas.push(col);
   }
+  const ordenColumna = col => {
+    const sla = col.match(/^KPI\s+SLA\s+ETAPA\s*(\d+)/i);
+    if (sla) return `1_${String(sla[1]).padStart(2,'0')}`;
+    const retro = col.match(/^KPI\s+RETROALIMENTACION\s+ETAPA\s*(\d+)/i);
+    if (retro) return `2_${String(retro[1]).padStart(2,'0')}`;
+    return `3_${String(col).toLowerCase().replace(/\s+/g, ' ')}`;
+  };
+  columnasUnicas.sort((a, b) => {
+    const pa = ordenColumna(a);
+    const pb = ordenColumna(b);
+    if (pa < pb) return -1;
+    if (pa > pb) return 1;
+    return a.localeCompare(b);
+  });
   const editableColumnasLower = new Set(editableColumns.map(c => String(c).toLowerCase()));
 
   let filtrados = datosBase.filter(fila => {
@@ -767,9 +781,16 @@ function repintar(contId) {
 
   const thead = `<thead><tr>${columnasUnicas.map(c => {
     const activo = filtros[c] ? 'activo' : '';
-    return c === 'acciones' 
+    const labelHeader = (() => {
+      const sla = c.match(/^KPI\s+SLA\s+ETAPA\s*(\d+)/i);
+      if (sla) return `<div class="kpi-header">KPI SLA<br>Etapa ${sla[1]}</div>`;
+      const retro = c.match(/^KPI\s+RETROALIMENTACION\s+ETAPA\s*(\d+)/i);
+      if (retro) return `<div class="kpi-header">KPI RETRO<br>Etapa ${retro[1]}</div>`;
+      return c;
+    })();
+    return c === 'acciones'
       ? `<th class="p-2">${c}</th>`
-      : `<th class="p-2">${c} <span class="filtro-icono ${activo}" onclick="abrirFiltroColumna('${contId}','${c}', this)">▾</span></th>`;
+      : `<th class="p-2">${labelHeader} <span class="filtro-icono ${activo}" onclick="abrirFiltroColumna('${contId}','${c}', this)">▾</span></th>`;
   }).join('')}</tr></thead>`;
 
   const columnasExpandibles = ['resumen_qa', 'transcripcion'];
@@ -802,8 +823,7 @@ function repintar(contId) {
         const value = (v === true || String(v).toLowerCase() === 'true') ? 'true' : 'false';
         const selectedYes = value === 'true' ? 'selected' : '';
         const selectedNo = value === 'false' ? 'selected' : '';
-        const compactLabel = c.replace(/^KPI\s+/, '').replace(/RETROALIMENTACION\s+/, 'RETRO ').replace(/ETAPA\s+/, 'Et. ');
-        return `<td class="p-2 whitespace-nowrap text-left"><div class="kpi-cell"><div class="kpi-label">${compactLabel}</div><select class="kpi-select ${value === 'true' ? 'kpi-yes' : 'kpi-no'}" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}" onchange="actualizarEditable(this.dataset.cont, this.dataset.row, this.dataset.col, this.value)" onclick="event.stopPropagation()"><option value="false" ${selectedNo}>No</option><option value="true" ${selectedYes}>Sí</option></select></div></td>`;
+        return `<td class="p-2 whitespace-nowrap"><select class="kpi-select ${value === 'true' ? 'kpi-yes' : 'kpi-no'}" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}" onchange="actualizarEditable(this.dataset.cont, this.dataset.row, this.dataset.col, this.value)" onclick="event.stopPropagation()"><option value="false" ${selectedNo}>No</option><option value="true" ${selectedYes}>Sí</option></select></td>`;
       }
       return `<td class="p-2 whitespace-nowrap text-gray-300">${contenidoCelda}</td>`;
     }).join('')}</tr>`;

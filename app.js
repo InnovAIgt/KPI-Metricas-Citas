@@ -531,7 +531,7 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
       vistos.add(clave);
       return true;
     });
-    datosFiltrados = datosFiltrados.map(({ opportunity_stage, stage, opportunityStage, ...rest }) => rest);
+    datosFiltrados = datosFiltrados.map(({ opportunity_stage, stage, opportunityStage, ...rest }) => normalizarFilaLeads(rest));
   }
 
   if (detalleFiltro && detalleFiltro.tabla === tabla) {
@@ -689,6 +689,11 @@ function copiarAlPortapapeles() {
 }
 
 const editableColumns = ['KPI_ETAPAS', 'KPI_SLA'];
+const editableColumnsSet = new Set(editableColumns.map(c => String(c).toLowerCase()));
+
+function normalizarNombreColumna(col) {
+  return String(col || '').trim().replace(/\s+/g, '_').toLowerCase();
+}
 
 function repintar(contId) {
   const datosBase = window.__datosBase[contId] || [];
@@ -703,11 +708,12 @@ function repintar(contId) {
   const columnasUnicas = [];
   const columnasVistas = new Set();
   for (const col of columnas) {
-    const clave = String(col || '').trim().toLowerCase();
+    const clave = normalizarNombreColumna(col);
     if (columnasVistas.has(clave)) continue;
     columnasVistas.add(clave);
     columnasUnicas.push(col);
   }
+  const editableColumnasLower = new Set(editableColumns.map(c => String(c).toLowerCase()));
 
   let filtrados = datosBase.filter(fila => {
     return columnasUnicas.every(col => {
@@ -752,9 +758,9 @@ function repintar(contId) {
           <div class="text-[11px] mt-1"><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-red-300 hover:text-red-200">Ver link</a></div>
         </td>`;
       }
-      if (editableColumns.includes(c)) {
+      if (editableColumnsSet.has(String(c).toLowerCase())) {
         const rawValue = v === null || v === undefined || v === '' ? '0' : String(v).replace(/\D/g, '').slice(0, 1) || '0';
-        return `<td class="p-2 whitespace-nowrap"><div contenteditable="true" spellcheck="false" class="editable-cell rounded bg-slate-900 px-2 py-1 text-right" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}" onclick="event.stopPropagation()">${rawValue}</div></td>`;
+        return `<td class="p-2 whitespace-nowrap"><div tabindex="0" contenteditable="true" spellcheck="false" class="editable-cell rounded bg-slate-900 px-2 py-1 text-right" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}" onmousedown="event.stopPropagation()" onclick="event.stopPropagation()">${rawValue}</div></td>`;
       }
       return `<td class="p-2 whitespace-nowrap text-gray-300">${contenidoCelda}</td>`;
     }).join('')}</tr>`;
@@ -1426,13 +1432,31 @@ function actualizarEditable(contId, rowId, col, valor) {
     if (fila2) fila2[col] = valor;
   }
 
-  if (contId === 'tabla-dinamica' && editableColumns.includes(col) && fila.id) {
+  if (contId === 'tabla-dinamica' && editableColumnsSet.has(String(col).toLowerCase()) && fila.id) {
     actualizarLeadKPI(fila.id, col, Number(valor));
   }
 }
 
-async function actualizarLeadKPI(id, col, valor) {
-  if (!id || !editableColumns.includes(col)) return;
+function normalizarFilaLeads(item) {
+  const salida = {};
+  for (const key of Object.keys(item)) {
+    const valor = item[key];
+    const columna = normalizarNombreColumna(key);
+    if (columna === 'opportunity_stage' || columna === 'stage' || columna === 'opportunitystage') continue;
+    if (columna === 'kpi_etapas') {
+      if (salida.KPI_ETAPAS === undefined) salida.KPI_ETAPAS = valor;
+      continue;
+    }
+    if (columna === 'kpi_sla') {
+      if (salida.KPI_SLA === undefined) salida.KPI_SLA = valor;
+      continue;
+    }
+    if (salida.hasOwnProperty(key)) continue;
+    salida[key] = valor;
+  }
+  if (salida.KPI_ETAPAS === undefined) salida.KPI_ETAPAS = 0;
+  if (salida.KPI_SLA === undefined) salida.KPI_SLA = 0;
+  return salida;
   try {
     const cliente = getSupabase();
     const updateData = {};

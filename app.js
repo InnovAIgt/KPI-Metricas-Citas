@@ -106,6 +106,8 @@ function render() {
   if (vistaActual === 'catalogo') return renderCatalogo(main);
   if (vistaActual === 'res-pais') return renderResumenPais(main);
   if (vistaActual === 'res-ejecutivo') return renderResumenEjecutivo(main);
+  if (vistaActual === 'res-sla') return renderResumenSLA(main);
+  if (vistaActual === 'res-retro') return renderResumenRetro(main);
   if (vistaActual === 'res-detalle') return renderDetalleUnificado(main);
 }
 
@@ -536,7 +538,11 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
 
   if (detalleFiltro && detalleFiltro.tabla === tabla) {
     datosFiltrados = aplicarFiltroDetalleRegistro(datosFiltrados, tabla);
-    const filtroText = `Mostrando registros de ${tabla === 'llamadas' ? 'PBX' : 'Celular'} para ${detalleFiltro.telefono}` + (detalleFiltro.fecha ? ` en ${detalleFiltro.fecha}` : '');
+    let filtroText = `Mostrando registros de ${tabla === 'llamadas' ? 'PBX' : 'Celular'}`;
+    if (detalleFiltro.ejecutivo) filtroText += ` para ${detalleFiltro.ejecutivo}`;
+    if (detalleFiltro.tipoResumen) filtroText += ` (${detalleFiltro.tipoResumen.toUpperCase()})`;
+    if (detalleFiltro.telefono) filtroText += ` y teléfono ${detalleFiltro.telefono}`;
+    if (detalleFiltro.fecha) filtroText += ` en ${detalleFiltro.fecha}`;
     const estadoEl = document.getElementById('estado-tabla');
     if (estadoEl) {
       estadoEl.classList.remove('hidden');
@@ -654,19 +660,36 @@ function abrirDetalleFuente(event, fila) {
   }
 }
 
+function abrirLeadsDesdeResumen(ejecutivo, tipoResumen) {
+  if (typeof ejecutivo !== 'string') ejecutivo = String(ejecutivo || '');
+  detalleFiltro = {
+    tabla: 'leads',
+    ejecutivo: decodeURIComponent(ejecutivo),
+    tipoResumen
+  };
+  irA('reg-leads');
+}
+
 function aplicarFiltroDetalleRegistro(datos, tabla) {
   if (!detalleFiltro || detalleFiltro.tabla !== tabla) return datos;
   const telefonoFiltro = normalizarTel(detalleFiltro.telefono);
   const fechaFiltro = detalleFiltro.fecha ? String(detalleFiltro.fecha).split('T')[0] : '';
   const registroFiltro = detalleFiltro.registroId ? String(detalleFiltro.registroId) : '';
+  const ejecutivoFiltro = detalleFiltro.ejecutivo ? String(detalleFiltro.ejecutivo).trim().toLowerCase() : '';
 
   return datos.filter(item => {
     if (registroFiltro) {
       const idMatch = String(item.uniqueid || item.id || '').trim() === registroFiltro.trim();
       if (idMatch) return true;
     }
-    const destino = normalizarTel(item.destino);
-    if (!destino || destino !== telefonoFiltro) return false;
+    if (ejecutivoFiltro) {
+      const nombreEjecutivo = String(item.asesor_nombre || item.ejecutivo || '').trim().toLowerCase();
+      if (nombreEjecutivo !== ejecutivoFiltro) return false;
+    }
+    if (telefonoFiltro) {
+      const destino = normalizarTel(item.destino);
+      if (!destino || destino !== telefonoFiltro) return false;
+    }
     if (!fechaFiltro) return true;
     const itemFecha = tabla === 'llamadas'
       ? (item.fecha_hora || '').split('T')[0]
@@ -699,8 +722,13 @@ const editableColumns = [
 ];
 const editableColumnsSet = new Set(editableColumns.map(c => String(c).toLowerCase()));
 const colToDbField = {
-  'KPI SLA ETAPA 1': 'KPI_SLA',
-  'KPI RETROALIMENTACION ETAPA 1': 'KPI_ETAPAS'
+  'KPI SLA ETAPA 1': 'kpi_sla_etapa_1',
+  'KPI SLA ETAPA 2': 'kpi_sla_etapa_2',
+  'KPI SLA ETAPA 3': 'kpi_sla_etapa_3',
+  'KPI RETROALIMENTACION ETAPA 1': 'kpi_retroalimentacion_etapa_1',
+  'KPI RETROALIMENTACION ETAPA 2': 'kpi_retroalimentacion_etapa_2',
+  'KPI RETROALIMENTACION ETAPA 3': 'kpi_retroalimentacion_etapa_3',
+  'KPI RETROALIMENTACION ETAPA 4': 'kpi_retroalimentacion_etapa_4'
 };
 
 function normalizarNombreColumna(col) {
@@ -771,8 +799,10 @@ function repintar(contId) {
         </td>`;
       }
       if (editableColumnsSet.has(String(c).toLowerCase())) {
-        const rawValue = v === null || v === undefined || v === '' ? '0' : String(v).replace(/\D/g, '').slice(0, 1) || '0';
-        return `<td class="p-2 whitespace-nowrap"><div tabindex="0" contenteditable="true" spellcheck="false" class="editable-cell rounded bg-slate-900 px-2 py-1 text-right" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}" onmousedown="event.stopPropagation()" onclick="event.stopPropagation()">${rawValue}</div></td>`;
+        const value = (v === true || String(v).toLowerCase() === 'true') ? 'true' : 'false';
+        const selectedYes = value === 'true' ? 'selected' : '';
+        const selectedNo = value === 'false' ? 'selected' : '';
+        return `<td class="p-2 whitespace-nowrap"><select class="w-full rounded bg-slate-900 text-xs text-gray-100 px-2 py-1" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}" onchange="actualizarEditable(this.dataset.cont, this.dataset.row, this.dataset.col, this.value)" onclick="event.stopPropagation()"><option value="false" ${selectedNo}>No</option><option value="true" ${selectedYes}>Sí</option></select></td>`;
       }
       return `<td class="p-2 whitespace-nowrap text-gray-300">${contenidoCelda}</td>`;
     }).join('')}</tr>`;
@@ -1078,7 +1108,14 @@ async function calcularCruceUnificado() {
       estado_tipo: estadoTipo,
       registro_origen_id: coincidencia?.raw?.uniqueid ?? coincidencia?.raw?.id ?? '',
       registro_origen_tabla: coincidencia?.fuente ?? '',
-      catalogo_ok: ejec ? 'Sí' : 'No'
+      catalogo_ok: ejec ? 'Sí' : 'No',
+      kpi_sla_etapa_1: Boolean(lead.kpi_sla_etapa_1),
+      kpi_sla_etapa_2: Boolean(lead.kpi_sla_etapa_2),
+      kpi_sla_etapa_3: Boolean(lead.kpi_sla_etapa_3),
+      kpi_retroalimentacion_etapa_1: Boolean(lead.kpi_retroalimentacion_etapa_1),
+      kpi_retroalimentacion_etapa_2: Boolean(lead.kpi_retroalimentacion_etapa_2),
+      kpi_retroalimentacion_etapa_3: Boolean(lead.kpi_retroalimentacion_etapa_3),
+      kpi_retroalimentacion_etapa_4: Boolean(lead.kpi_retroalimentacion_etapa_4)
     };
   });
 
@@ -1347,6 +1384,247 @@ async function renderResumenEjecutivo(main) {
   );
 }
 
+function agregarPorSLA(cruce) {
+  const grupos = {};
+  cache.ejecutivos.forEach(e => {
+    const nombre = (e.nombre_ejecutivo || '').trim();
+    const key = nombre.toLowerCase();
+    grupos[key] = {
+      pais: e.pais || 'N/D',
+      ejecutivo: nombre || 'Sin asignar',
+      leads: 0,
+      sla_etapa_1: 0,
+      sla_etapa_2: 0,
+      sla_etapa_3: 0,
+      enCatalogo: true
+    };
+  });
+
+  const sinCatalogo = {};
+
+  cruce.forEach(r => {
+    const nombreLead = (r.ejecutivo || '').trim();
+    const key = nombreLead.toLowerCase();
+    let g = grupos[key];
+    if (!g) {
+      if (!sinCatalogo[key]) {
+        sinCatalogo[key] = {
+          pais: r.pais || 'N/D',
+          ejecutivo: nombreLead || 'Sin asignar',
+          leads: 0,
+          sla_etapa_1: 0,
+          sla_etapa_2: 0,
+          sla_etapa_3: 0,
+          enCatalogo: false
+        };
+      }
+      g = sinCatalogo[key];
+    }
+    g.leads++;
+    if (r.kpi_sla_etapa_1) g.sla_etapa_1++;
+    if (r.kpi_sla_etapa_2) g.sla_etapa_2++;
+    if (r.kpi_sla_etapa_3) g.sla_etapa_3++;
+  });
+
+  const ordenar = arr => arr.sort((a, b) => nombrePais(a.pais).localeCompare(nombrePais(b.pais)) || a.ejecutivo.localeCompare(b.ejecutivo));
+  return ordenar([...Object.values(grupos), ...Object.values(sinCatalogo)]);
+}
+
+function agregarPorRetro(cruce) {
+  const grupos = {};
+  cache.ejecutivos.forEach(e => {
+    const nombre = (e.nombre_ejecutivo || '').trim();
+    const key = nombre.toLowerCase();
+    grupos[key] = {
+      pais: e.pais || 'N/D',
+      ejecutivo: nombre || 'Sin asignar',
+      leads: 0,
+      retro_etapa_1: 0,
+      retro_etapa_2: 0,
+      retro_etapa_3: 0,
+      retro_etapa_4: 0,
+      enCatalogo: true
+    };
+  });
+
+  const sinCatalogo = {};
+
+  cruce.forEach(r => {
+    const nombreLead = (r.ejecutivo || '').trim();
+    const key = nombreLead.toLowerCase();
+    let g = grupos[key];
+    if (!g) {
+      if (!sinCatalogo[key]) {
+        sinCatalogo[key] = {
+          pais: r.pais || 'N/D',
+          ejecutivo: nombreLead || 'Sin asignar',
+          leads: 0,
+          retro_etapa_1: 0,
+          retro_etapa_2: 0,
+          retro_etapa_3: 0,
+          retro_etapa_4: 0,
+          enCatalogo: false
+        };
+      }
+      g = sinCatalogo[key];
+    }
+    g.leads++;
+    if (r.kpi_retroalimentacion_etapa_1) g.retro_etapa_1++;
+    if (r.kpi_retroalimentacion_etapa_2) g.retro_etapa_2++;
+    if (r.kpi_retroalimentacion_etapa_3) g.retro_etapa_3++;
+    if (r.kpi_retroalimentacion_etapa_4) g.retro_etapa_4++;
+  });
+
+  const ordenar = arr => arr.sort((a, b) => nombrePais(a.pais).localeCompare(nombrePais(b.pais)) || a.ejecutivo.localeCompare(b.ejecutivo));
+  return ordenar([...Object.values(grupos), ...Object.values(sinCatalogo)]);
+}
+
+function pintarTablaResumenSLA(datos) {
+  const cols = [
+    { key: 'pais', label: 'País' },
+    { key: 'ejecutivo', label: 'Ejecutivo' },
+    { key: 'leads', label: 'Leads' },
+    { key: 'sla_etapa_1', label: '% SLA Etapa 1' },
+    { key: 'sla_etapa_2', label: '% SLA Etapa 2' },
+    { key: 'sla_etapa_3', label: '% SLA Etapa 3' }
+  ];
+
+  const filaHtml = (d, esTotal) => {
+    const base = esTotal ? 'bg-[#0f3a4a] text-white font-bold' : 'hover:bg-slate-800/50 text-gray-200 cursor-pointer';
+    const onclick = esTotal ? '' : `onclick="abrirLeadsDesdeResumen('${encodeURIComponent(String(d.ejecutivo || ''))}','sla')"`;
+    return `<tr class="${base}" ${onclick}>${cols.map(c => {
+      let v = d[c.key];
+      if (c.key === 'pais') v = esTotal ? 'TOTAL' : nombrePais(v);
+      if (c.key === 'sla_etapa_1' || c.key === 'sla_etapa_2' || c.key === 'sla_etapa_3') {
+        v = d.leads > 0 ? Math.round((v / d.leads) * 100) + '%' : '0%';
+      }
+      const align = c.key === 'pais' || c.key === 'ejecutivo' ? 'text-left' : 'text-right';
+      return `<td class="p-2.5 whitespace-nowrap ${align}">${v ?? ''}</td>`;
+    }).join('')}</tr>`;
+  };
+
+  const thead = `<tr>${cols.map((c, idx) => {
+    const align = c.key === 'pais' || c.key === 'ejecutivo' ? 'text-left' : 'text-right';
+    const hasFilter = true;
+    return `<th data-key="${c.key}" class="p-2.5 ${align} text-[10px]">${c.label} ${hasFilter ? '<span class="filtro-icono" onclick="abrirFiltroColumnaResumen(\'tabla-resumen-sla\',\'' + c.key + '\', this)">▾</span>' : ''}</th>`;
+  }).join('')}</tr>`;
+  const filas = datos.map(d => filaHtml(d, false)).join('');
+
+  document.getElementById('tabla-resumen-sla').innerHTML = `
+    <div class="overflow-auto rounded-lg border border-gray-800">
+      <table class="w-full text-xs border-collapse">
+        <thead class="bg-[#0e7490] text-white">${thead}</thead>
+        <tbody class="divide-y divide-gray-800">${filas}</tbody>
+      </table>
+    </div>`;
+}
+
+function pintarTablaResumenRetro(datos) {
+  const cols = [
+    { key: 'pais', label: 'País' },
+    { key: 'ejecutivo', label: 'Ejecutivo' },
+    { key: 'leads', label: 'Leads' },
+    { key: 'retro_etapa_1', label: '% Retroalimentación Etapa 1' },
+    { key: 'retro_etapa_2', label: '% Retroalimentación Etapa 2' },
+    { key: 'retro_etapa_3', label: '% Retroalimentación Etapa 3' },
+    { key: 'retro_etapa_4', label: '% Retroalimentación Etapa 4' }
+  ];
+
+  const filaHtml = (d, esTotal) => {
+    const base = esTotal ? 'bg-[#0f3a4a] text-white font-bold' : 'hover:bg-slate-800/50 text-gray-200 cursor-pointer';
+    const onclick = esTotal ? '' : `onclick="abrirLeadsDesdeResumen('${encodeURIComponent(String(d.ejecutivo || ''))}','retro')"`;
+    return `<tr class="${base}" ${onclick}>${cols.map(c => {
+      let v = d[c.key];
+      if (c.key === 'pais') v = esTotal ? 'TOTAL' : nombrePais(v);
+      if (c.key.startsWith('retro_etapa_')) {
+        v = d.leads > 0 ? Math.round((v / d.leads) * 100) + '%' : '0%';
+      }
+      const align = c.key === 'pais' || c.key === 'ejecutivo' ? 'text-left' : 'text-right';
+      return `<td class="p-2.5 whitespace-nowrap ${align}">${v ?? ''}</td>`;
+    }).join('')}</tr>`;
+  };
+
+  const thead = `<tr>${cols.map((c, idx) => {
+    const align = c.key === 'pais' || c.key === 'ejecutivo' ? 'text-left' : 'text-right';
+    const hasFilter = true;
+    return `<th data-key="${c.key}" class="p-2.5 ${align} text-[10px]">${c.label} ${hasFilter ? '<span class="filtro-icono" onclick="abrirFiltroColumnaResumen(\'tabla-resumen-retro\',\'' + c.key + '\', this)">▾</span>' : ''}</th>`;
+  }).join('')}</tr>`;
+  const filas = datos.map(d => filaHtml(d, false)).join('');
+
+  document.getElementById('tabla-resumen-retro').innerHTML = `
+    <div class="overflow-auto rounded-lg border border-gray-800">
+      <table class="w-full text-xs border-collapse">
+        <thead class="bg-[#0e7490] text-white">${thead}</thead>
+        <tbody class="divide-y divide-gray-800">${filas}</tbody>
+      </table>
+    </div>`;
+}
+
+async function renderResumenSLA(main) {
+  main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="text-sm font-bold text-gray-300">Cumplimiento SLA</h2>
+      <div class="flex gap-2">
+        <button onclick="renderResumenSLA(document.getElementById('main-content'))" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          Recalcular
+        </button>
+        <button id="btn-exp-sla" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+          Exportar XLSX
+        </button>
+      </div>
+    </div>
+    <p class="text-[11px] text-gray-500 mb-3">Resumen de cumplimiento por ejecutivo. El % de etapa se calcula sobre el total de leads del ejecutivo. Haz click en una fila para ver los leads calificados de ese ejecutivo.</p>
+    <div id="tabla-resumen-sla" class="overflow-auto text-xs"><span class="text-red-300">Calculando cruce...</span></div>
+  </div>`;
+
+  const cruce = await calcularCruceUnificado();
+  const datos = agregarPorSLA(cruce);
+  pintarTablaResumenSLA(datos);
+  document.getElementById('btn-exp-sla').onclick = () => exportarXLSXGenerico(datos.map(r => ({
+    pais: r.pais,
+    ejecutivo: r.ejecutivo,
+    leads: r.leads,
+    pct_sla_etapa_1: r.leads > 0 ? Math.round((r.sla_etapa_1 / r.leads) * 100) + '%' : '0%',
+    pct_sla_etapa_2: r.leads > 0 ? Math.round((r.sla_etapa_2 / r.leads) * 100) + '%' : '0%',
+    pct_sla_etapa_3: r.leads > 0 ? Math.round((r.sla_etapa_3 / r.leads) * 100) + '%' : '0%'
+  })), 'resumen_sla');
+}
+
+async function renderResumenRetro(main) {
+  main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="text-sm font-bold text-gray-300">Cumplimiento Retroalimentación</h2>
+      <div class="flex gap-2">
+        <button onclick="renderResumenRetro(document.getElementById('main-content'))" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          Recalcular
+        </button>
+        <button id="btn-exp-retro" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+          Exportar XLSX
+        </button>
+      </div>
+    </div>
+    <p class="text-[11px] text-gray-500 mb-3">Resumen de cumplimiento de retroalimentación por ejecutivo. El % de cada etapa se calcula sobre el total de leads del ejecutivo. Haz click en una fila para ver los leads calificados de ese ejecutivo.</p>
+    <div id="tabla-resumen-retro" class="overflow-auto text-xs"><span class="text-red-300">Calculando cruce...</span></div>
+  </div>`;
+
+  const cruce = await calcularCruceUnificado();
+  const datos = agregarPorRetro(cruce);
+  pintarTablaResumenRetro(datos);
+  document.getElementById('btn-exp-retro').onclick = () => exportarXLSXGenerico(datos.map(r => ({
+    pais: r.pais,
+    ejecutivo: r.ejecutivo,
+    leads: r.leads,
+    pct_retro_etapa_1: r.leads > 0 ? Math.round((r.retro_etapa_1 / r.leads) * 100) + '%' : '0%',
+    pct_retro_etapa_2: r.leads > 0 ? Math.round((r.retro_etapa_2 / r.leads) * 100) + '%' : '0%',
+    pct_retro_etapa_3: r.leads > 0 ? Math.round((r.retro_etapa_3 / r.leads) * 100) + '%' : '0%',
+    pct_retro_etapa_4: r.leads > 0 ? Math.round((r.retro_etapa_4 / r.leads) * 100) + '%' : '0%'
+  })), 'resumen_retro');
+}
+
 async function renderDetalleUnificado(main) {
   main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
     <div class="flex justify-between items-center mb-3">
@@ -1446,7 +1724,8 @@ function actualizarEditable(contId, rowId, col, valor) {
 
   const dbCol = colToDbField[col];
   if (contId === 'tabla-dinamica' && dbCol && fila.id) {
-    actualizarLeadKPI(fila.id, dbCol, Number(valor));
+    const parsed = String(valor).toLowerCase() === 'true';
+    actualizarLeadKPI(fila.id, dbCol, parsed);
   }
 }
 
@@ -1502,7 +1781,7 @@ async function actualizarLeadKPI(id, dbCol, valor) {
   try {
     const cliente = getSupabase();
     const updateData = {};
-    updateData[dbCol] = Number.isNaN(valor) ? 0 : valor;
+    updateData[dbCol] = typeof valor === 'boolean' ? valor : String(valor).toLowerCase() === 'true';
     const { error } = await cliente.from('leads').update(updateData).eq('id', id);
     if (error) {
       console.error('Error guardando KPI en leads:', error.message);

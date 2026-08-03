@@ -469,6 +469,16 @@ function filtrarPorFechaGlobal(datos, columnaFecha) {
   });
 }
 
+function obtenerUrlAudio(item) {
+  if (!item || typeof item !== 'object') return '';
+  const campos = ['grabacion_url', 'audio_url', 'recording_url', 'url_audio', 'link_audio', 'listen_url', 'recording', 'audio'];
+  for (const campo of campos) {
+    const valor = item[campo];
+    if (typeof valor === 'string' && valor.trim()) return valor.trim();
+  }
+  return '';
+}
+
 async function renderRegistro(main, tabla, titulo, columnaFecha) {
   main.innerHTML = `
     <div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
@@ -496,6 +506,14 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
   
   let datosFiltrados = filtrarPorFechaGlobal(cache[tabla], columnaFecha);
   datosFiltrados = datosFiltrados.map(({ id, ...resto }) => resto);
+
+  if (tabla === 'llamadas') {
+    datosFiltrados = datosFiltrados.map(item => ({
+      ...item,
+      Escuchar: obtenerUrlAudio(item) || ''
+    }));
+  }
+
   pintarTablaConFiltros('tabla-dinamica', datosFiltrados);
 }
 
@@ -645,6 +663,11 @@ function repintar(contId) {
       const contenidoCelda = /<[^>]+>/.test(rawValue) ? rawValue : rawValue.slice(0,120);
       if (c === 'Evidencia') {
         return `<td class="p-2 text-gray-300 align-top">${contenidoCelda}</td>`;
+      }
+      if (c === 'Escuchar') {
+        if (!v) return `<td class="p-2 text-gray-500 italic">Sin audio</td>`;
+        const url = String(v).trim();
+        return `<td class="p-2 whitespace-nowrap"><audio controls preload="none" class="h-8 max-w-[180px]"><source src="${url}" /></audio></td>`;
       }
       return `<td class="p-2 whitespace-nowrap text-gray-300">${contenidoCelda}</td>`;
     }).join('')}</tr>`;

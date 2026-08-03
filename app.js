@@ -1863,6 +1863,7 @@ function normalizarFilaLeads(item) {
     ejecutivo: ['asesor_nombre', 'ejecutivo', 'asesor', 'asesor_name'],
     resultado: ['resultado', 'status', 'status_lead']
   };
+  const clavesPrincipales = Object.values(mapAliases).flat();
   for (const [canon, aliases] of Object.entries(mapAliases)) {
     for (const key of Object.keys(item)) {
       const colNorm = normalizarNombreColumna(key);

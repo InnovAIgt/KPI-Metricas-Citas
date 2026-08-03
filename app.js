@@ -1066,7 +1066,6 @@ async function calcularCruceUnificado() {
   const ahora = new Date();
 
   const resultado = leads.map(lead => {
-    let debugCandidates = '';
     const telLead = normalizarTel(lead.telefono);
     const progr = parseFechaHora(lead.fecha_agendada, lead.hora_agendada);
     const esTeams = esReunionTeams(lead.tipo_reunion);
@@ -1118,9 +1117,6 @@ async function calcularCruceUnificado() {
           const fh = fBase && c.raw.hora ? new Date(`${fBase}T${c.raw.hora}`) : null;
           return { fuente: 'Celular', fechaHora: fh, raw: c.raw, operador: String(c.raw.usuario || '').trim().toLowerCase() };
         });
-      if (lead.codigo_prospecto === 'LD226' || String(lead.codigo_prospecto).toUpperCase() === 'LD226') {
-        console.log('LD226 telLead', telLead, 'candCelRaw', candCelRaw);
-      }
 
       candidatas = [...candPBX, ...candCel].filter(c => c.fechaHora && !isNaN(c.fechaHora.getTime()));
       usuarioNorm = usuario ? String(usuario).trim().toLowerCase() : '';
@@ -1156,12 +1152,14 @@ async function calcularCruceUnificado() {
         if (sameHourDay.length) {
           coincidencia = elegirConPreferenciaOperador(sameHourDay);
           diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
-          estado = 'Cumplió en fecha y horario';
+          estado = diferenciaMin <= 5 ? 'Cumplió en fecha y horario' : 'Llamó el mismo día fuera de horario';
           fuente = coincidencia.fuente;
         } else if (sameHourAny.length) {
           coincidencia = elegirConPreferenciaOperador(sameHourAny);
           diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
-          estado = 'Cumplió en fecha y horario';
+          estado = mismoDia(coincidencia.fechaHora, progr)
+            ? (diferenciaMin <= 5 ? 'Cumplió en fecha y horario' : 'Llamó el mismo día fuera de horario')
+            : 'Llamó en otra fecha';
           fuente = coincidencia.fuente;
         } else {
           // 2) Prefer any call on the same day
@@ -1183,23 +1181,6 @@ async function calcularCruceUnificado() {
         estado = ahora < limite ? 'Pendiente de evaluar' : 'Sin llamada encontrada';
       }
 
-      // prepare detailed debug info string listing candidate parsed times, raw values and epoch
-      try {
-        const progrDebug = progr ? `${formatearFechaCorta(progr)} ${formatearHoraCorta(progr)} (ISO:${progr.toISOString()}, H:${progr.getHours()})` : 'SIN_PROG';
-        const detalles = candidatas.map(c => {
-          const parsedISO = c.fechaHora ? c.fechaHora.toISOString() : '';
-          const epoch = c.fechaHora ? c.fechaHora.getTime() : '';
-          const rawStr = c.raw ? (c.raw.fecha_hora || c.raw.fecha || c.raw.hora || JSON.stringify(c.raw)) : '';
-          const operadorMatch = usuarioNorm ? (String(c.operador || '').trim().toLowerCase() === usuarioNorm) : 'NA';
-          return `${c.fuente}:${c.operador || '-'}@parsed=${parsedISO}|epoch=${epoch}|raw=${rawStr}|opMatch=${operadorMatch}`;
-        }).join(' || ');
-        if (coincidencia) {
-          const selISO = coincidencia.fechaHora ? coincidencia.fechaHora.toISOString() : '';
-          debugCandidates = `PROG -> ${progrDebug} -- SELECCIONADA -> ${coincidencia.fuente}:${coincidencia.operador || '-'}@parsed=${selISO} -- Todas: ${detalles}`;
-        } else {
-          debugCandidates = `PROG -> ${progrDebug} -- Ninguna seleccionada -- Todas: ${detalles}`;
-        }
-      } catch (e) { debugCandidates = 'ERROR DEBUG';}
     }
 
     const diferenciaMinFirmada = coincidencia && progr
@@ -1264,26 +1245,6 @@ async function calcularCruceUnificado() {
       kpi_retroalimentacion_etapa_4: Boolean(lead.kpi_retroalimentacion_etapa_4),
       fuente: fuente
     };
-    if (lead.codigo_prospecto === 'LD226' || String(lead.codigo_prospecto).toUpperCase() === 'LD226') {
-        console.log('LD226 cruce:', {
-          progr: progr ? progr.toISOString() : null,
-          candidatas: candidatas.map(c => ({
-            fuente: c.fuente,
-            operador: c.operador,
-            parsed: c.fechaHora ? c.fechaHora.toISOString() : null,
-            dateLocal: c.fechaHora ? `${formatearFechaCorta(c.fechaHora)} ${formatearHoraCorta(c.fechaHora)}` : null,
-            raw: c.raw ? (c.raw.fecha_hora || c.raw.fecha || c.raw.hora || '') : null
-          })),
-          selected: coincidencia ? {
-            fuente: coincidencia.fuente,
-            operador: coincidencia.operador,
-            parsed: coincidencia.fechaHora ? coincidencia.fechaHora.toISOString() : null,
-            dateLocal: coincidencia.fechaHora ? `${formatearFechaCorta(coincidencia.fechaHora)} ${formatearHoraCorta(coincidencia.fechaHora)}` : null,
-            raw: coincidencia.raw ? (coincidencia.raw.fecha_hora || coincidencia.raw.fecha || coincidencia.raw.hora || '') : null
-          } : null
-        });
-        outObj.debug_llamadas = `<pre style="white-space: pre-wrap; font-size: 10px; line-height: 1.1;">${debugCandidates}</pre>`;
-      }
     return outObj;
   });
 
@@ -1834,7 +1795,6 @@ async function renderDetalleUnificado(main) {
     'Estado/tipo': r.estado_tipo,
     'En catálogo': r.catalogo_ok,
     'Fuente': r.fuente,
-    'Debug llamadas': r.debug_llamadas || '',
     '__rowId': idx,
     '__telefono_comparado': r.telefono_comparado,
     '__fecha_llamada': r.fecha_llamada ? String(r.fecha_llamada).split('T')[0] : '',

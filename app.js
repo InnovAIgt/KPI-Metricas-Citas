@@ -1231,8 +1231,25 @@ async function calcularCruceUnificado() {
       fuente: fuente
     };
     if (lead.codigo_prospecto === 'LD226' || String(lead.codigo_prospecto).toUpperCase() === 'LD226') {
-      outObj.debug_llamadas = debugCandidates || '';
-    }
+        console.log('LD226 cruce:', {
+          progr: progr ? progr.toISOString() : null,
+          candidatas: candidatas.map(c => ({
+            fuente: c.fuente,
+            operador: c.operador,
+            parsed: c.fechaHora ? c.fechaHora.toISOString() : null,
+            dateLocal: c.fechaHora ? `${formatearFechaCorta(c.fechaHora)} ${formatearHoraCorta(c.fechaHora)}` : null,
+            raw: c.raw ? (c.raw.fecha_hora || c.raw.fecha || c.raw.hora || '') : null
+          })),
+          selected: coincidencia ? {
+            fuente: coincidencia.fuente,
+            operador: coincidencia.operador,
+            parsed: coincidencia.fechaHora ? coincidencia.fechaHora.toISOString() : null,
+            dateLocal: coincidencia.fechaHora ? `${formatearFechaCorta(coincidencia.fechaHora)} ${formatearHoraCorta(coincidencia.fechaHora)}` : null,
+            raw: coincidencia.raw ? (coincidencia.raw.fecha_hora || coincidencia.raw.fecha || coincidencia.raw.hora || '') : null
+          } : null
+        });
+        outObj.debug_llamadas = `<pre style="white-space: pre-wrap; font-size: 10px; line-height: 1.1;">${debugCandidates}</pre>`;
+      }
     return outObj;
   });
 

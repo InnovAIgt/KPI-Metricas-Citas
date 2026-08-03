@@ -840,8 +840,9 @@ function repintar(contId) {
         return `<td class="p-2 text-gray-300 align-top">${contenidoCelda}</td>`;
       }
       if (c === 'Escuchar') {
-        if (!v) return `<td class="p-2 text-gray-500 italic">Sin audio</td>`;
-        const url = String(v).trim();
+        const url = String(v || '').trim();
+        const esValida = /^https?:\/\//i.test(url) || /^data:/i.test(url);
+        if (!url || !esValida) return `<td class="p-2 text-gray-500 italic">Sin audio</td>`;
         return `<td class="p-2 whitespace-nowrap">
           <audio controls preload="metadata" class="h-8 max-w-[240px]" src="${url}">Tu navegador no soporta audio.</audio>
           <div class="text-[11px] mt-1"><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-red-300 hover:text-red-200">Ver link</a></div>

@@ -700,9 +700,17 @@ function repintar(contId) {
     return;
   }
   const columnas = Object.keys(datosBase[0]).filter(c => c !== 'created_at' && c !== 'id' && !c.startsWith('__'));
+  const columnasUnicas = [];
+  const columnasVistas = new Set();
+  for (const col of columnas) {
+    const clave = String(col || '').trim().toLowerCase();
+    if (columnasVistas.has(clave)) continue;
+    columnasVistas.add(clave);
+    columnasUnicas.push(col);
+  }
 
   let filtrados = datosBase.filter(fila => {
-    return columnas.every(col => {
+    return columnasUnicas.every(col => {
       const set = filtros[col];
       if (!set) return true;
       return set.has(valorMostrable(fila[col]));
@@ -711,7 +719,7 @@ function repintar(contId) {
 
   window.__ultimoFiltrado[contId] = filtrados;
 
-  const thead = `<thead><tr>${columnas.map(c => {
+  const thead = `<thead><tr>${columnasUnicas.map(c => {
     const activo = filtros[c] ? 'activo' : '';
     return c === 'acciones' 
       ? `<th class="p-2">${c}</th>`
@@ -721,7 +729,7 @@ function repintar(contId) {
   const columnasExpandibles = ['resumen_qa', 'transcripcion'];
 
   const filas = filtrados.slice(0, 10000).map(fila => {
-    return `<tr class="hover:bg-slate-800/50" data-fuente="${fila['Fuente cruda'] || fila['Fuente'] || ''}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_llamada'] || ''}" data-registro="${fila['__registro_id'] || ''}" data-registro-tabla="${fila['__registro_tabla'] || ''}" onclick="abrirDetalleFuente(event, this)">${columnas.map(c => {
+    return `<tr class="hover:bg-slate-800/50" data-fuente="${fila['Fuente cruda'] || fila['Fuente'] || ''}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_llamada'] || ''}" data-registro="${fila['__registro_id'] || ''}" data-registro-tabla="${fila['__registro_tabla'] || ''}" onclick="abrirDetalleFuente(event, this)">${columnasUnicas.map(c => {
       let v = fila[c];
       if (c === 'acciones') return `<td class="p-2">${v}</td>`;
       if (c === 'Estado' || c === 'Resultado') return `<td class="p-2 whitespace-nowrap">${badgeEstadoCruce(v)}</td>`;
@@ -752,7 +760,7 @@ function repintar(contId) {
     }).join('')}</tr>`;
   }).join('');
 
-  cont.innerHTML = thead + `<tbody>${filas || `<tr><td class="p-4 text-center text-gray-500" colspan="${columnas.length}">Sin resultados con esos filtros.</td></tr>`}</tbody>`;
+  cont.innerHTML = thead + `<tbody>${filas || `<tr><td class="p-4 text-center text-gray-500" colspan="${columnasUnicas.length}">Sin resultados con esos filtros.</td></tr>`}</tbody>`;
 
   const contador = document.getElementById('estado-tabla');
   if (contador) { contador.classList.remove('hidden'); contador.innerText = `${filtrados.length.toLocaleString()} de ${datosBase.length.toLocaleString()} registros (mostrando máx. 10000 en pantalla; XLSX exporta todo lo filtrado)`; }

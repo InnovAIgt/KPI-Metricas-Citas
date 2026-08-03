@@ -753,6 +753,34 @@ function repintar(contId) {
     columnasVistas.add(clave);
     columnasUnicas.push(col);
   }
+  // Reorder columns: prefer primary fields on the left, push KPI columns to the end
+  try {
+    const preferredNorm = ['codigo_prospecto','lead','nombre_prospecto','cliente','pais','asesor_nombre','asesor','ejecutivo','vendedor','resultado','status','fecha_reunion','hora_reunion','fecha','hora','telefono','telefono_crm','telefono_comparado'];
+    const kpis = [];
+    const left = [];
+    const middle = [];
+    const seen = new Set();
+    const editableLower = new Set(editableColumns.map(c => String(c).toLowerCase()));
+
+    for (const col of columnasUnicas) {
+      const norm = normalizarNombreColumna(col);
+      const isKpi = norm.includes('kpi') || editableLower.has(String(col).toLowerCase());
+      if (isKpi) { kpis.push(col); continue; }
+      const idx = preferredNorm.indexOf(norm);
+      if (idx !== -1) {
+        if (!seen.has(col)) { left.push({col, idx}); seen.add(col); }
+      } else {
+        middle.push(col);
+      }
+    }
+    left.sort((a,b)=>a.idx-b.idx);
+    const newOrder = [...left.map(x=>x.col), ...middle, ...kpis];
+    // replace columnasUnicas with ordered list
+    columnasUnicas.length = 0;
+    columnasUnicas.push(...newOrder);
+  } catch (err) {
+    // if ordering fails, keep original order
+  }
   const ordenColumna = col => {
     const sla = col.match(/^KPI\s+SLA\s+ETAPA\s*(\d+)/i);
     if (sla) return `1_${String(sla[1]).padStart(2,'0')}`;
@@ -1092,26 +1120,41 @@ async function calcularCruceUnificado() {
           return diffActual < diffMejor ? actual : mejor;
         }, null);
 
-        if (delDia.length) {
-          coincidencia = elegirMasCercana(delDia);
+        // 1) Prefer calls on the same day and same hour as scheduled
+        const sameHour = candidatas.filter(c => mismoDia(c.fechaHora, progr) && c.fechaHora.getHours() === progr.getHours());
+        if (sameHour.length) {
+          coincidencia = elegirMasCercana(sameHour);
           diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
           estado = diferenciaMin <= 5 ? 'Cumplió en fecha y horario' : 'Llamó el mismo día fuera de horario';
           fuente = coincidencia.fuente;
         } else {
-          coincidencia = elegirMasCercana(candidatas);
-          diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
-          estado = 'Llamó en otra fecha';
-          fuente = coincidencia.fuente;
+          // 2) Then prefer any call on the same day
+          if (delDia.length) {
+            coincidencia = elegirMasCercana(delDia);
+            diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
+            estado = diferenciaMin <= 5 ? 'Cumplió en fecha y horario' : 'Llamó el mismo día fuera de horario';
+            fuente = coincidencia.fuente;
+          } else {
+            // 3) fallback: closest overall
+            coincidencia = elegirMasCercana(candidatas);
+            diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
+            estado = 'Llamó en otra fecha';
+            fuente = coincidencia.fuente;
+          }
         }
       } else if (progr) {
         const limite = new Date(progr.getTime() + 5 * 60000);
         estado = ahora < limite ? 'Pendiente de evaluar' : 'Sin llamada encontrada';
       }
-        // prepare debug info string listing candidate times and operator
+        // prepare debug info string listing candidate parsed times and operator
         try {
-          debugCandidates = candidatas.map(c => `${c.fuente}:${c.operador || '-'}@${c.raw && (c.raw.fecha_hora || c.raw.fecha || c.raw.hora) || ''}`).join(' | ');
+          debugCandidates = candidatas.map(c => {
+            const when = c.fechaHora ? `${formatearFechaCorta(c.fechaHora)} ${formatearHoraCorta(c.fechaHora)}` : (c.raw && (c.raw.fecha_hora || c.raw.fecha || c.raw.hora) || '');
+            return `${c.fuente}:${c.operador || '-'}@${when}`;
+          }).join(' | ');
           if (coincidencia) {
-            debugCandidates = `SELECCIONADA -> ${coincidencia.fuente}:${coincidencia.operador || '-'}@${coincidencia.raw && (coincidencia.raw.fecha_hora || coincidencia.raw.fecha || coincidencia.raw.hora) || ''} -- Todas: ${debugCandidates}`;
+            const whenSel = coincidencia.fechaHora ? `${formatearFechaCorta(coincidencia.fechaHora)} ${formatearHoraCorta(coincidencia.fechaHora)}` : (coincidencia.raw && (coincidencia.raw.fecha_hora || coincidencia.raw.fecha || coincidencia.raw.hora) || '');
+            debugCandidates = `SELECCIONADA -> ${coincidencia.fuente}:${coincidencia.operador || '-'}@${whenSel} -- Todas: ${debugCandidates}`;
           }
         } catch (e) { debugCandidates = '';} 
     }

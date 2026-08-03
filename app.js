@@ -802,7 +802,8 @@ function repintar(contId) {
         const value = (v === true || String(v).toLowerCase() === 'true') ? 'true' : 'false';
         const selectedYes = value === 'true' ? 'selected' : '';
         const selectedNo = value === 'false' ? 'selected' : '';
-        return `<td class="p-2 whitespace-nowrap"><select class="w-full rounded bg-slate-900 text-xs text-gray-100 px-2 py-1" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}" onchange="actualizarEditable(this.dataset.cont, this.dataset.row, this.dataset.col, this.value)" onclick="event.stopPropagation()"><option value="false" ${selectedNo}>No</option><option value="true" ${selectedYes}>Sí</option></select></td>`;
+        const compactLabel = c.replace(/^KPI\s+/, '').replace(/RETROALIMENTACION\s+/, 'RETRO ').replace(/ETAPA\s+/, 'Et. ');
+        return `<td class="p-2 whitespace-nowrap text-left"><div class="kpi-cell"><div class="kpi-label">${compactLabel}</div><select class="kpi-select ${value === 'true' ? 'kpi-yes' : 'kpi-no'}" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}" onchange="actualizarEditable(this.dataset.cont, this.dataset.row, this.dataset.col, this.value)" onclick="event.stopPropagation()"><option value="false" ${selectedNo}>No</option><option value="true" ${selectedYes}>Sí</option></select></div></td>`;
       }
       return `<td class="p-2 whitespace-nowrap text-gray-300">${contenidoCelda}</td>`;
     }).join('')}</tr>`;
@@ -939,6 +940,19 @@ function parseFechaHora(fecha, hora) {
   return isNaN(d.getTime()) ? null : d;
 }
 
+function parseFechaHoraString(fechaHora) {
+  if (!fechaHora) return null;
+  const raw = String(fechaHora).trim();
+  const match = raw.match(/^(\d{4}-\d{2}-\d{2})(?:[ T])(\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?(?:\s*(?:Z|[+-]\d{2}:?\d{2}))?$/);
+  if (match) {
+    let time = match[2];
+    if (time.length === 5) time += ':00';
+    return new Date(`${match[1]}T${time}`);
+  }
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 function mismoDia(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
@@ -1031,7 +1045,7 @@ async function calcularCruceUnificado() {
     } else if (esLlamada) {
       const candPBX = cache.llamadas
         .filter(c => normalizarTel(c.destino) === telLead && telLead && (!usuario || c.nombre === usuario))
-        .map(c => ({ fuente: 'PBX', fechaHora: c.fecha_hora ? new Date(c.fecha_hora) : null, raw: c }));
+        .map(c => ({ fuente: 'PBX', fechaHora: parseFechaHoraString(c.fecha_hora), raw: c }));
 
       const candCel = cache.historiales
         .filter(c => normalizarTel(c.destino) === telLead && telLead && (!usuario || c.usuario === usuario) && (c.tipo || '').toLowerCase() === 'saliente')
@@ -1069,6 +1083,15 @@ async function calcularCruceUnificado() {
 
     const diferenciaHoras = minutosAHoras(diferenciaMinFirmada);
 
+    const rawFechaLlamada = coincidencia
+      ? String(coincidencia.fuente === 'PBX' ? coincidencia.raw.fecha_hora || '' : coincidencia.raw.fecha || '').trim()
+      : '';
+    const rawHoraLlamada = coincidencia
+      ? coincidencia.fuente === 'PBX'
+        ? (String(coincidencia.raw.fecha_hora || '').trim().split(/T| /)[1] || '').slice(0, 8)
+        : String(coincidencia.raw.hora || '').trim()
+      : '';
+
     let duracionSeg = null;
     let duracionMin = null;
     let estadoTipo = '';
@@ -1098,8 +1121,10 @@ async function calcularCruceUnificado() {
       resultado: estado,
       fuente: fuente,
       fecha_llamada: coincidencia && coincidencia.fechaHora ? coincidencia.fechaHora.toISOString() : '',
-      fecha_llamada_corta: coincidencia && coincidencia.fechaHora ? formatearFechaCorta(coincidencia.fechaHora) : '',
-      hora_llamada_corta: coincidencia && coincidencia.fechaHora ? formatearHoraCorta(coincidencia.fechaHora) : '',
+      fecha_llamada_corta: rawFechaLlamada || (coincidencia && coincidencia.fechaHora ? formatearFechaCorta(coincidencia.fechaHora) : ''),
+      hora_llamada_corta: rawHoraLlamada || (coincidencia && coincidencia.fechaHora ? formatearHoraCorta(coincidencia.fechaHora) : ''),
+      fecha_llamada_raw: rawFechaLlamada,
+      hora_llamada_raw: rawHoraLlamada,
       diferencia_min: diferenciaMin,
       diferencia_min_firmada: diferenciaMinFirmada,
       diferencia_horas: diferenciaHoras,
@@ -1667,6 +1692,8 @@ async function renderDetalleUnificado(main) {
     'Duración (seg)': r.duracion_seg,
     'Duración (min)': r.duracion_min,
     'Estado/tipo': r.estado_tipo,
+    'Hora llamada raw': r.hora_llamada_raw || '',
+    'Fecha llamada raw': r.fecha_llamada_raw || '',
     'KPI_ETAPAS': 0,
     'KPI_SLA': 0,
     'En catálogo': r.catalogo_ok,

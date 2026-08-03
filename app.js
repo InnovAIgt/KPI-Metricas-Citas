@@ -1064,30 +1064,41 @@ async function calcularCruceUnificado() {
       }
     } else if (esLlamada) {
       const candPBX = cache.llamadas
-        .filter(c => normalizarTel(c.destino) === telLead && telLead && (!usuario || c.nombre === usuario))
-        .map(c => ({ fuente: 'PBX', fechaHora: parseFechaHoraString(c.fecha_hora), raw: c }));
+        .filter(c => normalizarTel(c.destino) === telLead && telLead)
+        .map(c => ({ fuente: 'PBX', fechaHora: parseFechaHoraString(c.fecha_hora), raw: c, operador: String(c.nombre || '').trim().toLowerCase() }));
 
       const candCel = cache.historiales
-        .filter(c => normalizarTel(c.destino) === telLead && telLead && (!usuario || c.usuario === usuario) && (c.tipo || '').toLowerCase() === 'saliente')
+        .filter(c => normalizarTel(c.destino) === telLead && telLead && (c.tipo || '').toLowerCase() === 'saliente')
         .map(c => {
           const fBase = c.fecha ? String(c.fecha).split('T')[0] : null;
           const fh = fBase && c.hora ? new Date(`${fBase}T${c.hora}`) : null;
-          return { fuente: 'Celular', fechaHora: fh, raw: c };
+          return { fuente: 'Celular', fechaHora: fh, raw: c, operador: String(c.usuario || '').trim().toLowerCase() };
         });
 
-      const candidatas = [...candPBX, ...candCel].filter(c => c.fechaHora && !isNaN(c.fechaHora.getTime()));
+      let candidatas = [...candPBX, ...candCel].filter(c => c.fechaHora && !isNaN(c.fechaHora.getTime()));
+      if (usuario) {
+        const usuarioNorm = String(usuario).trim().toLowerCase();
+        const candidatasUsuario = candidatas.filter(c => c.operador === usuarioNorm);
+        if (candidatasUsuario.length) candidatas = candidatasUsuario;
+      }
 
       if (progr && candidatas.length) {
         const delDia = candidatas.filter(c => mismoDia(c.fechaHora, progr));
+        const elegirMasCercana = arr => arr.reduce((mejor, actual) => {
+          if (!mejor) return actual;
+          const diffMejor = Math.abs(mejor.fechaHora - progr);
+          const diffActual = Math.abs(actual.fechaHora - progr);
+          return diffActual < diffMejor ? actual : mejor;
+        }, null);
+
         if (delDia.length) {
-          delDia.sort((a, b) => Math.abs(a.fechaHora - progr) - Math.abs(b.fechaHora - progr));
-          coincidencia = delDia[0];
+          coincidencia = elegirMasCercana(delDia);
           diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
           estado = diferenciaMin <= 5 ? 'Cumplió en fecha y horario' : 'Llamó el mismo día fuera de horario';
           fuente = coincidencia.fuente;
         } else {
-          candidatas.sort((a, b) => Math.abs(a.fechaHora - progr) - Math.abs(b.fechaHora - progr));
-          coincidencia = candidatas[0];
+          coincidencia = elegirMasCercana(candidatas);
+          diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
           estado = 'Llamó en otra fecha';
           fuente = coincidencia.fuente;
         }

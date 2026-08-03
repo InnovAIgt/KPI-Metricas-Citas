@@ -1140,22 +1140,18 @@ async function calcularCruceUnificado() {
 
     return {
       pais: lead.pais || 'N/D',
-      ejecutivo: lead.asesor_nombre || 'Sin asignar',
       codigo_prospecto: lead.codigo_prospecto,
       lead: lead.nombre_prospecto,
       cliente: lead.nombre_prospecto,
+      ejecutivo: lead.asesor_nombre || 'Sin asignar',
+      resultado: estado,
       telefono: fuente === 'Teams' ? '' : lead.telefono,
       telefono_comparado: fuente === 'Teams' ? '' : telLead || '',
       fecha_reunion: lead.fecha_agendada,
       hora_reunion: lead.hora_agendada,
-      status_lead: lead.status,
-      resultado: estado,
-      fuente: fuente,
       fecha_llamada: coincidencia && coincidencia.fechaHora ? coincidencia.fechaHora.toISOString() : '',
-      fecha_llamada_corta: rawFechaLlamada || (coincidencia && coincidencia.fechaHora ? formatearFechaCorta(coincidencia.fechaHora) : ''),
-      hora_llamada_corta: rawHoraLlamada || (coincidencia && coincidencia.fechaHora ? formatearHoraCorta(coincidencia.fechaHora) : ''),
-      fecha_llamada_raw: rawFechaLlamada,
-      hora_llamada_raw: rawHoraLlamada,
+      fecha_llamada_corta: (coincidencia && coincidencia.fechaHora) ? formatearFechaCorta(coincidencia.fechaHora) : '',
+      hora_llamada_corta: (coincidencia && coincidencia.fechaHora) ? formatearHoraCorta(coincidencia.fechaHora) : '',
       diferencia_min: diferenciaMin,
       diferencia_min_firmada: diferenciaMinFirmada,
       diferencia_horas: diferenciaHoras,
@@ -1171,7 +1167,8 @@ async function calcularCruceUnificado() {
       kpi_retroalimentacion_etapa_1: Boolean(lead.kpi_retroalimentacion_etapa_1),
       kpi_retroalimentacion_etapa_2: Boolean(lead.kpi_retroalimentacion_etapa_2),
       kpi_retroalimentacion_etapa_3: Boolean(lead.kpi_retroalimentacion_etapa_3),
-      kpi_retroalimentacion_etapa_4: Boolean(lead.kpi_retroalimentacion_etapa_4)
+      kpi_retroalimentacion_etapa_4: Boolean(lead.kpi_retroalimentacion_etapa_4),
+      fuente: fuente
     };
   });
 
@@ -1706,16 +1703,13 @@ async function renderDetalleUnificado(main) {
   const cruce = await calcularCruceUnificado();
 
   const detalle = cruce.map((r, idx) => ({
-    'País': r.pais,
-    'Ejecutivo': r.ejecutivo,
     'Lead': r.codigo_prospecto,
+    'País': r.pais,
     'Cliente': r.cliente,
-    'Teléfono CRM': r.telefono,
-    'Teléfono comparado': r.telefono_comparado,
+    'Ejecutivo': r.ejecutivo,
+    'Resultado': r.resultado,
     'Fecha reunión': r.fecha_reunion,
     'Hora reunión': r.hora_reunion,
-    'Resultado': r.resultado,
-    'Fuente': r.fuente,
     'Fecha llamada': r.fecha_llamada_corta,
     'Hora llamada': r.hora_llamada_corta,
     'Diferencia (min)': r.diferencia_min_firmada,
@@ -1723,12 +1717,8 @@ async function renderDetalleUnificado(main) {
     'Duración (seg)': r.duracion_seg,
     'Duración (min)': r.duracion_min,
     'Estado/tipo': r.estado_tipo,
-    'Hora llamada raw': r.hora_llamada_raw || '',
-    'Fecha llamada raw': r.fecha_llamada_raw || '',
-    'KPI_ETAPAS': 0,
-    'KPI_SLA': 0,
     'En catálogo': r.catalogo_ok,
-    'Fuente cruda': r.fuente,
+    'Fuente': r.fuente,
     '__rowId': idx,
     '__telefono_comparado': r.telefono_comparado,
     '__fecha_llamada': r.fecha_llamada ? String(r.fecha_llamada).split('T')[0] : '',
@@ -1789,48 +1779,38 @@ function actualizarEditable(contId, rowId, col, valor) {
 
 function normalizarFilaLeads(item) {
   const salida = {};
-  for (const key of Object.keys(item)) {
-    const valor = item[key];
-    const columna = normalizarNombreColumna(key);
-    if (columna === 'opportunity_stage' || columna === 'stage' || columna === 'opportunitystage') continue;
-    if (columna === 'kpi_etapas') {
-      if (salida['KPI RETROALIMENTACION ETAPA 1'] === undefined) salida['KPI RETROALIMENTACION ETAPA 1'] = valor;
-      continue;
+  // Ensure primary columns first
+  const clavesPrincipales = ['lead', 'pais', 'cliente', 'ejecutivo', 'resultado'];
+  for (const k of clavesPrincipales) {
+    for (const key of Object.keys(item)) {
+      if (normalizarNombreColumna(key) === k && salida[key] === undefined) {
+        salida[key] = item[key];
+      }
     }
-    if (columna === 'kpi_sla') {
-      if (salida['KPI SLA ETAPA 1'] === undefined) salida['KPI SLA ETAPA 1'] = valor;
-      continue;
-    }
-    if (columna === 'kpi_sla_etapa_2') {
-      salida['KPI SLA ETAPA 2'] = valor;
-      continue;
-    }
-    if (columna === 'kpi_sla_etapa_3') {
-      salida['KPI SLA ETAPA 3'] = valor;
-      continue;
-    }
-    if (columna === 'kpi_retroalimentacion_etapa_2') {
-      salida['KPI RETROALIMENTACION ETAPA 2'] = valor;
-      continue;
-    }
-    if (columna === 'kpi_retroalimentacion_etapa_3') {
-      salida['KPI RETROALIMENTACION ETAPA 3'] = valor;
-      continue;
-    }
-    if (columna === 'kpi_retroalimentacion_etapa_4') {
-      salida['KPI RETROALIMENTACION ETAPA 4'] = valor;
-      continue;
-    }
-    if (salida.hasOwnProperty(key)) continue;
-    salida[key] = valor;
   }
-  salida['KPI SLA ETAPA 1'] = salida['KPI SLA ETAPA 1'] ?? 0;
-  salida['KPI SLA ETAPA 2'] = salida['KPI SLA ETAPA 2'] ?? 0;
-  salida['KPI SLA ETAPA 3'] = salida['KPI SLA ETAPA 3'] ?? 0;
-  salida['KPI RETROALIMENTACION ETAPA 1'] = salida['KPI RETROALIMENTACION ETAPA 1'] ?? 0;
-  salida['KPI RETROALIMENTACION ETAPA 2'] = salida['KPI RETROALIMENTACION ETAPA 2'] ?? 0;
-  salida['KPI RETROALIMENTACION ETAPA 3'] = salida['KPI RETROALIMENTACION ETAPA 3'] ?? 0;
-  salida['KPI RETROALIMENTACION ETAPA 4'] = salida['KPI RETROALIMENTACION ETAPA 4'] ?? 0;
+
+  // Add the rest of non-KPI columns
+  for (const key of Object.keys(item)) {
+    const columna = normalizarNombreColumna(key);
+    if (columna.startsWith('kpi_') || clavesPrincipales.includes(columna)) continue;
+    if (salida.hasOwnProperty(key)) continue;
+    salida[key] = item[key];
+  }
+
+  // Finally, append KPI columns at the end in a fixed order
+  const kpis = [
+    ['KPI SLA ETAPA 1', 'kpi_sla_etapa_1'],
+    ['KPI SLA ETAPA 2', 'kpi_sla_etapa_2'],
+    ['KPI SLA ETAPA 3', 'kpi_sla_etapa_3'],
+    ['KPI RETROALIMENTACION ETAPA 1', 'kpi_retroalimentacion_etapa_1'],
+    ['KPI RETROALIMENTACION ETAPA 2', 'kpi_retroalimentacion_etapa_2'],
+    ['KPI RETROALIMENTACION ETAPA 3', 'kpi_retroalimentacion_etapa_3'],
+    ['KPI RETROALIMENTACION ETAPA 4', 'kpi_retroalimentacion_etapa_4']
+  ];
+  for (const [label, col] of kpis) {
+    if (item.hasOwnProperty(col)) salida[label] = item[col];
+    else if (salida[label] === undefined) salida[label] = 0;
+  }
   return salida;
 }
 

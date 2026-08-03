@@ -523,6 +523,14 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
   }
 
   if (tabla === 'leads') {
+    const vistos = new Set();
+    datosFiltrados = datosFiltrados.filter(item => {
+      const clave = String(item.codigo_prospecto || item.telefono || item.nombre_prospecto || item.id || '').trim();
+      if (!clave) return true;
+      if (vistos.has(clave)) return false;
+      vistos.add(clave);
+      return true;
+    });
     datosFiltrados = datosFiltrados.map(({ opportunity_stage, stage, opportunityStage, ...rest }) => rest);
   }
 

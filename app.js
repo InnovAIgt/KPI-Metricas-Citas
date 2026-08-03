@@ -755,7 +755,7 @@ function repintar(contId) {
   }
   // Reorder columns: prefer primary fields on the left, push KPI columns to the end
   try {
-    const preferredNorm = ['codigo_prospecto','lead','nombre_prospecto','cliente','pais','asesor_nombre','asesor','ejecutivo','vendedor','resultado','status','fecha_reunion','hora_reunion','fecha','hora','telefono','telefono_crm','telefono_comparado'];
+    const preferredNorm = ['uniqueid','codigo_prospecto','lead','nombre_prospecto','cliente','asesor_nombre','asesor','ejecutivo','telefono','telefono_comparado','telefono_crm','hora_reunion','hora_agendada','fecha_reunion','fecha_agendada','resultado','status','pais','vendedor'];
     const kpis = [];
     const left = [];
     const middle = [];
@@ -774,6 +774,21 @@ function repintar(contId) {
       }
     }
     left.sort((a,b)=>a.idx-b.idx);
+    middle.sort((a,b) => a.localeCompare(b));
+    kpis.sort((a, b) => {
+      const ordenKpi = col => {
+        const sla = col.match(/^KPI\s+SLA\s+ETAPA\s*(\d+)/i);
+        if (sla) return `1_${String(sla[1]).padStart(2,'0')}`;
+        const retro = col.match(/^KPI\s+RETROALIMENTACION\s+ETAPA\s*(\d+)/i);
+        if (retro) return `2_${String(retro[1]).padStart(2,'0')}`;
+        return `3_${String(col).toLowerCase().replace(/\s+/g, ' ')}`;
+      };
+      const pa = ordenKpi(a);
+      const pb = ordenKpi(b);
+      if (pa < pb) return -1;
+      if (pa > pb) return 1;
+      return a.localeCompare(b);
+    });
     const newOrder = [...left.map(x=>x.col), ...middle, ...kpis];
     // replace columnasUnicas with ordered list
     columnasUnicas.length = 0;
@@ -781,20 +796,6 @@ function repintar(contId) {
   } catch (err) {
     // if ordering fails, keep original order
   }
-  const ordenColumna = col => {
-    const sla = col.match(/^KPI\s+SLA\s+ETAPA\s*(\d+)/i);
-    if (sla) return `1_${String(sla[1]).padStart(2,'0')}`;
-    const retro = col.match(/^KPI\s+RETROALIMENTACION\s+ETAPA\s*(\d+)/i);
-    if (retro) return `2_${String(retro[1]).padStart(2,'0')}`;
-    return `3_${String(col).toLowerCase().replace(/\s+/g, ' ')}`;
-  };
-  columnasUnicas.sort((a, b) => {
-    const pa = ordenColumna(a);
-    const pb = ordenColumna(b);
-    if (pa < pb) return -1;
-    if (pa > pb) return 1;
-    return a.localeCompare(b);
-  });
   const editableColumnasLower = new Set(editableColumns.map(c => String(c).toLowerCase()));
 
   let filtrados = datosBase.filter(fila => {
@@ -1149,12 +1150,18 @@ async function calcularCruceUnificado() {
           return byOp.length ? elegirMasCercana(byOp) : elegirMasCercana(arr);
         };
 
-        // 1) Prefer any call at the scheduled hour, regardless of date
-        const sameHour = candidatas.filter(c => obtenerHora(c) === horaProgr);
-        if (sameHour.length) {
-          coincidencia = elegirConPreferenciaOperador(sameHour);
+        // 1) Prefer a call on the scheduled hour, prioritizing same day first
+        const sameHourDay = candidatas.filter(c => mismoDia(c.fechaHora, progr) && obtenerHora(c) === horaProgr);
+        const sameHourAny = candidatas.filter(c => obtenerHora(c) === horaProgr);
+        if (sameHourDay.length) {
+          coincidencia = elegirConPreferenciaOperador(sameHourDay);
           diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
-          estado = diferenciaMin <= 5 ? 'Cumplió en fecha y horario' : 'Llamó el mismo día fuera de horario';
+          estado = 'Cumplió en fecha y horario';
+          fuente = coincidencia.fuente;
+        } else if (sameHourAny.length) {
+          coincidencia = elegirConPreferenciaOperador(sameHourAny);
+          diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
+          estado = 'Cumplió en fecha y horario';
           fuente = coincidencia.fuente;
         } else {
           // 2) Prefer any call on the same day

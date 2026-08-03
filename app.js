@@ -505,13 +505,24 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
   document.getElementById('estado-tabla').classList.add('hidden');
   
   let datosFiltrados = filtrarPorFechaGlobal(cache[tabla], columnaFecha);
-  datosFiltrados = datosFiltrados.map(({ id, ...resto }) => resto);
+
+  if (tabla === 'leads') {
+    datosFiltrados = datosFiltrados.map(item => ({
+      ...item,
+      KPI_ETAPAS: item.KPI_ETAPAS == null ? 0 : item.KPI_ETAPAS,
+      KPI_SLA: item.KPI_SLA == null ? 0 : item.KPI_SLA
+    }));
+  }
 
   if (tabla === 'llamadas') {
     datosFiltrados = datosFiltrados.map(item => ({
       ...item,
       Escuchar: obtenerUrlAudio(item) || ''
     }));
+  }
+
+  if (tabla === 'leads') {
+    datosFiltrados = datosFiltrados.map(({ opportunity_stage, stage, opportunityStage, ...rest }) => rest);
   }
 
   pintarTablaConFiltros('tabla-dinamica', datosFiltrados);
@@ -618,6 +629,8 @@ function copiarAlPortapapeles() {
   });
 }
 
+const editableColumns = ['KPI_ETAPAS', 'KPI_SLA'];
+
 function repintar(contId) {
   const datosBase = window.__datosBase[contId] || [];
   const filtros = filtroColState[contId] || {};
@@ -627,7 +640,7 @@ function repintar(contId) {
     cont.innerHTML = `<tbody><tr><td class="p-4 text-center text-gray-500">No hay registros.</td></tr></tbody>`;
     return;
   }
-  const columnas = Object.keys(datosBase[0]).filter(c => c !== 'created_at');
+  const columnas = Object.keys(datosBase[0]).filter(c => c !== 'created_at' && c !== 'id' && !c.startsWith('__'));
 
   let filtrados = datosBase.filter(fila => {
     return columnas.every(col => {
@@ -667,7 +680,14 @@ function repintar(contId) {
       if (c === 'Escuchar') {
         if (!v) return `<td class="p-2 text-gray-500 italic">Sin audio</td>`;
         const url = String(v).trim();
-        return `<td class="p-2 whitespace-nowrap"><audio controls preload="none" class="h-8 max-w-[180px]"><source src="${url}" /></audio></td>`;
+        return `<td class="p-2 whitespace-nowrap">
+          <audio controls preload="metadata" class="h-8 max-w-[240px]" src="${url}">Tu navegador no soporta audio.</audio>
+          <div class="text-[11px] mt-1"><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-red-300 hover:text-red-200">Ver link</a></div>
+        </td>`;
+      }
+      if (editableColumns.includes(c)) {
+        const rawValue = v === null || v === undefined || v === '' ? '0' : String(v).replace(/\D/g, '').slice(0, 1) || '0';
+        return `<td class="p-2 whitespace-nowrap"><div contenteditable="true" spellcheck="false" class="editable-cell rounded bg-slate-900 px-2 py-1 text-right" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}">${rawValue}</div></td>`;
       }
       return `<td class="p-2 whitespace-nowrap text-gray-300">${contenidoCelda}</td>`;
     }).join('')}</tr>`;
@@ -772,7 +792,7 @@ document.addEventListener('click', (e) => {
 function exportarXLSX(contId, nombre) {
   const datos = window.__ultimoFiltrado[contId] || cache[nombre] || [];
   if (!datos.length) return alert("No hay datos para exportar.");
-  const ws = XLSX.utils.json_to_sheet(datos.map(({acciones, ...d}) => d));
+  const ws = XLSX.utils.json_to_sheet(datos.map(({acciones, __rowId, ...d}) => d));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, nombre.slice(0, 30));
   XLSX.writeFile(wb, `${nombre}_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -1264,7 +1284,7 @@ async function renderDetalleUnificado(main) {
 
   const cruce = await calcularCruceUnificado();
 
-  const detalle = cruce.map(r => ({
+  const detalle = cruce.map((r, idx) => ({
     'País': r.pais,
     'Ejecutivo': r.ejecutivo,
     'Lead': r.codigo_prospecto,
@@ -1282,11 +1302,65 @@ async function renderDetalleUnificado(main) {
     'Duración (seg)': r.duracion_seg,
     'Duración (min)': r.duracion_min,
     'Estado/tipo': r.estado_tipo,
-    'En catálogo': r.catalogo_ok
+    'KPI_ETAPAS': 0,
+    'KPI_SLA': 0,
+    'En catálogo': r.catalogo_ok,
+    __rowId: idx
   }));
 
   document.getElementById('estado-tabla').classList.remove('hidden');
   pintarTablaConFiltros('tabla-detalle-unificado', detalle);
+}
+
+document.addEventListener('input', event => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement) || !target.classList.contains('editable-cell')) return;
+  const clean = target.innerText.replace(/\D/g, '').slice(0, 1);
+  if (target.innerText !== clean) target.innerText = clean;
+});
+
+document.addEventListener('focusout', event => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement) || !target.classList.contains('editable-cell')) return;
+  const raw = target.innerText.trim();
+  const clean = raw.replace(/\D/g, '').slice(0, 1);
+  const value = clean || '0';
+  if (target.innerText !== value) target.innerText = value;
+  actualizarEditable(target.dataset.cont, target.dataset.row, target.dataset.col, value);
+});
+
+function actualizarEditable(contId, rowId, col, valor) {
+  if (!contId || !rowId || !col) return;
+  const datos = window.__datosBase[contId];
+  if (!Array.isArray(datos)) return;
+  const fila = datos.find(r => String(r.id || r.__rowId) === String(rowId));
+  if (!fila) return;
+  fila[col] = valor;
+
+  const ultimo = window.__ultimoFiltrado[contId];
+  if (Array.isArray(ultimo)) {
+    const fila2 = ultimo.find(r => String(r.id || r.__rowId) === String(rowId));
+    if (fila2) fila2[col] = valor;
+  }
+
+  if (contId === 'tabla-dinamica' && editableColumns.includes(col) && fila.id) {
+    actualizarLeadKPI(fila.id, col, Number(valor));
+  }
+}
+
+async function actualizarLeadKPI(id, col, valor) {
+  if (!id || !editableColumns.includes(col)) return;
+  try {
+    const cliente = getSupabase();
+    const updateData = {};
+    updateData[col] = Number.isNaN(valor) ? 0 : valor;
+    const { error } = await cliente.from('leads').update(updateData).eq('id', id);
+    if (error) {
+      console.error('Error guardando KPI en leads:', error.message);
+    }
+  } catch (err) {
+    console.error('Error guardando KPI en leads:', err);
+  }
 }
 
 async function calcularTeams() {

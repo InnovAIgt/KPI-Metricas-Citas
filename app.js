@@ -843,24 +843,45 @@ function repintar(contId) {
 
   window.__ultimoFiltrado[contId] = filtrados;
 
-  const thead = `<thead><tr>${columnasUnicas.map(c => {
-    const activo = filtros[c] ? 'activo' : '';
-    const sla = c.match(/^KPI[_\s]*SLA[_\s]*ETAPA[_\s]*(\d+)/i);
-    const retro = c.match(/^KPI[_\s]*RETROALIMENTACION[_\s]*ETAPA[_\s]*(\d+)/i);
-    const labelHeader = (() => {
-      if (sla) {
-        return `<div class="kpi-header"><span class="kpi-title">KPI SLA</span><span class="kpi-subtitle">Etapa ${sla[1]}</span></div>`;
+  const columnDefs = columnasUnicas.map(c => {
+    const slaMatch = c.match(/^KPI[_\s]*SLA[_\s]*ETAPA[_\s]*(\d+)/i);
+    const retroMatch = c.match(/^KPI[_\s]*RETROALIMENTACION[_\s]*ETAPA[_\s]*(\d+)/i);
+    return {
+      name: c,
+      isSla: Boolean(slaMatch),
+      isRetro: Boolean(retroMatch),
+      stage: slaMatch ? slaMatch[1] : retroMatch ? retroMatch[1] : null,
+      label: c,
+      filterable: c !== 'acciones'
+    };
+  });
+
+  const groupedRows = [];
+  const headerRow1 = [];
+  const headerRow2 = [];
+  for (let i = 0; i < columnDefs.length; ) {
+    const col = columnDefs[i];
+    if (col.isSla || col.isRetro) {
+      const groupName = col.isRetro ? 'KPI RETROALIMENTACION' : 'KPI SLA';
+      const groupClass = col.isRetro ? 'group-header-kpi-retro' : 'group-header-kpi-sla';
+      const groupCols = [];
+      while (i < columnDefs.length && columnDefs[i].isRetro === col.isRetro && columnDefs[i].isSla === col.isSla) {
+        groupCols.push(columnDefs[i]);
+        i += 1;
       }
-      if (retro) {
-        return `<div class="kpi-header"><span class="kpi-title">KPI RETROALIMENTACION</span><span class="kpi-subtitle">Etapa ${retro[1]}</span></div>`;
+      headerRow1.push(`<th class="p-2 ${groupClass}" colspan="${groupCols.length}">${groupName}</th>`);
+      for (const inner of groupCols) {
+        const activo = filtros[inner.name] ? 'activo' : '';
+        headerRow2.push(`<th class="p-2 ${inner.isRetro ? 'col-kpi-retro' : 'col-kpi-sla'}"><div class="kpi-header"><span class="kpi-title">Etapa ${inner.stage}</span></div> <span class="filtro-icono ${activo}" onclick="abrirFiltroColumna('${contId}','${inner.name}', this)">▾</span></th>`);
       }
-      return c;
-    })();
-    const thClass = sla ? 'col-kpi-sla' : retro ? 'col-kpi-retro' : '';
-    return c === 'acciones'
-      ? `<th class="p-2">${c}</th>`
-      : `<th class="p-2 ${thClass}">${labelHeader} <span class="filtro-icono ${activo}" onclick="abrirFiltroColumna('${contId}','${c}', this)">▾</span></th>`;
-  }).join('')}</tr></thead>`;
+    } else {
+      const activo = filtros[col.name] ? 'activo' : '';
+      headerRow1.push(`<th class="p-2" rowspan="2">${col.name} <span class="filtro-icono ${activo}" onclick="abrirFiltroColumna('${contId}','${col.name}', this)">▾</span></th>`);
+      i += 1;
+    }
+  }
+
+  const thead = `<thead><tr>${headerRow1.join('')}</tr>${headerRow2.length ? `<tr>${headerRow2.join('')}</tr>` : ''}</thead>`;
 
   const columnasExpandibles = ['resumen_qa', 'transcripcion'];
 

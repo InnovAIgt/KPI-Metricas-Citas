@@ -867,7 +867,7 @@ function repintar(contId) {
         const value = (v === true || String(v).toLowerCase() === 'true') ? 'true' : 'false';
         const selectedYes = value === 'true' ? 'selected' : '';
         const selectedNo = value === 'false' ? 'selected' : '';
-        return `<td class="p-2 whitespace-nowrap"><select class="kpi-select ${value === 'true' ? 'kpi-yes' : 'kpi-no'}" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}" onchange="actualizarEditable(this.dataset.cont, this.dataset.row, this.dataset.col, this.value)" onclick="event.stopPropagation()"><option value="false" ${selectedNo}>No</option><option value="true" ${selectedYes}>Sí</option></select></td>`;
+        return `<td class="p-2 max-w-[140px]"><div class="kpi-cell"><select class="kpi-select ${value === 'true' ? 'kpi-yes' : 'kpi-no'}" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}" onchange="actualizarEditable(this.dataset.cont, this.dataset.row, this.dataset.col, this.value)" onclick="event.stopPropagation()"><option value="false" ${selectedNo}>No</option><option value="true" ${selectedYes}>Sí</option></select></div></td>`;
       }
       return `<td class="p-2 whitespace-nowrap text-gray-300">${contenidoCelda}</td>`;
     }).join('')}</tr>`;

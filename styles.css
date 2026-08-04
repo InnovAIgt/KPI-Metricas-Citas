@@ -147,3 +147,8 @@ body.theme-light .table-button { background:#f97316 !important; color:#ffffff !i
 .kpi-select.kpi-yes { background:rgba(16, 185, 129, 0.12); color:#a7f3d0; border-color:#0f766e; }
 .kpi-select.kpi-no { background:rgba(239, 68, 68, 0.12); color:#fecaca; border-color:#991b1b; }
 .kpi-select option { background:#0f172a; color:#e2e8f0; }
+.col-kpi-retro { background: rgba(148, 163, 184, 0.08); }
+.col-kpi-sla { background: rgba(148, 163, 184, 0.16); }
+.kpi-header { display:flex; flex-direction:column; gap:0.15rem; line-height:1.1; white-space: normal; max-width: 90px; text-align: left; }
+.kpi-header span { display:block; }
+.kpi-header .kpi-subtitle { font-size: 0.75rem; color: #cbd5e1; }

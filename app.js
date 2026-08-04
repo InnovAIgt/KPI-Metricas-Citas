@@ -839,41 +839,49 @@ function repintar(contId) {
 
   const thead = `<thead><tr>${columnasUnicas.map(c => {
     const activo = filtros[c] ? 'activo' : '';
+    const sla = c.match(/^KPI[_\s]*SLA[_\s]*ETAPA[_\s]*(\d+)/i);
+    const retro = c.match(/^KPI[_\s]*RETROALIMENTACION[_\s]*ETAPA[_\s]*(\d+)/i);
     const labelHeader = (() => {
-      const sla = c.match(/^KPI\s+SLA\s+ETAPA\s*(\d+)/i);
-      if (sla) return `<div class="kpi-header">KPI SLA<br>Etapa ${sla[1]}</div>`;
-      const retro = c.match(/^KPI\s+RETROALIMENTACION\s+ETAPA\s*(\d+)/i);
-      if (retro) return `<div class="kpi-header">KPI RETROALIMENTACION ETAPA ${retro[1]}</div>`;
+      if (sla) {
+        return `<div class="kpi-header"><span>KPI SLA</span><span class="kpi-subtitle">Etapa ${sla[1]}</span></div>`;
+      }
+      if (retro) {
+        return `<div class="kpi-header"><span>KPI RETROALIMENTACION</span><span class="kpi-subtitle">Etapa ${retro[1]}</span></div>`;
+      }
       return c;
     })();
+    const thClass = sla ? 'col-kpi-sla' : retro ? 'col-kpi-retro' : '';
     return c === 'acciones'
       ? `<th class="p-2">${c}</th>`
-      : `<th class="p-2">${labelHeader} <span class="filtro-icono ${activo}" onclick="abrirFiltroColumna('${contId}','${c}', this)">▾</span></th>`;
+      : `<th class="p-2 ${thClass}">${labelHeader} <span class="filtro-icono ${activo}" onclick="abrirFiltroColumna('${contId}','${c}', this)">▾</span></th>`;
   }).join('')}</tr></thead>`;
 
   const columnasExpandibles = ['resumen_qa', 'transcripcion'];
 
   const filas = filtrados.slice(0, 10000).map(fila => {
     return `<tr class="hover:bg-slate-800/50" data-fuente="${fila['Fuente cruda'] || fila['Fuente'] || ''}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_llamada'] || ''}" data-registro="${fila['__registro_id'] || ''}" data-registro-tabla="${fila['__registro_tabla'] || ''}" onclick="abrirDetalleFuente(event, this)">${columnasUnicas.map(c => {
+      const isSla = /^KPI[_\s]*SLA/i.test(c);
+      const isRetro = /^KPI[_\s]*RETROALIMENTACION/i.test(c);
+      const cellBase = isSla ? 'col-kpi-sla' : isRetro ? 'col-kpi-retro' : '';
       let v = fila[c];
-      if (c === 'acciones') return `<td class="p-2">${v}</td>`;
-      if (c === 'Estado' || c === 'Resultado') return `<td class="p-2 whitespace-nowrap">${badgeEstadoCruce(v)}</td>`;
-      if (c === 'Cumplió') return `<td class="p-2 whitespace-nowrap">${badgeCumplio(v)}</td>`;
+      if (c === 'acciones') return `<td class="p-2 ${cellBase}">${v}</td>`;
+      if (c === 'Estado' || c === 'Resultado') return `<td class="p-2 whitespace-nowrap ${cellBase}">${badgeEstadoCruce(v)}</td>`;
+      if (c === 'Cumplió') return `<td class="p-2 whitespace-nowrap ${cellBase}">${badgeCumplio(v)}</td>`;
       if (columnasExpandibles.includes(c) && v && String(v).length > 50) {
         const encoded = encodeURIComponent(String(v));
-        return `<td class="p-2 max-w-xs"><span class="celda-expandible" data-col="${c}" data-val="${encoded}" onclick="abrirModalCeldaFromEl(this)">Ver contenido...</span></td>`;
+        return `<td class="p-2 max-w-xs ${cellBase}"><span class="celda-expandible" data-col="${c}" data-val="${encoded}" onclick="abrirModalCeldaFromEl(this)">Ver contenido...</span></td>`;
       }
       if (v === null || v === undefined || v === '') v = '<span class="text-gray-500 italic">no especificado</span>';
       const rawValue = String(v);
       const contenidoCelda = /<[^>]+>/.test(rawValue) ? rawValue : rawValue.slice(0,120);
       if (c === 'Evidencia') {
-        return `<td class="p-2 text-gray-300 align-top">${contenidoCelda}</td>`;
+        return `<td class="p-2 text-gray-300 align-top ${cellBase}">${contenidoCelda}</td>`;
       }
       if (c === 'Escuchar') {
         const url = String(v || '').trim();
         const esValida = /^https?:\/\//i.test(url) || /^data:/i.test(url);
-        if (!url || !esValida) return `<td class="p-2 text-gray-500 italic">Sin audio</td>`;
-        return `<td class="p-2 whitespace-nowrap">
+        if (!url || !esValida) return `<td class="p-2 text-gray-500 italic ${cellBase}">Sin audio</td>`;
+        return `<td class="p-2 whitespace-nowrap ${cellBase}">
           <audio controls preload="metadata" class="h-8 max-w-[240px]" src="${url}">Tu navegador no soporta audio.</audio>
           <div class="text-[11px] mt-1"><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-red-300 hover:text-red-200">Ver link</a></div>
         </td>`;
@@ -882,9 +890,9 @@ function repintar(contId) {
         const value = (v === true || String(v).toLowerCase() === 'true') ? 'true' : 'false';
         const selectedYes = value === 'true' ? 'selected' : '';
         const selectedNo = value === 'false' ? 'selected' : '';
-        return `<td class="p-2 max-w-[140px]"><div class="kpi-cell"><select class="kpi-select ${value === 'true' ? 'kpi-yes' : 'kpi-no'}" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}" onchange="actualizarEditable(this.dataset.cont, this.dataset.row, this.dataset.col, this.value)" onclick="event.stopPropagation()"><option value="false" ${selectedNo}>No</option><option value="true" ${selectedYes}>Sí</option></select></div></td>`;
+        return `<td class="p-2 max-w-[140px] ${cellBase}"><div class="kpi-cell"><select class="kpi-select ${value === 'true' ? 'kpi-yes' : 'kpi-no'}" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}" onchange="actualizarEditable(this.dataset.cont, this.dataset.row, this.dataset.col, this.value)" onclick="event.stopPropagation()"><option value="false" ${selectedNo}>No</option><option value="true" ${selectedYes}>Sí</option></select></div></td>`;
       }
-      return `<td class="p-2 whitespace-nowrap text-gray-300">${contenidoCelda}</td>`;
+      return `<td class="p-2 whitespace-nowrap text-gray-300 ${cellBase}">${contenidoCelda}</td>`;
     }).join('')}</tr>`;
   }).join('');
 

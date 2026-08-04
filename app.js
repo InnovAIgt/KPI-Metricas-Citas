@@ -454,6 +454,19 @@ function claseClasificacion(pctNum, evaluados) {
 // ==================================================================
 // TABLA GENERICA CON FILTRO ESTILO EXCEL
 // ==================================================================
+function obtenerFechaDesdeItem(item, columnaFecha) {
+  if (!item) return '';
+  const raw = item[columnaFecha]
+    || item.fecha_reunion
+    || item.fecha_reunión
+    || item.fecha_de_reunion
+    || item.fecha_de_reunión
+    || item.fecha_cita
+    || item.fecha
+    || item.fecha_hora;
+  return raw || '';
+}
+
 function filtrarPorFechaGlobal(datos, columnaFecha) {
   if (!columnaFecha) return datos;
   const desde = document.getElementById('global-desde')?.value;
@@ -462,7 +475,7 @@ function filtrarPorFechaGlobal(datos, columnaFecha) {
   const desdeT = desde ? new Date(desde + 'T00:00:00Z').getTime() : null;
   const hastaT = hasta ? new Date(hasta + 'T23:59:59Z').getTime() : null;
   return datos.filter(item => {
-    const raw = item[columnaFecha];
+    const raw = obtenerFechaDesdeItem(item, columnaFecha);
     if (!raw) return false;
     const fechaRaw = normalizarFechaISO(String(raw).trim());
     const t = new Date(fechaRaw.includes('T') ? fechaRaw : `${fechaRaw}T00:00:00Z`).getTime();
@@ -1026,6 +1039,18 @@ function parseFechaHoraString(fechaHora) {
   return isNaN(d.getTime()) ? null : d;
 }
 
+function obtenerLeadTipo(lead) {
+  return (lead?.tipo_reunion || lead?.tipo || lead?.tipo_de_llamada || lead?.tipo_llamada || lead?.tipo_lead || lead?.tipo_de_reunion || lead?.tipo_reunión || '').trim();
+}
+
+function obtenerLeadFecha(lead) {
+  return lead?.fecha_agendada || lead?.fecha_reunion || lead?.fecha_reunión || lead?.fecha_de_reunion || lead?.fecha_de_reunión || lead?.fecha_cita || lead?.fecha || '';
+}
+
+function obtenerLeadHora(lead) {
+  return lead?.hora_agendada || lead?.hora_reunion || lead?.hora_reunión || lead?.hora_de_reunion || lead?.hora_de_reunión || lead?.hora_cita || lead?.hora || '';
+}
+
 function mismoDia(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
@@ -1067,12 +1092,12 @@ function formatearHoraCorta(d) {
 
 function esReunionTeams(tipo) {
   const valor = (tipo || '').toLowerCase();
-  return valor.includes('teams') || valor.includes('virtual');
+  return valor.includes('teams') || valor.includes('virtual') || valor.includes('zoom');
 }
 
 function esLlamadaTelefonica(tipo) {
   const valor = (tipo || '').toLowerCase();
-  return valor.includes('llamada') && !valor.includes('teams');
+  return (valor.includes('llamada') || valor.includes('telef') || valor.includes('phone')) && !valor.includes('teams');
 }
 
 async function calcularCruceUnificado() {
@@ -1084,15 +1109,22 @@ async function calcularCruceUnificado() {
     asegurarCache('teams_registro', null)
   ]);
 
-  let leads = cache.leads.filter(l => esLlamadaTelefonica(l.tipo_reunion) || esReunionTeams(l.tipo_reunion));
+  let leads = cache.leads.filter(l => {
+    const tipo = obtenerLeadTipo(l);
+    return esLlamadaTelefonica(tipo) || esReunionTeams(tipo);
+  });
   leads = filtrarPorFechaGlobal(leads, 'fecha_agendada');
   const ahora = new Date();
 
   const resultado = leads.map(lead => {
     const telLead = normalizarTel(lead.telefono);
-    const progr = parseFechaHora(lead.fecha_agendada, lead.hora_agendada);
-    const esTeams = esReunionTeams(lead.tipo_reunion);
-    const esLlamada = esLlamadaTelefonica(lead.tipo_reunion);
+    const progr = parseFechaHora(
+      obtenerLeadFecha(lead),
+      obtenerLeadHora(lead)
+    );
+    const tipoLead = obtenerLeadTipo(lead);
+    const esTeams = esReunionTeams(tipoLead);
+    const esLlamada = esLlamadaTelefonica(tipoLead);
     
     const ejec = cache.ejecutivos.find(e => (e.nombre_ejecutivo || '').trim().toLowerCase() === (lead.asesor_nombre || '').trim().toLowerCase());
     const usuario = ejec ? ejec.usuario : null;
@@ -1897,33 +1929,36 @@ function actualizarEditable(contId, rowId, col, valor) {
 
 function normalizarFilaLeads(item) {
   const salida = {};
-  // Ensure primary columns first — accept multiple source key variants
   const mapAliases = {
     lead: ['codigo_prospecto', 'lead', 'nombre_prospecto'],
     pais: ['pais', 'country'],
     cliente: ['cliente', 'nombre_prospecto', 'contacto'],
     ejecutivo: ['asesor_nombre', 'ejecutivo', 'asesor', 'asesor_name'],
-    resultado: ['resultado', 'status', 'status_lead']
+    resultado: ['resultado', 'status', 'status_lead'],
+    tipo_reunion: ['tipo_reunion', 'tipo', 'tipo_de_llamada', 'tipo_llamada', 'tipo_lead', 'tipo_de_reunion', 'tipo_reunión'],
+    fecha_agendada: ['fecha_agendada', 'fecha_reunion', 'fecha_reunión', 'fecha_de_reunion', 'fecha_de_reunión', 'fecha_cita', 'fecha'],
+    hora_agendada: ['hora_agendada', 'hora_reunion', 'hora_reunión', 'hora_de_reunion', 'hora_de_reunión', 'hora_cita', 'hora'],
+    telefono: ['telefono', 'contacto', 'telefono_contacto', 'telefono_cliente']
   };
-  const clavesPrincipales = Object.values(mapAliases).flat();
+  const aliasNorms = new Set(Object.values(mapAliases).flat().map(normalizarNombreColumna));
+
   for (const [canon, aliases] of Object.entries(mapAliases)) {
+    const aliasNormsForCanon = aliases.map(normalizarNombreColumna);
     for (const key of Object.keys(item)) {
       const colNorm = normalizarNombreColumna(key);
-      if (aliases.includes(colNorm) && salida[key] === undefined) {
-        salida[key] = item[key];
+      if (aliasNormsForCanon.includes(colNorm) && salida[canon] === undefined) {
+        salida[canon] = item[key];
       }
     }
   }
 
-  // Add the rest of non-KPI columns
   for (const key of Object.keys(item)) {
     const columna = normalizarNombreColumna(key);
-    if (columna.startsWith('kpi_') || clavesPrincipales.includes(columna)) continue;
+    if (aliasNorms.has(columna)) continue;
     if (salida.hasOwnProperty(key)) continue;
     salida[key] = item[key];
   }
 
-  // Finally, append KPI columns at the end in a fixed order
   const kpis = [
     ['KPI SLA ETAPA 1', 'kpi_sla_etapa_1'],
     ['KPI SLA ETAPA 2', 'kpi_sla_etapa_2'],

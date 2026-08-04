@@ -1949,26 +1949,33 @@ function actualizarEditable(contId, rowId, col, valor) {
   if (!contId || !rowId || !col) return;
   const datos = window.__datosBase[contId];
   if (!Array.isArray(datos)) return;
+  const parsedValue = parseBooleanValue(valor);
   const fila = datos.find(r => String(r.id || r.__rowId) === String(rowId));
   if (!fila) return;
-  fila[col] = valor;
+  fila[col] = parsedValue;
 
   const ultimo = window.__ultimoFiltrado[contId];
   if (Array.isArray(ultimo)) {
     const fila2 = ultimo.find(r => String(r.id || r.__rowId) === String(rowId));
-    if (fila2) fila2[col] = valor;
+    if (fila2) fila2[col] = parsedValue;
   }
 
   const dbCol = colToDbField[col];
-  if (contId === 'tabla-dinamica' && dbCol && fila.id) {
-    const parsed = parseBooleanValue(valor);
-    actualizarLeadKPI(fila.id, dbCol, parsed);
+  if (contId === 'tabla-dinamica' && dbCol) {
+    const parsed = parsedValue;
+    const codigoProspecto = fila.codigo_prospecto || fila.lead || fila.codigo;
+    actualizarLeadKPI(fila.id, codigoProspecto, dbCol, parsed);
+
+    if (Array.isArray(cache.leads)) {
+      const filaCache = cache.leads.find(r => String(r.id) === String(rowId) || String(r.codigo_prospecto) === String(codigoProspecto));
+      if (filaCache) filaCache[dbCol] = parsed;
+    }
   }
   // Update select visual class if present in the DOM
   try {
     const sel = document.querySelector(`select[data-cont="${contId}"][data-row="${rowId}"][data-col="${col}"]`);
     if (sel) {
-      if (String(valor).toLowerCase() === 'true') {
+      if (parsedValue === true) {
         sel.classList.remove('kpi-no'); sel.classList.add('kpi-yes');
       } else {
         sel.classList.remove('kpi-yes'); sel.classList.add('kpi-no');
@@ -2026,15 +2033,24 @@ function normalizarFilaLeads(item) {
 }
 
 
-async function actualizarLeadKPI(id, dbCol, valor) {
-  if (!id || !dbCol) return;
+async function actualizarLeadKPI(id, codigoProspecto, dbCol, valor) {
+  if (!dbCol) return;
   try {
     const cliente = getSupabase();
     const updateData = {};
     updateData[dbCol] = parseBooleanValue(valor);
-    const { error } = await cliente.from('leads').update(updateData).eq('id', id);
+    let query = cliente.from('leads').update(updateData);
+    if (id) {
+      query = query.eq('id', id);
+    } else if (codigoProspecto) {
+      query = query.eq('codigo_prospecto', codigoProspecto);
+    } else {
+      console.error('No se encontró clave para actualizar lead:', dbCol, valor);
+      return;
+    }
+    const { error } = await query;
     if (error) {
-      console.error('Error guardando KPI en leads:', error.message);
+      console.error('Error guardando KPI en leads:', error.message, { id, codigoProspecto, dbCol, valor });
     }
   } catch (err) {
     console.error('Error guardando KPI en leads:', err);

@@ -734,15 +734,23 @@ const editableColumns = [
   'KPI RETROALIMENTACION ETAPA 3',
   'KPI RETROALIMENTACION ETAPA 4'
 ];
-const editableColumnsSet = new Set(editableColumns.map(c => String(c).toLowerCase()));
+const normalizeEditableCol = (col) => String(col || '').trim().replace(/[_\s]+/g, ' ').toLowerCase();
+const editableColumnsSet = new Set(editableColumns.map(c => normalizeEditableCol(c)).concat(editableColumns.map(c => normalizeEditableCol(c.replace(/\s+/g, '_')))));
 const colToDbField = {
   'KPI SLA ETAPA 1': 'kpi_sla_etapa_1',
+  'KPI_SLA_ETAPA_1': 'kpi_sla_etapa_1',
   'KPI SLA ETAPA 2': 'kpi_sla_etapa_2',
+  'KPI_SLA_ETAPA_2': 'kpi_sla_etapa_2',
   'KPI SLA ETAPA 3': 'kpi_sla_etapa_3',
+  'KPI_SLA_ETAPA_3': 'kpi_sla_etapa_3',
   'KPI RETROALIMENTACION ETAPA 1': 'kpi_retroalimentacion_etapa_1',
+  'KPI_RETROALIMENTACION_ETAPA_1': 'kpi_retroalimentacion_etapa_1',
   'KPI RETROALIMENTACION ETAPA 2': 'kpi_retroalimentacion_etapa_2',
+  'KPI_RETROALIMENTACION_ETAPA_2': 'kpi_retroalimentacion_etapa_2',
   'KPI RETROALIMENTACION ETAPA 3': 'kpi_retroalimentacion_etapa_3',
-  'KPI RETROALIMENTACION ETAPA 4': 'kpi_retroalimentacion_etapa_4'
+  'KPI_RETROALIMENTACION_ETAPA_3': 'kpi_retroalimentacion_etapa_3',
+  'KPI RETROALIMENTACION ETAPA 4': 'kpi_retroalimentacion_etapa_4',
+  'KPI_RETROALIMENTACION_ETAPA_4': 'kpi_retroalimentacion_etapa_4'
 };
 
 function normalizarNombreColumna(col) {
@@ -863,7 +871,7 @@ function repintar(contId) {
           <div class="text-[11px] mt-1"><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-red-300 hover:text-red-200">Ver link</a></div>
         </td>`;
       }
-      if (editableColumnsSet.has(String(c).toLowerCase())) {
+      if (editableColumnsSet.has(normalizeEditableCol(c))) {
         const value = (v === true || String(v).toLowerCase() === 'true') ? 'true' : 'false';
         const selectedYes = value === 'true' ? 'selected' : '';
         const selectedNo = value === 'false' ? 'selected' : '';

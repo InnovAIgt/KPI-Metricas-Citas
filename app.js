@@ -757,6 +757,12 @@ function normalizarNombreColumna(col) {
   return String(col || '').trim().replace(/\s+/g, '_').toLowerCase();
 }
 
+function parseBooleanValue(valor) {
+  if (typeof valor === 'boolean') return valor;
+  const raw = String(valor || '').trim().toLowerCase();
+  return raw === 'true' || raw === '1' || raw === 'si' || raw === 'sí' || raw === 'yes';
+}
+
 function repintar(contId) {
   const datosBase = window.__datosBase[contId] || [];
   const filtros = filtroColState[contId] || {};
@@ -843,10 +849,10 @@ function repintar(contId) {
     const retro = c.match(/^KPI[_\s]*RETROALIMENTACION[_\s]*ETAPA[_\s]*(\d+)/i);
     const labelHeader = (() => {
       if (sla) {
-        return `<div class="kpi-header"><span>KPI SLA</span><span class="kpi-subtitle">Etapa ${sla[1]}</span></div>`;
+        return `<div class="kpi-header"><span class="kpi-title">KPI SLA</span><span class="kpi-subtitle">Etapa ${sla[1]}</span></div>`;
       }
       if (retro) {
-        return `<div class="kpi-header"><span>KPI RETROALIMENTACION</span><span class="kpi-subtitle">Etapa ${retro[1]}</span></div>`;
+        return `<div class="kpi-header"><span class="kpi-title">KPI RETROALIMENTACION</span><span class="kpi-subtitle">Etapa ${retro[1]}</span></div>`;
       }
       return c;
     })();
@@ -1934,7 +1940,7 @@ function actualizarEditable(contId, rowId, col, valor) {
 
   const dbCol = colToDbField[col];
   if (contId === 'tabla-dinamica' && dbCol && fila.id) {
-    const parsed = String(valor).toLowerCase() === 'true';
+    const parsed = parseBooleanValue(valor);
     actualizarLeadKPI(fila.id, dbCol, parsed);
   }
   // Update select visual class if present in the DOM
@@ -2004,7 +2010,7 @@ async function actualizarLeadKPI(id, dbCol, valor) {
   try {
     const cliente = getSupabase();
     const updateData = {};
-    updateData[dbCol] = typeof valor === 'boolean' ? valor : String(valor).toLowerCase() === 'true';
+    updateData[dbCol] = parseBooleanValue(valor);
     const { error } = await cliente.from('leads').update(updateData).eq('id', id);
     if (error) {
       console.error('Error guardando KPI en leads:', error.message);

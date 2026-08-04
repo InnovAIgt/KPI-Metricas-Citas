@@ -464,7 +464,8 @@ function filtrarPorFechaGlobal(datos, columnaFecha) {
   return datos.filter(item => {
     const raw = item[columnaFecha];
     if (!raw) return false;
-    const t = new Date(raw).getTime();
+    const fechaRaw = normalizarFechaISO(String(raw).trim());
+    const t = new Date(fechaRaw.includes('T') ? fechaRaw : `${fechaRaw}T00:00:00Z`).getTime();
     if (isNaN(t)) return false;
     if (desdeT !== null && t < desdeT) return false;
     if (hastaT !== null && t > hastaT) return false;
@@ -980,9 +981,24 @@ function normalizarTel(tel) {
   return String(tel).replace(/\D/g, '').slice(-8);
 }
 
+function normalizarFechaISO(fecha) {
+  if (!fecha) return '';
+  let raw = String(fecha).trim();
+  // Aceptar formatos comunes: YYYY-MM-DD, YYYY/MM/DD, DD/MM/YYYY, DD-MM-YYYY
+  const isoDateMatch = raw.match(/^(\d{4})[\/-](\d{2})[\/-](\d{2})$/);
+  if (isoDateMatch) {
+    return `${isoDateMatch[1]}-${isoDateMatch[2]}-${isoDateMatch[3]}`;
+  }
+  const latamMatch = raw.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
+  if (latamMatch) {
+    return `${latamMatch[3]}-${latamMatch[2]}-${latamMatch[1]}`;
+  }
+  return raw;
+}
+
 function parseFechaHora(fecha, hora) {
   if (!fecha) return null;
-  let base = String(fecha).trim();
+  let base = normalizarFechaISO(String(fecha).trim());
   base = base.includes('T') ? base.split('T')[0] : base;
   let h = hora ? String(hora).trim() : '00:00:00';
   if (h.length === 5) h += ':00';
@@ -993,13 +1009,20 @@ function parseFechaHora(fecha, hora) {
 function parseFechaHoraString(fechaHora) {
   if (!fechaHora) return null;
   const raw = String(fechaHora).trim();
-  const match = raw.match(/^(\d{4}-\d{2}-\d{2})(?:[ T])(\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?(?:\s*(?:Z|[+-]\d{2}:?\d{2}))?$/);
+  const normalized = raw.replace(/\//g, '-');
+  const match = normalized.match(/^(\d{4}-\d{2}-\d{2})(?:[ T])(\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?(?:\s*(?:Z|[+-]\d{2}:?\d{2}))?$/);
   if (match) {
     let time = match[2];
     if (time.length === 5) time += ':00';
     return new Date(`${match[1]}T${time}`);
   }
-  const d = new Date(raw);
+  const latamMatch = normalized.match(/^(\d{2})-(\d{2})-(\d{4})(?:[ T])(\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?(?:\s*(?:Z|[+-]\d{2}:?\d{2}))?$/);
+  if (latamMatch) {
+    let time = latamMatch[4];
+    if (time.length === 5) time += ':00';
+    return new Date(`${latamMatch[3]}-${latamMatch[2]}-${latamMatch[1]}T${time}`);
+  }
+  const d = new Date(normalized);
   return isNaN(d.getTime()) ? null : d;
 }
 
@@ -1097,7 +1120,15 @@ async function calcularCruceUnificado() {
     } else if (esLlamada) {
       const candPBX = cache.llamadas
         .filter(c => normalizarTel(c.destino) === telLead && telLead)
-        .map(c => ({ fuente: 'PBX', fechaHora: parseFechaHoraString(c.fecha_hora), raw: c, operador: String(c.nombre || '').trim().toLowerCase() }));
+        .map(c => {
+          const rawFechaHora = c.fecha_hora || (c.fecha && c.hora ? `${String(c.fecha).trim()}T${String(c.hora).trim()}` : '');
+          return {
+            fuente: 'PBX',
+            fechaHora: parseFechaHoraString(rawFechaHora),
+            raw: c,
+            operador: String(c.nombre || c.usuario || '').trim().toLowerCase()
+          };
+        });
 
       const candCelRaw = cache.historiales
         .filter(c => telLead && normalizarTel(c.destino) === telLead)

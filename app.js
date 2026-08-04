@@ -766,7 +766,14 @@ function repintar(contId) {
     cont.innerHTML = `<tbody><tr><td class="p-4 text-center text-gray-500">No hay registros.</td></tr></tbody>`;
     return;
   }
-  const columnas = Object.keys(datosBase[0]).filter(c => c !== 'created_at' && c !== 'id' && !c.startsWith('__'));
+  const columnas = Object.keys(datosBase[0]).filter(c => {
+    const clave = normalizarNombreColumna(c);
+    return c !== 'created_at'
+      && c !== 'id'
+      && !c.startsWith('__')
+      && clave !== 'kpi_sla'
+      && clave !== 'kpi_etapas';
+  });
   const columnasUnicas = [];
   const columnasVistas = new Set();
   for (const col of columnas) {
@@ -836,7 +843,7 @@ function repintar(contId) {
       const sla = c.match(/^KPI\s+SLA\s+ETAPA\s*(\d+)/i);
       if (sla) return `<div class="kpi-header">KPI SLA<br>Etapa ${sla[1]}</div>`;
       const retro = c.match(/^KPI\s+RETROALIMENTACION\s+ETAPA\s*(\d+)/i);
-      if (retro) return `<div class="kpi-header">KPI RETRO<br>Etapa ${retro[1]}</div>`;
+      if (retro) return `<div class="kpi-header">KPI RETROALIMENTACION ETAPA ${retro[1]}</div>`;
       return c;
     })();
     return c === 'acciones'

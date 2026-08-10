@@ -1385,6 +1385,7 @@ async function calcularCruceUnificado() {
       estado_tipo: estadoTipo,
       registro_origen_id: coincidencia?.raw?.uniqueid ?? coincidencia?.raw?.id ?? '',
       registro_origen_tabla: coincidencia?.fuente ?? '',
+      vendedor_extension: coincidencia?.fuente === 'PBX' ? (coincidencia?.raw?.usuario || coincidencia?.raw?.nombre || '') : '',
       catalogo_ok: ejec ? 'Sí' : 'No',
       kpi_sla_etapa_1: Boolean(lead.kpi_sla_etapa_1),
       kpi_sla_etapa_2: Boolean(lead.kpi_sla_etapa_2),
@@ -1809,20 +1810,16 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
 
   const filas = registros.map(r => `
     <tr class="hover:bg-slate-800/50 text-gray-200">
+      <td class="p-2.5 text-left">${r.codigo_prospecto || ''}</td>
       <td class="p-2.5 text-left">${r.lead || ''}</td>
-      <td class="p-2.5 text-left">${r.resultado || ''}</td>
+      <td class="p-2.5 text-left"><span class="${claseResultado(r.resultado)}">${r.resultado || ''}</span></td>
       <td class="p-2.5 text-left">${r.telefono || ''}</td>
+      <td class="p-2.5 text-left">${r.fuente || ''}</td>
+      <td class="p-2.5 text-left">${r.vendedor_extension || ''}</td>
+      <td class="p-2.5 text-right">${r.fecha_llamada_corta || ''}</td>
+      <td class="p-2.5 text-right">${r.hora_llamada_corta || ''}</td>
       <td class="p-2.5 text-right">${r.fecha_reunion || ''}</td>
       <td class="p-2.5 text-right">${r.hora_reunion || ''}</td>
-      <td class="p-2.5 text-right">${r.fecha_llamada || ''}</td>
-      <td class="p-2.5 text-right">${r.hora_llamada || ''}</td>
-      <td class="p-2.5 text-center">${r.kpi_sla_etapa_1 || 'No'}</td>
-      <td class="p-2.5 text-center">${r.kpi_sla_etapa_2 || 'No'}</td>
-      <td class="p-2.5 text-center">${r.kpi_sla_etapa_3 || 'No'}</td>
-      <td class="p-2.5 text-center">${r.kpi_retroalimentacion_etapa_1 || 'No'}</td>
-      <td class="p-2.5 text-center">${r.kpi_retroalimentacion_etapa_2 || 'No'}</td>
-      <td class="p-2.5 text-center">${r.kpi_retroalimentacion_etapa_3 || 'No'}</td>
-      <td class="p-2.5 text-center">${r.kpi_retroalimentacion_etapa_4 || 'No'}</td>
     </tr>`).join('');
 
   document.getElementById('kpi1-detalle').innerHTML = `
@@ -1830,7 +1827,7 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
       <div class="flex items-center justify-between mb-3">
         <div>
           <h3 class="text-sm font-bold text-white">Detalle de ${ejecutivo}</h3>
-          <p class="text-[11px] text-gray-500">Casos por lead y llamadas asociadas.</p>
+          <p class="text-[11px] text-gray-500">Lead, resultado y datos de llamada / vendedor PBX.</p>
         </div>
         <span class="text-[11px] text-gray-400">${registros.length} registros</span>
       </div>
@@ -1838,23 +1835,19 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
         <table class="w-full text-xs border-collapse">
           <thead class="bg-[#0f172a] text-white">
             <tr>
+              <th class="p-2.5 text-left text-[10px]">Código Lead</th>
               <th class="p-2.5 text-left text-[10px]">Lead</th>
               <th class="p-2.5 text-left text-[10px]">Resultado</th>
               <th class="p-2.5 text-left text-[10px]">Teléfono</th>
-              <th class="p-2.5 text-right text-[10px]">Fecha reunión</th>
-              <th class="p-2.5 text-right text-[10px]">Hora reunión</th>
+              <th class="p-2.5 text-left text-[10px]">Fuente</th>
+              <th class="p-2.5 text-left text-[10px]">Extensión vendedor</th>
               <th class="p-2.5 text-right text-[10px]">Fecha llamada</th>
               <th class="p-2.5 text-right text-[10px]">Hora llamada</th>
-              <th class="p-2.5 text-center text-[10px]">SLA 1</th>
-              <th class="p-2.5 text-center text-[10px]">SLA 2</th>
-              <th class="p-2.5 text-center text-[10px]">SLA 3</th>
-              <th class="p-2.5 text-center text-[10px]">KPI 3-1</th>
-              <th class="p-2.5 text-center text-[10px]">KPI 3-2</th>
-              <th class="p-2.5 text-center text-[10px]">KPI 3-3</th>
-              <th class="p-2.5 text-center text-[10px]">KPI 3-4</th>
+              <th class="p-2.5 text-right text-[10px]">Fecha reunión</th>
+              <th class="p-2.5 text-right text-[10px]">Hora reunión</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-800">${filas || `<tr><td colspan="14" class="p-4 text-center text-gray-400">No hay registros asociados a este ejecutivo.</td></tr>`}</tbody>
+          <tbody class="divide-y divide-gray-800">${filas || `<tr><td colspan="10" class="p-4 text-center text-gray-400">No hay registros asociados a este ejecutivo.</td></tr>`}</tbody>
         </table>
       </div>
     </div>`;

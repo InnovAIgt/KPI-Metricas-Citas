@@ -178,6 +178,23 @@ body.theme-light .table-button { background:#f97316 !important; color:#ffffff !i
 .kpi-header .kpi-subtitle {
   font-size: 0.72rem;
   color: #cbd5e1;
+}
+.kpi-maestra-link {
+  color: #7dd3fc;
+  text-decoration: underline;
+  font-size: 0.75rem;
+  margin-left: 0.4rem;
+}
+.kpi-maestra-col1 {
+  background: rgba(16, 185, 129, 0.08);
+}
+.kpi-maestra-col2 {
+  background: rgba(56, 189, 248, 0.08);
+}
+.kpi-maestra-col3 {
+  background: rgba(168, 85, 247, 0.08);
+}
+
   text-transform: none;
   letter-spacing: 0;
 }

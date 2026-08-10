@@ -1414,7 +1414,95 @@ function nombrePais(codigo) {
   return NOMBRES_PAIS[codigo] || codigo;
 }
 
-function pintarTablaResumenPais(datos, total) {
+function crearIdEjecutivo(ejecutivo) {
+  return String(ejecutivo || 'sin-asignar').trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'sin-asignar';
+}
+
+function construirResumenMaestra(cruce) {
+  const { filasCatalogo, filasSinCatalogo } = construirResumenPorEjecutivo(cruce);
+  const datosSla = agregarPorSLA(cruce);
+  const datosRetro = agregarPorRetro(cruce);
+  const slaMap = new Map(datosSla.map(r => [String(r.ejecutivo || '').trim().toLowerCase(), r]));
+  const retroMap = new Map(datosRetro.map(r => [String(r.ejecutivo || '').trim().toLowerCase(), r]));
+
+  return [...filasCatalogo, ...filasSinCatalogo].map(r => {
+    const key = String(r.ejecutivo || '').trim().toLowerCase();
+    const slaRow = slaMap.get(key) || { sla_etapa_1: 0, sla_etapa_2: 0, sla_etapa_3: 0 };
+    const retroRow = retroMap.get(key) || { retro_etapa_1: 0, retro_etapa_2: 0, retro_etapa_3: 0, retro_etapa_4: 0 };
+    const leads = r.leads || 0;
+    const slaValues = [slaRow.sla_etapa_1, slaRow.sla_etapa_2, slaRow.sla_etapa_3].map(v => leads > 0 ? (Math.round((v / leads) * 100)) : 0);
+    const retroValues = [retroRow.retro_etapa_1, retroRow.retro_etapa_2, retroRow.retro_etapa_3, retroRow.retro_etapa_4].map(v => leads > 0 ? (Math.round((v / leads) * 100)) : 0);
+    const kpi2Avg = slaValues.length ? Math.round(slaValues.reduce((a,b)=>a+b,0)/slaValues.length) : 0;
+    const kpi3Avg = retroValues.length ? Math.round(retroValues.reduce((a,b)=>a+b,0)/retroValues.length) : 0;
+    return {
+      pais: r.pais,
+      ejecutivo: r.ejecutivo,
+      leads,
+      evaluados: r.evaluados,
+      cumplidos: r.cumplieron,
+      pct_cumplimiento: r.pct_cumplimiento,
+      kpi1: r.pct_cumplimiento,
+      kpi2: `${kpi2Avg}%`,
+      kpi3: `${kpi3Avg}%`,
+      sla_etapa_1: leads > 0 ? Math.round((slaRow.sla_etapa_1 / leads) * 100) + '%' : '0%',
+      sla_etapa_2: leads > 0 ? Math.round((slaRow.sla_etapa_2 / leads) * 100) + '%' : '0%',
+      sla_etapa_3: leads > 0 ? Math.round((slaRow.sla_etapa_3 / leads) * 100) + '%' : '0%',
+      retro_etapa_1: leads > 0 ? Math.round((retroRow.retro_etapa_1 / leads) * 100) + '%' : '0%',
+      retro_etapa_2: leads > 0 ? Math.round((retroRow.retro_etapa_2 / leads) * 100) + '%' : '0%',
+      retro_etapa_3: leads > 0 ? Math.round((retroRow.retro_etapa_3 / leads) * 100) + '%' : '0%',
+      retro_etapa_4: leads > 0 ? Math.round((retroRow.retro_etapa_4 / leads) * 100) + '%' : '0%',
+      rowId: crearIdEjecutivo(r.ejecutivo)
+    };
+  });
+}
+
+function pintarTablaResumenMaestra(datos) {
+  const cols = [
+    { key: 'pais', label: 'País' },
+    { key: 'ejecutivo', label: 'Ejecutivo' },
+    { key: 'leads', label: 'Leads' },
+    { key: 'evaluados', label: 'Evaluados' },
+    { key: 'cumplidos', label: 'Cumplidos' },
+    { key: 'pct_cumplimiento', label: '% Cumplimiento' },
+    { key: 'kpi1', label: 'KPI 1: Cumplimiento Leads' },
+    { key: 'kpi2', label: 'KPI 2: SLA de Etapas' },
+    { key: 'kpi3', label: 'KPI 3: Retroalimentación de Etapas' }
+  ];
+
+  const filaHtml = d => {
+    const kpi1 = `${d.kpi1} <a href="#kpi1-row-${d.rowId}" class="kpi-maestra-link">Detalle</a>`;
+    const kpi2 = `${d.kpi2} <a href="#kpi2-row-${d.rowId}" class="kpi-maestra-link">Detalle</a>`;
+    const kpi3 = `${d.kpi3} <a href="#kpi3-row-${d.rowId}" class="kpi-maestra-link">Detalle</a>`;
+    return `<tr class="hover:bg-slate-800/50 text-gray-200">${cols.map(c => {
+      let v = d[c.key];
+      let align = 'text-right';
+      let extraClass = '';
+      if (c.key === 'pais' || c.key === 'ejecutivo') align = 'text-left';
+      if (c.key === 'kpi1') { v = kpi1; extraClass = 'kpi-maestra-col1'; align = 'text-center'; }
+      if (c.key === 'kpi2') { v = kpi2; extraClass = 'kpi-maestra-col2'; align = 'text-center'; }
+      if (c.key === 'kpi3') { v = kpi3; extraClass = 'kpi-maestra-col3'; align = 'text-center'; }
+      return `<td class="p-2.5 whitespace-nowrap ${align} ${extraClass}">${v ?? ''}</td>`;
+    }).join('')}</tr>`;
+  };
+
+  const thead = `<tr>${cols.map(c => {
+    const align = c.key === 'pais' || c.key === 'ejecutivo' ? 'text-left' : 'text-right';
+    return `<th class="p-2.5 ${align} text-[10px]">${c.label}</th>`;
+  }).join('')}</tr>`;
+
+  document.getElementById('tabla-resumen-maestra').innerHTML = `
+    <div class="overflow-auto rounded-lg border border-gray-800">
+      <table class="w-full text-xs border-collapse kpi-maestra-table">
+        <thead class="bg-[#0f172a] text-white">${thead}</thead>
+        <tbody class="divide-y divide-gray-800">${datos.map(filaHtml).join('')}</tbody>
+      </table>
+    </div>`;
+}
+
+function pintarTablaResumenEjecutivo(filasCatalogo, filasSinCatalogo, total, rowIdPrefix = '') {
   const cols = [
     { key: 'pais', label: 'País' },
     { key: 'leads', label: 'Leads telefónicos' },
@@ -1540,7 +1628,7 @@ function construirResumenPorEjecutivo(cruce) {
   };
 }
 
-function pintarTablaResumenEjecutivo(filasCatalogo, filasSinCatalogo, total) {
+function pintarTablaResumenEjecutivo(filasCatalogo, filasSinCatalogo, total, rowIdPrefix = '') {
   const cols = [
     { key: 'pais', label: 'País' },
     { key: 'ejecutivo', label: 'Ejecutivo' },
@@ -1556,7 +1644,8 @@ function pintarTablaResumenEjecutivo(filasCatalogo, filasSinCatalogo, total) {
 
   const filaHtml = (d, esTotal) => {
     const base = esTotal ? 'bg-[#0f3a4a] text-white font-bold' : 'hover:bg-slate-800/50 text-gray-200';
-    return `<tr class="${base}">${cols.map(c => {
+    const idAttr = !esTotal ? `id="${rowIdPrefix}${crearIdEjecutivo(d.ejecutivo)}"` : '';
+    return `<tr ${idAttr} class="${base}">${cols.map(c => {
       let v = d[c.key];
       if (c.key === 'pais') v = esTotal ? 'TOTAL' : nombrePais(v);
       if (c.key === 'ejecutivo' && esTotal) v = '';
@@ -1598,9 +1687,12 @@ function pintarTablaResumenEjecutivo(filasCatalogo, filasSinCatalogo, total) {
 }
 
 async function renderResumenEjecutivo(main) {
-  main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
+  main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800 space-y-6">
     <div class="flex justify-between items-center mb-3">
-      <h2 class="text-sm font-bold text-gray-300">Resumen Cumplimiento</h2>
+      <div>
+        <h2 class="text-sm font-bold text-gray-300">Resumen Maestro</h2>
+        <p class="text-[11px] text-gray-500 mt-1">Tabla maestra con datos de país, ejecutivo, leads y acceso rápido a cada KPI. Haz click en un enlace de KPI para ir al detalle correspondiente.</p>
+      </div>
       <div class="flex gap-2">
         <button onclick="renderResumenEjecutivo(document.getElementById('main-content'))" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
@@ -1612,17 +1704,66 @@ async function renderResumenEjecutivo(main) {
         </button>
       </div>
     </div>
-    <p class="text-[11px] text-gray-500 mb-3">Evaluación por ejecutivo. El % excluye pendientes. Todos los ejecutivos en catálogo se listan aunque tengan 0 leads. Incluye Llamadas y Teams.</p>
-    <div id="tabla-resumen-ejec" class="overflow-auto text-xs"><span class="text-red-300">Calculando cruce...</span></div>
+
+    <section>
+      <h3 class="text-xs font-bold text-gray-300 mb-2">Tabla maestra</h3>
+      <div id="tabla-resumen-maestra" class="overflow-auto text-xs"><span class="text-red-300">Calculando cruce...</span></div>
+    </section>
+
+    <section>
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-xs font-bold text-emerald-300">KPI 1: Cumplimiento Leads</h3>
+        <span class="text-[10px] text-gray-500">Muestra el cumplimiento general por ejecutivo.</span>
+      </div>
+      <div id="tabla-resumen-ejec" class="overflow-auto text-xs"><span class="text-red-300">Calculando cruce...</span></div>
+    </section>
+
+    <section>
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-xs font-bold text-sky-300">KPI 2: SLA de Etapas</h3>
+        <span class="text-[10px] text-gray-500">Muestra el porcentaje SLA por etapa.</span>
+      </div>
+      <div id="tabla-resumen-sla" class="overflow-auto text-xs"><span class="text-red-300">Calculando cruce...</span></div>
+    </section>
+
+    <section>
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-xs font-bold text-violet-300">KPI 3: Retroalimentación de Etapas</h3>
+        <span class="text-[10px] text-gray-500">Muestra el porcentaje de retroalimentación por etapa.</span>
+      </div>
+      <div id="tabla-resumen-retro" class="overflow-auto text-xs"><span class="text-red-300">Calculando cruce...</span></div>
+    </section>
   </div>`;
 
   const cruce = await calcularCruceUnificado();
+  const datosMaestros = construirResumenMaestra(cruce);
   const { filasCatalogo, filasSinCatalogo } = construirResumenPorEjecutivo(cruce);
   const total = calcularFilaTotal([...filasCatalogo, ...filasSinCatalogo]);
-  pintarTablaResumenEjecutivo(filasCatalogo, filasSinCatalogo, total);
+  const datosSla = agregarPorSLA(cruce);
+  const datosRetro = agregarPorRetro(cruce);
+
+  pintarTablaResumenMaestra(datosMaestros);
+  pintarTablaResumenEjecutivo(filasCatalogo, filasSinCatalogo, total, 'kpi1-row-');
+  pintarTablaResumenSLA(datosSla, 'kpi2-row-');
+  pintarTablaResumenRetro(datosRetro, 'kpi3-row-');
+
   document.getElementById('btn-exp-ejec').onclick = () => exportarXLSXGenerico(
-    [...filasCatalogo, ...filasSinCatalogo, total].map(({pct_num, enCatalogo, ...r}) => r),
-    'resumen_cumplimiento'
+    [...datosMaestros].map(r => ({
+      pais: r.pais,
+      ejecutivo: r.ejecutivo,
+      leads: r.leads,
+      evaluados: r.evaluados,
+      cumplidos: r.cumplidos,
+      pct_cumplimiento: r.pct_cumplimiento,
+      sla_etapa_1: r.sla_etapa_1,
+      sla_etapa_2: r.sla_etapa_2,
+      sla_etapa_3: r.sla_etapa_3,
+      retro_etapa_1: r.retro_etapa_1,
+      retro_etapa_2: r.retro_etapa_2,
+      retro_etapa_3: r.retro_etapa_3,
+      retro_etapa_4: r.retro_etapa_4
+    })),
+    'resumen_maestro'
   );
 }
 
@@ -1638,7 +1779,8 @@ function agregarPorSLA(cruce) {
       sla_etapa_1: 0,
       sla_etapa_2: 0,
       sla_etapa_3: 0,
-      enCatalogo: true
+      enCatalogo: true,
+      rowId: crearIdEjecutivo(nombre)
     };
   });
 
@@ -1685,7 +1827,8 @@ function agregarPorRetro(cruce) {
       retro_etapa_2: 0,
       retro_etapa_3: 0,
       retro_etapa_4: 0,
-      enCatalogo: true
+      enCatalogo: true,
+      rowId: crearIdEjecutivo(nombre)
     };
   });
 
@@ -1721,7 +1864,7 @@ function agregarPorRetro(cruce) {
   return ordenar([...Object.values(grupos), ...Object.values(sinCatalogo)]);
 }
 
-function pintarTablaResumenSLA(datos) {
+function pintarTablaResumenSLA(datos, rowIdPrefix = '') {
   const cols = [
     { key: 'pais', label: 'País' },
     { key: 'ejecutivo', label: 'Ejecutivo' },
@@ -1733,8 +1876,9 @@ function pintarTablaResumenSLA(datos) {
 
   const filaHtml = (d, esTotal) => {
     const base = esTotal ? 'bg-[#0f3a4a] text-white font-bold' : 'hover:bg-slate-800/50 text-gray-200 cursor-pointer';
+    const idAttr = !esTotal ? `id="${rowIdPrefix}${crearIdEjecutivo(d.ejecutivo)}"` : '';
     const onclick = esTotal ? '' : `onclick="abrirLeadsDesdeResumen('${encodeURIComponent(String(d.ejecutivo || ''))}','sla')"`;
-    return `<tr class="${base}" ${onclick}>${cols.map(c => {
+    return `<tr ${idAttr} class="${base}" ${onclick}>${cols.map(c => {
       let v = d[c.key];
       if (c.key === 'pais') v = esTotal ? 'TOTAL' : nombrePais(v);
       if (c.key === 'sla_etapa_1' || c.key === 'sla_etapa_2' || c.key === 'sla_etapa_3') {
@@ -1761,7 +1905,7 @@ function pintarTablaResumenSLA(datos) {
     </div>`;
 }
 
-function pintarTablaResumenRetro(datos) {
+function pintarTablaResumenRetro(datos, rowIdPrefix = '') {
   const cols = [
     { key: 'pais', label: 'País' },
     { key: 'ejecutivo', label: 'Ejecutivo' },
@@ -1774,8 +1918,9 @@ function pintarTablaResumenRetro(datos) {
 
   const filaHtml = (d, esTotal) => {
     const base = esTotal ? 'bg-[#0f3a4a] text-white font-bold' : 'hover:bg-slate-800/50 text-gray-200 cursor-pointer';
+    const idAttr = !esTotal ? `id="${rowIdPrefix}${crearIdEjecutivo(d.ejecutivo)}"` : '';
     const onclick = esTotal ? '' : `onclick="abrirLeadsDesdeResumen('${encodeURIComponent(String(d.ejecutivo || ''))}','retro')"`;
-    return `<tr class="${base}" ${onclick}>${cols.map(c => {
+    return `<tr ${idAttr} class="${base}" ${onclick}>${cols.map(c => {
       let v = d[c.key];
       if (c.key === 'pais') v = esTotal ? 'TOTAL' : nombrePais(v);
       if (c.key.startsWith('retro_etapa_')) {

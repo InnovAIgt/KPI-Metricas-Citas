@@ -1365,36 +1365,25 @@ async function calcularCruceUnificado() {
 
     const outObj = {
       pais: lead.pais || 'N/D',
-      codigo_prospecto: lead.codigo_prospecto,
-      lead: lead.nombre_prospecto,
-      cliente: lead.nombre_prospecto,
       ejecutivo: lead.asesor_nombre || 'Sin asignar',
-      resultado: estado,
+      lead: lead.codigo_prospecto || '',
+      cliente: lead.nombre_prospecto || '',
       telefono: fuente === 'Teams' ? '' : lead.telefono,
-      telefono_comparado: fuente === 'Teams' ? '' : telLead || '',
       fecha_reunion: lead.fecha_agendada,
       hora_reunion: lead.hora_agendada,
-      fecha_llamada: coincidencia && coincidencia.fechaHora ? coincidencia.fechaHora.toISOString() : '',
-      fecha_llamada_corta: (coincidencia && coincidencia.fechaHora) ? formatearFechaCorta(coincidencia.fechaHora) : '',
-      hora_llamada_corta: (coincidencia && coincidencia.fechaHora) ? formatearHoraCorta(coincidencia.fechaHora) : '',
+      resultado: estado,
+      cumplio: estado === 'Cumplió en fecha y horario' || estado === 'Cumplió con evidencia en Teams' ? 'Sí' : 'No',
+      fuente: fuente,
+      fecha_contacto: (coincidencia && coincidencia.fechaHora) ? formatearFechaCorta(coincidencia.fechaHora) : '',
+      hora_contacto: (coincidencia && coincidencia.fechaHora) ? formatearHoraCorta(coincidencia.fechaHora) : '',
       diferencia_min: diferenciaMin,
-      diferencia_min_firmada: diferenciaMinFirmada,
-      diferencia_horas: diferenciaHoras,
       duracion_seg: duracionSeg,
-      duracion_min: duracionMin,
-      estado_tipo: estadoTipo,
-      registro_origen_id: coincidencia?.raw?.uniqueid ?? coincidencia?.raw?.id ?? '',
-      registro_origen_tabla: coincidencia?.fuente ?? '',
-      vendedor_extension: coincidencia?.fuente === 'PBX' ? (coincidencia?.raw?.usuario || coincidencia?.raw?.nombre || '') : '',
+      estado_llamada: estadoTipo || '',
+      intentos_mismo_dia: Array.isArray(delDia) ? delDia.length : 0,
+      intentos_totales: Array.isArray(candidatas) ? candidatas.length : 0,
       catalogo_ok: ejec ? 'Sí' : 'No',
-      kpi_sla_etapa_1: Boolean(lead.kpi_sla_etapa_1),
-      kpi_sla_etapa_2: Boolean(lead.kpi_sla_etapa_2),
-      kpi_sla_etapa_3: Boolean(lead.kpi_sla_etapa_3),
-      kpi_retroalimentacion_etapa_1: Boolean(lead.kpi_retroalimentacion_etapa_1),
-      kpi_retroalimentacion_etapa_2: Boolean(lead.kpi_retroalimentacion_etapa_2),
-      kpi_retroalimentacion_etapa_3: Boolean(lead.kpi_retroalimentacion_etapa_3),
-      kpi_retroalimentacion_etapa_4: Boolean(lead.kpi_retroalimentacion_etapa_4),
-      fuente: fuente
+      observacion: coincidencia?.raw?.observacion || coincidencia?.raw?.nota || coincidencia?.raw?.detalle || coincidencia?.raw?.comentario || '',
+      vendedor_extension: coincidencia?.fuente === 'PBX' ? (coincidencia?.raw?.usuario || coincidencia?.raw?.nombre || '') : ''
     };
     return outObj;
   });
@@ -1810,16 +1799,25 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
 
   const filas = registros.map(r => `
     <tr class="hover:bg-slate-800/50 text-gray-200">
-      <td class="p-2.5 text-left">${r.codigo_prospecto || ''}</td>
+      <td class="p-2.5 text-left">${nombrePais(r.pais) || ''}</td>
+      <td class="p-2.5 text-left">${r.ejecutivo || ''}</td>
       <td class="p-2.5 text-left">${r.lead || ''}</td>
-      <td class="p-2.5 text-left"><span class="${claseResultado(r.resultado)}">${r.resultado || ''}</span></td>
+      <td class="p-2.5 text-left">${r.cliente || ''}</td>
       <td class="p-2.5 text-left">${r.telefono || ''}</td>
-      <td class="p-2.5 text-left">${r.fuente || ''}</td>
-      <td class="p-2.5 text-left">${r.vendedor_extension || ''}</td>
-      <td class="p-2.5 text-right">${r.fecha_llamada_corta || ''}</td>
-      <td class="p-2.5 text-right">${r.hora_llamada_corta || ''}</td>
       <td class="p-2.5 text-right">${r.fecha_reunion || ''}</td>
       <td class="p-2.5 text-right">${r.hora_reunion || ''}</td>
+      <td class="p-2.5 text-left"><span class="${claseResultado(r.resultado)}">${r.resultado || ''}</span></td>
+      <td class="p-2.5 text-center">${r.cumplio || 'No'}</td>
+      <td class="p-2.5 text-left">${r.fuente || ''}</td>
+      <td class="p-2.5 text-right">${r.fecha_contacto || ''}</td>
+      <td class="p-2.5 text-right">${r.hora_contacto || ''}</td>
+      <td class="p-2.5 text-right">${r.diferencia_min ?? ''}</td>
+      <td class="p-2.5 text-right">${r.duracion_seg ?? ''}</td>
+      <td class="p-2.5 text-left">${r.estado_llamada || ''}</td>
+      <td class="p-2.5 text-right">${r.intentos_mismo_dia ?? 0}</td>
+      <td class="p-2.5 text-right">${r.intentos_totales ?? 0}</td>
+      <td class="p-2.5 text-center">${r.catalogo_ok || 'No'}</td>
+      <td class="p-2.5 text-left">${r.observacion || ''}</td>
     </tr>`).join('');
 
   document.getElementById('kpi1-detalle').innerHTML = `
@@ -1827,7 +1825,7 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
       <div class="flex items-center justify-between mb-3">
         <div>
           <h3 class="text-sm font-bold text-white">Detalle de ${ejecutivo}</h3>
-          <p class="text-[11px] text-gray-500">Lead, resultado y datos de llamada / vendedor PBX.</p>
+          <p class="text-[11px] text-gray-500">Lead, ejecutivo y contacto con detalle de cumplimiento.</p>
         </div>
         <span class="text-[11px] text-gray-400">${registros.length} registros</span>
       </div>
@@ -1835,19 +1833,28 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
         <table class="w-full text-xs border-collapse">
           <thead class="bg-[#0f172a] text-white">
             <tr>
-              <th class="p-2.5 text-left text-[10px]">Código Lead</th>
+              <th class="p-2.5 text-left text-[10px]">País</th>
+              <th class="p-2.5 text-left text-[10px]">Ejecutivo</th>
               <th class="p-2.5 text-left text-[10px]">Lead</th>
-              <th class="p-2.5 text-left text-[10px]">Resultado</th>
+              <th class="p-2.5 text-left text-[10px]">Cliente</th>
               <th class="p-2.5 text-left text-[10px]">Teléfono</th>
-              <th class="p-2.5 text-left text-[10px]">Fuente</th>
-              <th class="p-2.5 text-left text-[10px]">Extensión vendedor</th>
-              <th class="p-2.5 text-right text-[10px]">Fecha llamada</th>
-              <th class="p-2.5 text-right text-[10px]">Hora llamada</th>
               <th class="p-2.5 text-right text-[10px]">Fecha reunión</th>
               <th class="p-2.5 text-right text-[10px]">Hora reunión</th>
+              <th class="p-2.5 text-left text-[10px]">Resultado</th>
+              <th class="p-2.5 text-center text-[10px]">Cumplió</th>
+              <th class="p-2.5 text-left text-[10px]">Fuente</th>
+              <th class="p-2.5 text-right text-[10px]">Fecha contacto</th>
+              <th class="p-2.5 text-right text-[10px]">Hora contacto</th>
+              <th class="p-2.5 text-right text-[10px]">Diferencia (min)</th>
+              <th class="p-2.5 text-right text-[10px]">Duración (seg)</th>
+              <th class="p-2.5 text-left text-[10px]">Estado llamada</th>
+              <th class="p-2.5 text-right text-[10px]">Intentos mismo día</th>
+              <th class="p-2.5 text-right text-[10px]">Intentos totales</th>
+              <th class="p-2.5 text-center text-[10px]">Catálogo</th>
+              <th class="p-2.5 text-left text-[10px]">Observación</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-800">${filas || `<tr><td colspan="10" class="p-4 text-center text-gray-400">No hay registros asociados a este ejecutivo.</td></tr>`}</tbody>
+          <tbody class="divide-y divide-gray-800">${filas || `<tr><td colspan="19" class="p-4 text-center text-gray-400">No hay registros asociados a este ejecutivo.</td></tr>`}</tbody>
         </table>
       </div>
     </div>`;

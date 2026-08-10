@@ -8,6 +8,7 @@ let cruceCache = null;
 let vistaActual = 'config';
 let contenidoModalCelda = '';
 let detalleFiltro = null;
+let kpi1DetalleCruce = [];
 
 let SB_URL = "https://sbopifiiyezmvsadwkpg.supabase.co";
 let SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNib3BpZmlieWV6bXZzYWR3c3BnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MzM0OTYsImV4cCI6MjEwMDMwOTQ5Nn0.ZI5y8lroFF529Xr-Otm1fcq6H2lhbh9e3s-WU9O6I7A";
@@ -1452,6 +1453,30 @@ function construirResumenMaestra(cruce) {
   }));
 }
 
+function construirResumenPorEjecutivo(cruce) {
+  const grupos = {};
+  cruce.forEach(r => {
+    const nombre = String(r.ejecutivo || 'Sin asignar').trim();
+    const key = nombre.toLowerCase();
+    if (!grupos[key]) {
+      grupos[key] = {
+        pais: r.pais || 'N/D',
+        ejecutivo: nombre || 'Sin asignar',
+        leads: 0,
+        cumplidos: 0
+      };
+    }
+    grupos[key].leads++;
+    if (r.resultado === 'Cumplió en fecha y horario' || r.resultado === 'Cumplió con evidencia en Teams') {
+      grupos[key].cumplidos++;
+    }
+  });
+  return Object.values(grupos).map(g => ({
+    ...g,
+    pct_cumplimiento: g.leads > 0 ? Math.round((g.cumplidos / g.leads) * 100) + '%' : '0%'
+  })).sort((a, b) => nombrePais(a.pais).localeCompare(nombrePais(b.pais)) || a.ejecutivo.localeCompare(b.ejecutivo));
+}
+
 function pintarTablaResumenMaestra(datos) {
   const cols = [
     { key: 'pais', label: 'País' },
@@ -1475,7 +1500,7 @@ function pintarTablaResumenMaestra(datos) {
   const filaHtml = d => {
     return `<tr class="hover:bg-slate-800/50 text-gray-200">${cols.map(c => {
       let v = d[c.key] ?? '';
-      const align = ['pais', 'ejecutivo', 'lead', 'resultado', 'telefono', 'fecha_reunion', 'hora_reunion', 'fecha_llamada', 'hora_llamada'].includes(c.key) ? 'text-left' : 'text-right';
+      const align = c.kpiGroup ? 'text-center' : ['pais', 'ejecutivo', 'lead', 'resultado', 'telefono', 'fecha_reunion', 'hora_reunion', 'fecha_llamada', 'hora_llamada'].includes(c.key) ? 'text-left' : 'text-right';
       const extraClass = c.kpiGroup ? ` ${c.kpiGroup === 'kpi2' ? 'col-kpi2' : 'col-kpi3'}` : '';
       if (c.key === 'resultado') {
         v = `<span class="${claseResultado(v)}">${v}</span>`;
@@ -1485,7 +1510,7 @@ function pintarTablaResumenMaestra(datos) {
   };
 
   const thead = `<tr>${cols.map(c => {
-    const align = ['pais', 'ejecutivo', 'lead', 'resultado', 'telefono', 'fecha_reunion', 'hora_reunion', 'fecha_llamada', 'hora_llamada'].includes(c.key) ? 'text-left' : 'text-right';
+    const align = c.kpiGroup ? 'text-center' : ['pais', 'ejecutivo', 'lead', 'resultado', 'telefono', 'fecha_reunion', 'hora_reunion', 'fecha_llamada', 'hora_llamada'].includes(c.key) ? 'text-left' : 'text-right';
     const content = c.labelTitle ? `<div class="kpi-header ${c.kpiGroup === 'kpi2' ? 'kpi-header-kpi2' : 'kpi-header-kpi3'}"><span class="kpi-title text-red-300">${c.labelTitle}</span><span class="kpi-subtitle">${c.labelSubtitle}</span></div>` : `<div class="kpi-header"><span class="kpi-title">${c.label}</span></div>`;
     return `<th class="p-2.5 ${align} text-[10px] align-top">${content}</th>`;
   }).join('')}</tr>`;
@@ -1702,14 +1727,42 @@ async function renderResumenKpis(main) {
     </div>
 
     <section>
+      <div class="grid gap-3 sm:grid-cols-2 mb-4" id="resumen-pais-cards"></div>
       <h3 class="text-xs font-bold text-gray-300 mb-2">Tabla maestra</h3>
       <div id="tabla-resumen-maestra" class="overflow-auto text-xs"><span class="text-red-300">Calculando cruce...</span></div>
     </section>
   </div>`;
 
   const cruce = await calcularCruceUnificado();
+  const resumenPaises = calcularResumenPorPais(cruce);
+  main.querySelector('#resumen-pais-cards').innerHTML = resumenPaises.map(r => `
+      <div class="bg-[#111827] border border-gray-800 rounded-lg p-4 flex flex-col gap-2">
+        <span class="text-[11px] text-gray-400 uppercase tracking-[0.15em]">${r.pais}</span>
+        <span class="text-2xl font-bold text-white">${r.leads}</span>
+        <span class="text-[11px] text-gray-500">Leads totales</span>
+        <span class="text-xl font-semibold text-emerald-300">${r.cumplieron}</span>
+        <span class="text-[11px] text-gray-500">Cumplieron</span>
+      </div>
+    `).join('');
   const datosMaestros = construirResumenMaestra(cruce);
   pintarTablaResumenMaestra(datosMaestros);
+}
+
+function calcularResumenPorPais(cruce) {
+  const grupo = {
+    GT: { pais: 'Guatemala', leads: 0, cumplieron: 0 },
+    SV: { pais: 'El Salvador', leads: 0, cumplieron: 0 }
+  };
+  cruce.forEach(r => {
+    if (r.pais === 'GT' || r.pais === 'SV') {
+      const key = r.pais;
+      grupo[key].leads++;
+      if (r.resultado === 'Cumplió en fecha y horario' || r.resultado === 'Cumplió con evidencia en Teams') {
+        grupo[key].cumplieron++;
+      }
+    }
+  });
+  return [grupo.GT, grupo.SV];
 }
 
 async function renderResumenKPI1(main) {
@@ -1717,43 +1770,107 @@ async function renderResumenKPI1(main) {
     <div class="flex justify-between items-center mb-3">
       <div>
         <h2 class="text-sm font-bold text-gray-300">KPI 1: Cumplimiento Leads</h2>
-        <p class="text-[11px] text-gray-500 mt-1">Cumplimiento general por ejecutivo con leads evaluados, resultados y porcentaje de cumplimiento.</p>
+        <p class="text-[11px] text-gray-500 mt-1">Lista de ejecutivos y leads cumplidos. Haz clic en un ejecutivo para ver el detalle de cada caso.</p>
       </div>
-      <div class="flex gap-2">
-        <button onclick="renderResumenKPI1(document.getElementById('main-content'))" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-          Recalcular
-        </button>
-        <button id="btn-exp-kpi1" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-          Exportar XLSX
-        </button>
-      </div>
+      <button onclick="renderResumenKPI1(document.getElementById('main-content'))" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        Recalcular
+      </button>
+
     </div>
 
-    <div id="tabla-resumen-ejec" class="overflow-auto text-xs"><span class="text-red-300">Calculando cruce...</span></div>
+    <div class="overflow-auto rounded-lg border border-gray-800">
+      <table class="w-full text-xs border-collapse" id="tabla-kpi1">
+        <thead class="bg-[#0f172a] text-white">
+          <tr>
+            <th class="p-2.5 text-left text-[10px]">País</th>
+            <th class="p-2.5 text-left text-[10px]">Ejecutivo</th>
+            <th class="p-2.5 text-right text-[10px]">Leads</th>
+            <th class="p-2.5 text-right text-[10px]">Cumplieron</th>
+            <th class="p-2.5 text-right text-[10px]">% Cumplimiento</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800" id="tbody-kpi1"><tr><td colspan="5" class="p-4 text-center text-red-300">Calculando cruce...</td></tr></tbody>
+      </table>
+    </div>
+
+    <div id="kpi1-detalle" class="space-y-3"></div>
   </div>`;
 
   const cruce = await calcularCruceUnificado();
-  const { filasCatalogo, filasSinCatalogo } = construirResumenPorEjecutivo(cruce);
-  const total = calcularFilaTotal([...filasCatalogo, ...filasSinCatalogo]);
-  pintarTablaResumenEjecutivo(filasCatalogo, filasSinCatalogo, total, 'kpi1-row-');
+  window.kpi1DetalleCruce = cruce;
+  const datosKPI1 = construirResumenPorEjecutivo(cruce);
+  pintarTablaKPI1(datosKPI1);
+}
 
-  document.getElementById('btn-exp-kpi1').onclick = () => exportarXLSXGenerico(
-    [...filasCatalogo, ...filasSinCatalogo, total].map(r => ({
-      pais: r.pais,
-      ejecutivo: r.ejecutivo,
-      leads: r.leads,
-      evaluados: r.evaluados,
-      cumplieron: r.cumplieron,
-      fuera_horario: r.fuera_horario,
-      otra_fecha: r.otra_fecha,
-      sin_llamada: r.sin_llamada,
-      pendientes: r.pendientes,
-      pct_cumplimiento: r.pct_cumplimiento
-    })),
-    'kpi1_cumplimiento_leads'
-  );
+function pintarTablaKPI1(datos) {
+  const filas = datos.map(d => {
+    return `<tr class="hover:bg-slate-800/50 text-gray-200 cursor-pointer" onclick="mostrarDetalleKPI1('${encodeURIComponent(String(d.ejecutivo || ''))}')">
+      <td class="p-2.5 text-left">${nombrePais(d.pais)}</td>
+      <td class="p-2.5 text-left">${d.ejecutivo}</td>
+      <td class="p-2.5 text-right">${d.leads}</td>
+      <td class="p-2.5 text-right">${d.cumplidos}</td>
+      <td class="p-2.5 text-right">${d.pct_cumplimiento}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tbody-kpi1').innerHTML = filas || `<tr><td colspan="5" class="p-4 text-center text-gray-400">No hay datos disponibles para este rango.</td></tr>`;
+}
+
+function mostrarDetalleKPI1(ejecutivoEncoded) {
+  const ejecutivo = decodeURIComponent(String(ejecutivoEncoded || ''));
+  const registros = (window.kpi1DetalleCruce || []).filter(r => String(r.ejecutivo || '').trim() === ejecutivo);
+
+  const filas = registros.map(r => `
+    <tr class="hover:bg-slate-800/50 text-gray-200">
+      <td class="p-2.5 text-left">${r.lead || ''}</td>
+      <td class="p-2.5 text-left">${r.resultado || ''}</td>
+      <td class="p-2.5 text-left">${r.telefono || ''}</td>
+      <td class="p-2.5 text-right">${r.fecha_reunion || ''}</td>
+      <td class="p-2.5 text-right">${r.hora_reunion || ''}</td>
+      <td class="p-2.5 text-right">${r.fecha_llamada || ''}</td>
+      <td class="p-2.5 text-right">${r.hora_llamada || ''}</td>
+      <td class="p-2.5 text-center">${r.kpi_sla_etapa_1 || 'No'}</td>
+      <td class="p-2.5 text-center">${r.kpi_sla_etapa_2 || 'No'}</td>
+      <td class="p-2.5 text-center">${r.kpi_sla_etapa_3 || 'No'}</td>
+      <td class="p-2.5 text-center">${r.kpi_retroalimentacion_etapa_1 || 'No'}</td>
+      <td class="p-2.5 text-center">${r.kpi_retroalimentacion_etapa_2 || 'No'}</td>
+      <td class="p-2.5 text-center">${r.kpi_retroalimentacion_etapa_3 || 'No'}</td>
+      <td class="p-2.5 text-center">${r.kpi_retroalimentacion_etapa_4 || 'No'}</td>
+    </tr>`).join('');
+
+  document.getElementById('kpi1-detalle').innerHTML = `
+    <div class="bg-[#111827] border border-gray-800 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h3 class="text-sm font-bold text-white">Detalle de ${ejecutivo}</h3>
+          <p class="text-[11px] text-gray-500">Casos por lead y llamadas asociadas.</p>
+        </div>
+        <span class="text-[11px] text-gray-400">${registros.length} registros</span>
+      </div>
+      <div class="overflow-auto">
+        <table class="w-full text-xs border-collapse">
+          <thead class="bg-[#0f172a] text-white">
+            <tr>
+              <th class="p-2.5 text-left text-[10px]">Lead</th>
+              <th class="p-2.5 text-left text-[10px]">Resultado</th>
+              <th class="p-2.5 text-left text-[10px]">Teléfono</th>
+              <th class="p-2.5 text-right text-[10px]">Fecha reunión</th>
+              <th class="p-2.5 text-right text-[10px]">Hora reunión</th>
+              <th class="p-2.5 text-right text-[10px]">Fecha llamada</th>
+              <th class="p-2.5 text-right text-[10px]">Hora llamada</th>
+              <th class="p-2.5 text-center text-[10px]">SLA 1</th>
+              <th class="p-2.5 text-center text-[10px]">SLA 2</th>
+              <th class="p-2.5 text-center text-[10px]">SLA 3</th>
+              <th class="p-2.5 text-center text-[10px]">KPI 3-1</th>
+              <th class="p-2.5 text-center text-[10px]">KPI 3-2</th>
+              <th class="p-2.5 text-center text-[10px]">KPI 3-3</th>
+              <th class="p-2.5 text-center text-[10px]">KPI 3-4</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800">${filas || `<tr><td colspan="14" class="p-4 text-center text-gray-400">No hay registros asociados a este ejecutivo.</td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>`;
 }
 
 function agregarPorSLA(cruce) {

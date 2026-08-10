@@ -1701,28 +1701,11 @@ async function renderResumenKpis(main) {
     <div class="flex justify-between items-center mb-3">
       <div>
         <h2 class="text-sm font-bold text-gray-300">Resumen KPIs</h2>
-        <p class="text-[11px] text-gray-500 mt-1">Vista maestra con datos por ejecutivo y acceso directo a cada KPI. Usa los botones para ir a KPI 1, KPI 2 o KPI 3.</p>
+        <p class="text-[11px] text-gray-500 mt-1">Vista maestra con datos por ejecutivo y un resumen compacto por país.</p>
       </div>
-      <div class="flex gap-2">
-        <button onclick="renderResumenKpis(document.getElementById('main-content'))" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-          Recalcular
-        </button>
-      </div>
-    </div>
-
-    <div class="grid gap-2 sm:grid-cols-3">
-      <button onclick="irA('res-kpi1')" class="text-left bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded p-3 text-xs text-white">
-        <strong class="block text-[11px] text-emerald-300">KPI 1</strong>
-        Cumplimiento Leads
-      </button>
-      <button onclick="irA('res-sla')" class="text-left bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded p-3 text-xs text-white">
-        <strong class="block text-[11px] text-sky-300">KPI 2</strong>
-        SLA de Etapas
-      </button>
-      <button onclick="irA('res-retro')" class="text-left bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded p-3 text-xs text-white">
-        <strong class="block text-[11px] text-violet-300">KPI 3</strong>
-        Retroalimentación de Etapas
+      <button onclick="renderResumenKpis(document.getElementById('main-content'))" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        Recalcular
       </button>
     </div>
 
@@ -1736,12 +1719,16 @@ async function renderResumenKpis(main) {
   const cruce = await calcularCruceUnificado();
   const resumenPaises = calcularResumenPorPais(cruce);
   main.querySelector('#resumen-pais-cards').innerHTML = resumenPaises.map(r => `
-      <div class="bg-[#111827] border border-gray-800 rounded-lg p-4 flex flex-col gap-2">
-        <span class="text-[11px] text-gray-400 uppercase tracking-[0.15em]">${r.pais}</span>
-        <span class="text-2xl font-bold text-white">${r.leads}</span>
-        <span class="text-[11px] text-gray-500">Leads totales</span>
-        <span class="text-xl font-semibold text-emerald-300">${r.cumplieron}</span>
-        <span class="text-[11px] text-gray-500">Cumplieron</span>
+      <div class="bg-[#111827] border border-gray-800 rounded-lg p-3 flex items-center justify-between gap-4">
+        <div>
+          <div class="text-[10px] text-gray-400 uppercase tracking-[0.15em]">${r.pais}</div>
+          <div class="mt-2 text-sm text-gray-400">Leads</div>
+          <div class="text-2xl font-bold text-white">${r.leads}</div>
+        </div>
+        <div class="text-right">
+          <div class="text-[10px] text-gray-400 uppercase tracking-[0.15em]">Cumplieron</div>
+          <div class="text-2xl font-bold text-emerald-300">${r.cumplieron}</div>
+        </div>
       </div>
     `).join('');
   const datosMaestros = construirResumenMaestra(cruce);

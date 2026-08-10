@@ -1217,6 +1217,7 @@ async function calcularCruceUnificado() {
     const usuario = ejec ? ejec.usuario : null;
     let usuarioNorm = '';
     let candidatas = [];
+    let delDia = [];
 
     let estado = 'Sin llamada encontrada';
     let coincidencia = null;

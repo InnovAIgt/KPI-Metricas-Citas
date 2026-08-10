@@ -105,6 +105,7 @@ function render() {
   if (vistaActual === 'reg-teams') return renderRegistroTeams(main);
   if (vistaActual === 'catalogo') return renderCatalogo(main);
   if (vistaActual === 'res-kpis' || vistaActual === 'res-ejecutivo') return renderResumenKpis(main);
+  if (vistaActual === 'res-kpi1') return renderResumenKPI1(main);
   if (vistaActual === 'res-sla') return renderResumenSLA(main);
   if (vistaActual === 'res-retro') return renderResumenRetro(main);
   if (vistaActual === 'res-detalle') return renderDetalleUnificado(main);
@@ -1134,9 +1135,45 @@ function formatearFechaCorta(d) {
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   return `${dd}/${mm}/${d.getFullYear()}`;
 }
+
+function parseFecha(fecha) {
+  if (!fecha) return null;
+  if (fecha instanceof Date && !Number.isNaN(fecha.getTime())) return fecha;
+  const valor = String(fecha).trim();
+  if (!valor) return null;
+  const iso = new Date(valor);
+  if (!Number.isNaN(iso.getTime())) return iso;
+  const partes = valor.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (partes) {
+    const dia = Number(partes[1]);
+    const mes = Number(partes[2]) - 1;
+    const anio = Number(partes[3].length === 2 ? `20${partes[3]}` : partes[3]);
+    const d = new Date(anio, mes, dia);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
+function formatearFechaValor(fecha) {
+  const d = parseFecha(fecha);
+  if (!d) return String(fecha || '');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()}`;
+}
 function formatearHoraCorta(d) {
   if (!d) return '';
   return d.toTimeString().slice(0, 8);
+}
+
+function claseResultado(resultado) {
+  const value = String(resultado || '').toLowerCase();
+  if (value.includes('cumplió en fecha y horario') || value.includes('cumplió con evidencia en teams')) return 'result-badge result-cumplio';
+  if (value.includes('llamó el mismo día fuera de horario')) return 'result-badge result-fuera';
+  if (value.includes('llamó en otra fecha')) return 'result-badge result-otra';
+  if (value.includes('sin llamada') || value.includes('sin evidencia')) return 'result-badge result-sin';
+  if (value.includes('pendiente')) return 'result-badge result-pendiente';
+  return 'result-badge result-default';
 }
 
 function esReunionTeams(tipo) {
@@ -1400,7 +1437,7 @@ function construirResumenMaestra(cruce) {
     lead: r.lead,
     resultado: r.resultado,
     telefono: r.telefono || '',
-    fecha_reunion: r.fecha_reunion || '',
+    fecha_reunion: formatearFechaValor(r.fecha_reunion || ''),
     hora_reunion: r.hora_reunion || '',
     fecha_llamada: r.fecha_llamada_corta || '',
     hora_llamada: r.hora_llamada_corta || '',
@@ -1426,26 +1463,31 @@ function pintarTablaResumenMaestra(datos) {
     { key: 'hora_reunion', label: 'Hora reunión' },
     { key: 'fecha_llamada', label: 'Fecha llamada' },
     { key: 'hora_llamada', label: 'Hora llamada' },
-    { key: 'kpi_sla_etapa_1', label: 'SLA Etapa 1' },
-    { key: 'kpi_sla_etapa_2', label: 'SLA Etapa 2' },
-    { key: 'kpi_sla_etapa_3', label: 'SLA Etapa 3' },
-    { key: 'kpi_retroalimentacion_etapa_1', label: 'Retro Etapa 1' },
-    { key: 'kpi_retroalimentacion_etapa_2', label: 'Retro Etapa 2' },
-    { key: 'kpi_retroalimentacion_etapa_3', label: 'Retro Etapa 3' },
-    { key: 'kpi_retroalimentacion_etapa_4', label: 'Retro Etapa 4' }
+    { key: 'kpi_sla_etapa_1', labelTitle: 'KPI 2', labelSubtitle: 'Etapa 1', kpiGroup: 'kpi2' },
+    { key: 'kpi_sla_etapa_2', labelTitle: 'KPI 2', labelSubtitle: 'Etapa 2', kpiGroup: 'kpi2' },
+    { key: 'kpi_sla_etapa_3', labelTitle: 'KPI 2', labelSubtitle: 'Etapa 3', kpiGroup: 'kpi2' },
+    { key: 'kpi_retroalimentacion_etapa_1', labelTitle: 'KPI 3', labelSubtitle: 'Etapa 1', kpiGroup: 'kpi3' },
+    { key: 'kpi_retroalimentacion_etapa_2', labelTitle: 'KPI 3', labelSubtitle: 'Etapa 2', kpiGroup: 'kpi3' },
+    { key: 'kpi_retroalimentacion_etapa_3', labelTitle: 'KPI 3', labelSubtitle: 'Etapa 3', kpiGroup: 'kpi3' },
+    { key: 'kpi_retroalimentacion_etapa_4', labelTitle: 'KPI 3', labelSubtitle: 'Etapa 4', kpiGroup: 'kpi3' }
   ];
 
   const filaHtml = d => {
     return `<tr class="hover:bg-slate-800/50 text-gray-200">${cols.map(c => {
-      let v = d[c.key];
-      const align = c.key === 'pais' || c.key === 'ejecutivo' || c.key === 'lead' || c.key === 'resultado' ? 'text-left' : 'text-right';
-      return `<td class="p-2.5 whitespace-nowrap ${align}">${v ?? ''}</td>`;
+      let v = d[c.key] ?? '';
+      const align = ['pais', 'ejecutivo', 'lead', 'resultado', 'telefono', 'fecha_reunion', 'hora_reunion', 'fecha_llamada', 'hora_llamada'].includes(c.key) ? 'text-left' : 'text-right';
+      const extraClass = c.kpiGroup ? ` ${c.kpiGroup === 'kpi2' ? 'col-kpi2' : 'col-kpi3'}` : '';
+      if (c.key === 'resultado') {
+        v = `<span class="${claseResultado(v)}">${v}</span>`;
+      }
+      return `<td class="p-2.5 whitespace-nowrap ${align}${extraClass}">${v}</td>`;
     }).join('')}</tr>`;
   };
 
   const thead = `<tr>${cols.map(c => {
-    const align = c.key === 'pais' || c.key === 'ejecutivo' ? 'text-left' : 'text-right';
-    return `<th class="p-2.5 ${align} text-[10px]">${c.label}</th>`;
+    const align = ['pais', 'ejecutivo', 'lead', 'resultado', 'telefono', 'fecha_reunion', 'hora_reunion', 'fecha_llamada', 'hora_llamada'].includes(c.key) ? 'text-left' : 'text-right';
+    const content = c.labelTitle ? `<div class="kpi-header ${c.kpiGroup === 'kpi2' ? 'kpi-header-kpi2' : 'kpi-header-kpi3'}"><span class="kpi-title text-red-300">${c.labelTitle}</span><span class="kpi-subtitle">${c.labelSubtitle}</span></div>` : `<div class="kpi-header"><span class="kpi-title">${c.label}</span></div>`;
+    return `<th class="p-2.5 ${align} text-[10px] align-top">${content}</th>`;
   }).join('')}</tr>`;
 
   document.getElementById('tabla-resumen-maestra').innerHTML = `

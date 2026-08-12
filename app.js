@@ -2,8 +2,8 @@
 // ESTADO GLOBAL
 // ==================================================================
 let supabaseClient = null;
-let cache = { leads: [], llamadas: [], historiales: [], ejecutivos: [], teams_registro: [] };
-let cargaCompleta = { leads: false, llamadas: false, historiales: false, ejecutivos: false, teams_registro: false };
+let cache = { leads: [], llamadas_pbx: [], llamadas_celular: [], ejecutivos: [], teams_registro: [] };
+let cargaCompleta = { leads: false, llamadas_pbx: false, llamadas_celular: false, ejecutivos: false, teams_registro: false };
 let cruceCache = null;
 let vistaActual = 'config';
 let contenidoModalCelda = '';
@@ -100,8 +100,8 @@ function render() {
   const main = document.getElementById('main-content');
   if (vistaActual === 'config') return renderConfig(main);
   if (vistaActual === 'criterios') return renderCriterios(main);
-  if (vistaActual === 'reg-pbx') return renderRegistro(main, 'llamadas', 'Llamadas PBX', 'fecha');
-  if (vistaActual === 'reg-cel') return renderRegistro(main, 'historiales', 'Llamadas Celular', 'fecha');
+  if (vistaActual === 'reg-pbx') return renderRegistro(main, 'llamadas_pbx', 'Llamadas PBX', 'fecha_hora');
+  if (vistaActual === 'reg-cel') return renderRegistro(main, 'llamadas_celular', 'Llamadas Celular', 'fecha');
   if (vistaActual === 'reg-leads') return renderRegistro(main, 'leads', 'Leads Calificados', 'fecha_agendada');
   if (vistaActual === 'reg-teams') return renderRegistroTeams(main);
   if (vistaActual === 'catalogo') return renderCatalogo(main);
@@ -399,12 +399,12 @@ async function asegurarCache(tabla, orden) {
 
 async function recargarTodoYContadores() {
   console.log('Iniciando recargarTodoYContadores...');
-  cargaCompleta = { leads: false, llamadas: false, historiales: false, ejecutivos: false, teams_registro: false };
+  cargaCompleta = { leads: false, llamadas: false, llamadas_celular: false, ejecutivos: false, teams_registro: false };
   cruceCache = null;
   try {
     await cargarTablaCompleta('leads', 'fecha_agendada');
-    await cargarTablaCompleta('llamadas', 'fecha');
-    await cargarTablaCompleta('historiales', 'fecha');
+    await cargarTablaCompleta('llamadas_pbx', 'fecha_hora');
+    await cargarTablaCompleta('llamadas_celular', 'fecha');
     await cargarTablaCompleta('ejecutivos', null);
     
     try {
@@ -532,7 +532,7 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
     }));
   }
 
-  if (tabla === 'llamadas') {
+  if (tabla === 'llamadas_pbx' || tabla === 'llamadas') {
     datosFiltrados = datosFiltrados.map(item => ({
       ...item,
       Escuchar: obtenerUrlAudio(item) || ''
@@ -553,7 +553,7 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
 
   if (detalleFiltro && detalleFiltro.tabla === tabla) {
     datosFiltrados = aplicarFiltroDetalleRegistro(datosFiltrados, tabla);
-    let filtroText = `Mostrando registros de ${tabla === 'llamadas' ? 'PBX' : 'Celular'}`;
+    let filtroText = `Mostrando registros de ${tabla === 'llamadas_pbx' || tabla === 'llamadas' ? 'PBX' : 'Celular'}`;
     if (detalleFiltro.ejecutivo) filtroText += ` para ${detalleFiltro.ejecutivo}`;
     if (detalleFiltro.tipoResumen) filtroText += ` (${detalleFiltro.tipoResumen.toUpperCase()})`;
     if (detalleFiltro.telefono) filtroText += ` y teléfono ${detalleFiltro.telefono}`;
@@ -665,10 +665,10 @@ function abrirDetalleFuente(event, fila) {
   const registroTabla = fila.dataset.registroTabla || '';
 
   if (fuente.toLowerCase() === 'pbx') {
-    detalleFiltro = { tabla: 'llamadas', telefono, fecha, registroId: registro, registroTabla: registroTabla };
+    detalleFiltro = { tabla: 'llamadas_pbx', telefono, fecha, registroId: registro, registroTabla: registroTabla };
     irA('reg-pbx');
   } else if (fuente.toLowerCase() === 'celular') {
-    detalleFiltro = { tabla: 'historiales', telefono, fecha, registroId: registro, registroTabla: registroTabla };
+    detalleFiltro = { tabla: 'llamadas_celular', telefono, fecha, registroId: registro, registroTabla: registroTabla };
     irA('reg-cel');
   } else {
     alert('No hay detalle directo para esta fuente: ' + fuente);
@@ -706,8 +706,8 @@ function aplicarFiltroDetalleRegistro(datos, tabla) {
       if (!destino || destino !== telefonoFiltro) return false;
     }
     if (!fechaFiltro) return true;
-    const itemFecha = tabla === 'llamadas'
-      ? (item.fecha_hora || '').split('T')[0]
+    const itemFecha = tabla === 'llamadas_pbx' || tabla === 'llamadas'
+      ? (item.fecha_hora || item.fecha || '').split('T')[0]
       : (item.fecha || '').split('T')[0];
     return itemFecha === fechaFiltro;
   });
@@ -1191,7 +1191,7 @@ async function calcularCruceUnificado() {
   await Promise.all([
     asegurarCache('leads', 'fecha_agendada'),
     asegurarCache('llamadas', 'fecha'),
-    asegurarCache('historiales', 'fecha'),
+    asegurarCache('llamadas_celular', 'fecha'),
     asegurarCache('ejecutivos', null),
     asegurarCache('teams_registro', null)
   ]);
@@ -1250,7 +1250,7 @@ async function calcularCruceUnificado() {
           };
         });
 
-      const candCelRaw = cache.historiales
+      const candCelRaw = cache.llamadas_celular
         .filter(c => telLead && normalizarTel(c.destino) === telLead)
         .map(c => ({
           destino: c.destino,

@@ -2,8 +2,8 @@
 // ESTADO GLOBAL
 // ==================================================================
 let supabaseClient = null;
-let cache = { leads: [], llamadas_pbx: [], llamadas_celular: [], ejecutivos: [], teams_registro: [] };
-let cargaCompleta = { leads: false, llamadas_pbx: false, llamadas_celular: false, ejecutivos: false, teams_registro: false };
+let cache = { leads: [], llamadas_pbx: [], llamadas_celular: [], catalogo: [], teams_registro: [] };
+let cargaCompleta = { leads: false, llamadas_pbx: false, llamadas_celular: false, catalogo: false, teams_registro: false };
 let cruceCache = null;
 let vistaActual = 'config';
 let contenidoModalCelda = '';
@@ -251,11 +251,11 @@ async function renderCatalogo(main) {
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
             Nuevo Ejecutivo
           </button>
-          <button onclick="recargarUnaTabla('ejecutivos','null')" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+          <button onclick="recargarUnaTabla('catalogo','null')" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             Recargar
           </button>
-          <button onclick="exportarXLSX('tabla-ejecutivos','catalogo_ejecutivos')" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
+          <button onclick="exportarXLSX('tabla-catalogo','catalogo')" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded flex items-center gap-1">
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
             Exportar XLSX
           </button>
@@ -264,14 +264,14 @@ async function renderCatalogo(main) {
       <p class="text-[11px] text-gray-500 mb-3">Gestiona la base de datos de ejecutivos. Estos datos se usan para la búsqueda inteligente en los resúmenes de llamadas. Agranda, edita o elimina directamente desde aquí.</p>
       <span id="estado-tabla" class="text-xs text-red-300">Cargando...</span>
       <div class="overflow-auto mt-2" style="max-height: 68vh;">
-        <table class="w-full text-left text-xs" id="tabla-ejecutivos"></table>
+        <table class="w-full text-left text-xs" id="tabla-catalogo"></table>
       </div>
     </div>`;
 
-  await asegurarCache('ejecutivos', null);
+  await asegurarCache('catalogo', null);
   document.getElementById('estado-tabla').classList.add('hidden');
   
-  const ejecutivosConAcciones = cache.ejecutivos.map(e => ({
+  const ejecutivosConAcciones = cache.catalogo.map(e => ({
     ...e,
     acciones: `<div class="flex gap-1" style="white-space: nowrap;">
       <button onclick="abrirModalEditar(${e.id})" class="bg-red-600 hover:bg-red-700 text-xs px-2 py-1 rounded flex items-center gap-1">
@@ -283,7 +283,7 @@ async function renderCatalogo(main) {
     </div>`
   }));
 
-  pintarTablaConFiltros('tabla-ejecutivos', ejecutivosConAcciones);
+  pintarTablaConFiltros('tabla-catalogo', ejecutivosConAcciones);
 }
 
 // ==================================================================
@@ -307,7 +307,7 @@ function abrirModalNuevo() {
 }
 
 async function abrirModalEditar(id) {
-  const ejec = cache.ejecutivos.find(e => e.id === id);
+  const ejec = cache.catalogo.find(e => e.id === id);
   if (!ejec) return alert('Ejecutivo no encontrado');
 
   document.getElementById('modal-titulo').textContent = 'Editar Ejecutivo';
@@ -335,17 +335,17 @@ async function guardarEjecutivo(e) {
 
   try {
     if (id) {
-      const { error } = await client.from('ejecutivos').update(datos).eq('id', parseInt(id));
+      const { error } = await client.from('catalogo').update(datos).eq('id', parseInt(id));
       if (error) throw error;
       alert('Ejecutivo actualizado');
     } else {
-      const { error } = await client.from('ejecutivos').insert([datos]);
+      const { error } = await client.from('catalogo').insert([datos]);
       if (error) throw error;
       alert('Ejecutivo agregado');
     }
     
-    cargaCompleta.ejecutivos = false;
-    await cargarTablaCompleta('ejecutivos', null);
+    cargaCompleta.catalogo = false;
+    await cargarTablaCompleta('catalogo', null);
     cerrarModal();
     renderCatalogo(document.getElementById('main-content'));
   } catch (err) {
@@ -358,12 +358,12 @@ async function confirmarEliminar(id) {
   
   const client = getSupabase();
   try {
-    const { error } = await client.from('ejecutivos').delete().eq('id', id);
+    const { error } = await client.from('catalogo').delete().eq('id', id);
     if (error) throw error;
     alert('Ejecutivo eliminado');
     
-    cargaCompleta.ejecutivos = false;
-    await cargarTablaCompleta('ejecutivos', null);
+    cargaCompleta.catalogo = false;
+    await cargarTablaCompleta('catalogo', null);
     renderCatalogo(document.getElementById('main-content'));
   } catch (err) {
     alert('Error: ' + err.message);
@@ -399,13 +399,13 @@ async function asegurarCache(tabla, orden) {
 
 async function recargarTodoYContadores() {
   console.log('Iniciando recargarTodoYContadores...');
-  cargaCompleta = { leads: false, llamadas: false, llamadas_celular: false, ejecutivos: false, teams_registro: false };
+  cargaCompleta = { leads: false, llamadas_pbx: false, llamadas_celular: false, catalogo: false, teams_registro: false };
   cruceCache = null;
   try {
     await cargarTablaCompleta('leads', 'fecha_agendada');
     await cargarTablaCompleta('llamadas_pbx', 'fecha_hora');
     await cargarTablaCompleta('llamadas_celular', 'fecha');
-    await cargarTablaCompleta('ejecutivos', null);
+    await cargarTablaCompleta('catalogo', null);
     
     try {
       await cargarTablaCompleta('teams_registro', null);
@@ -492,9 +492,49 @@ function obtenerUrlAudio(item) {
   const campos = ['grabacion_url', 'audio_url', 'recording_url', 'url_audio', 'link_audio', 'listen_url', 'recording', 'audio'];
   for (const campo of campos) {
     const valor = item[campo];
-    if (typeof valor === 'string' && valor.trim()) return valor.trim();
+    if (typeof valor === 'string' && valor.trim()) {
+      const texto = valor.trim();
+      if (texto.startsWith('/')) return `https://api.red.com.sv${texto}`;
+      return texto;
+    }
   }
+
+  if (item.uniqueid && item.extension && (item.anio || item.fecha_hora)) {
+    const pais = item.pais || 'GT';
+    const anio = item.anio || new Date(item.fecha_hora || item.fecha || Date.now()).getFullYear();
+    const mes = item.mes || new Date(item.fecha_hora || item.fecha || Date.now()).getMonth() + 1;
+    const dia = item.dia || new Date(item.fecha_hora || item.fecha || Date.now()).getDate();
+    const archivo = `Grabacion_Ext_${item.extension}_${item.uniqueid}.wav`;
+    return `https://api.red.com.sv/pbx/api/v1/rawCalls?pais=${pais}&anio=${anio}&mes=${String(mes).padStart(2, '0')}&dia=${String(dia).padStart(2, '0')}&archivo=${encodeURIComponent(archivo)}`;
+  }
+
   return '';
+}
+
+function normalizarVistaPbx(item) {
+  if (!item || typeof item !== 'object') return item;
+  const fechaHora = item.fecha_hora || item.fecha || '';
+  const anio = item.anio ?? (fechaHora ? new Date(fechaHora).getFullYear() : '');
+  const mes = item.mes ?? (fechaHora ? new Date(fechaHora).getMonth() + 1 : '');
+  const dia = item.dia ?? (fechaHora ? new Date(fechaHora).getDate() : '');
+  const copia = { ...item };
+
+  delete copia.audio_url;
+  delete copia.grabacion_url;
+  delete copia.solo_fecha;
+  delete copia.anio;
+  delete copia.mes;
+  delete copia.dia;
+  delete copia.fecha_hora;
+  delete copia.fecha;
+
+  return {
+    ...copia,
+    'Fecha y hora': fechaHora,
+    ...(anio !== '' ? { 'Año': anio } : {}),
+    ...(mes !== '' && anio !== '' ? { 'Mes / Año': `${String(mes).padStart(2, '0')}/${anio}` } : {}),
+    Escuchar: obtenerUrlAudio(item) || ''
+  };
 }
 
 async function renderRegistro(main, tabla, titulo, columnaFecha) {
@@ -533,10 +573,7 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
   }
 
   if (tabla === 'llamadas_pbx' || tabla === 'llamadas') {
-    datosFiltrados = datosFiltrados.map(item => ({
-      ...item,
-      Escuchar: obtenerUrlAudio(item) || ''
-    }));
+    datosFiltrados = datosFiltrados.map(item => normalizarVistaPbx(item));
   }
 
   if (tabla === 'leads') {
@@ -1192,7 +1229,7 @@ async function calcularCruceUnificado() {
     asegurarCache('leads', 'fecha_agendada'),
     asegurarCache('llamadas', 'fecha'),
     asegurarCache('llamadas_celular', 'fecha'),
-    asegurarCache('ejecutivos', null),
+    asegurarCache('catalogo', null),
     asegurarCache('teams_registro', null)
   ]);
 
@@ -1213,7 +1250,7 @@ async function calcularCruceUnificado() {
     const esTeams = esReunionTeams(tipoLead);
     const esLlamada = esLlamadaTelefonica(tipoLead);
     
-    const ejec = cache.ejecutivos.find(e => (e.nombre_ejecutivo || '').trim().toLowerCase() === (lead.asesor_nombre || '').trim().toLowerCase());
+    const ejec = cache.catalogo.find(e => (e.nombre_ejecutivo || '').trim().toLowerCase() === (lead.asesor_nombre || '').trim().toLowerCase());
     const usuario = ejec ? ejec.usuario : null;
     let usuarioNorm = '';
     let candidatas = [];
@@ -1572,7 +1609,7 @@ function pintarTablaResumenEjecutivo(filasCatalogo, filasSinCatalogo, total, row
 
 async function renderResumenKpis(main) {
   const grupos = {};
-  cache.ejecutivos.forEach(e => {
+  cache.catalogo.forEach(e => {
     const nombre = (e.nombre_ejecutivo || '').trim();
     grupos[nombre.toLowerCase()] = {
       pais: e.pais || 'N/D',
@@ -1863,7 +1900,7 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
 
 function agregarPorSLA(cruce) {
   const grupos = {};
-  cache.ejecutivos.forEach(e => {
+  cache.catalogo.forEach(e => {
     const nombre = (e.nombre_ejecutivo || '').trim();
     const key = nombre.toLowerCase();
     grupos[key] = {
@@ -1910,7 +1947,7 @@ function agregarPorSLA(cruce) {
 
 function agregarPorRetro(cruce) {
   const grupos = {};
-  cache.ejecutivos.forEach(e => {
+  cache.catalogo.forEach(e => {
     const nombre = (e.nombre_ejecutivo || '').trim();
     const key = nombre.toLowerCase();
     grupos[key] = {

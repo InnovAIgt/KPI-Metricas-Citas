@@ -403,7 +403,12 @@ function abrirModalGeneradorToken() {
 async function reproducirAudioConToken(urlEncoded) {
   try {
     const rawUrl = decodeURIComponent(urlEncoded);
-    const resolvedUrl = await resolverAudioPbxPorUniqueid(rawUrl, PBX_BEARER_TOKEN);
+    let resolvedUrl = null;
+    try {
+      resolvedUrl = await resolverAudioPbxPorUniqueid(rawUrl, PBX_BEARER_TOKEN);
+    } catch (e) {
+      // Si falla la resolución por uniqueid, continúa con la URL original
+    }
     const url = resolvedUrl && resolvedUrl.startsWith('http') ? resolvedUrl : (() => {
       const base = (PBX_HOST || 'https://api.red.com.sv').replace(/\/$/, '');
       const path = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
@@ -1363,8 +1368,10 @@ function repintar(contId) {
   const columnasExpandibles = ['resumen_qa', 'transcripcion'];
 
   const filas = filtrados.slice(0, 10000).map(fila => {
-    const colorEjecutivo = generarColorEjecutivo(fila.Ejecutivo || fila.nombre || '');
-    return `<tr class="hover:bg-slate-800/50 ${colorEjecutivo}" data-fuente="${fila['Fuente cruda'] || fila['Fuente'] || ''}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_llamada'] || ''}" data-registro="${fila['__registro_id'] || ''}" data-registro-tabla="${fila['__registro_tabla'] || ''}" onclick="abrirDetalleFuente(event, this)">${columnasUnicas.map(c => {
+    // Busca el ejecutivo/operador/asesor en diferentes columnas (case-insensitive)
+    const ejecutorValue = fila.Ejecutivo || fila.ejecutivo || fila.operador || fila.usuario || fila.asesor_nombre || fila.asesor || fila.nombre || '';
+    const colorEjecutivo = generarColorEjecutivo(ejecutorValue);
+    return `<tr class="hover:bg-slate-800/50 ${colorEjecutivo}" data-fuente="${fila['Fuente cruda'] || fila['Fuente'] || ''}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_llamada'] || ''}" data-registro="${fila['__registro_id'] || ''}" data-registro-tabla="${fila['__registro_tabla'] || ''}" onclick="abrirDetalleFuente(event, this)">`${columnasUnicas.map(c => {
       const isSla = /^KPI[_\s]*SLA/i.test(c);
       const isRetro = /^KPI[_\s]*RETROALIMENTACION/i.test(c);
       const cellBase = isSla ? 'col-kpi-sla' : isRetro ? 'col-kpi-retro' : '';

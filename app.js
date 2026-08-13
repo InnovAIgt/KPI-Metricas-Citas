@@ -1371,7 +1371,7 @@ function repintar(contId) {
     // Busca el ejecutivo/operador/asesor en diferentes columnas (case-insensitive)
     const ejecutorValue = fila.Ejecutivo || fila.ejecutivo || fila.operador || fila.usuario || fila.asesor_nombre || fila.asesor || fila.nombre || '';
     const colorEjecutivo = generarColorEjecutivo(ejecutorValue);
-    return `<tr class="hover:bg-slate-800/50 ${colorEjecutivo}" data-fuente="${fila['Fuente cruda'] || fila['Fuente'] || ''}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_llamada'] || ''}" data-registro="${fila['__registro_id'] || ''}" data-registro-tabla="${fila['__registro_tabla'] || ''}" onclick="abrirDetalleFuente(event, this)">`${columnasUnicas.map(c => {
+    return `<tr class="hover:bg-slate-800/50 ${colorEjecutivo}" data-fuente="${fila['Fuente cruda'] || fila['Fuente'] || ''}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_llamada'] || ''}" data-registro="${fila['__registro_id'] || ''}" data-registro-tabla="${fila['__registro_tabla'] || ''}" onclick="abrirDetalleFuente(event, this)">${columnasUnicas.map(c => {
       const isSla = /^KPI[_\s]*SLA/i.test(c);
       const isRetro = /^KPI[_\s]*RETROALIMENTACION/i.test(c);
       const cellBase = isSla ? 'col-kpi-sla' : isRetro ? 'col-kpi-retro' : '';

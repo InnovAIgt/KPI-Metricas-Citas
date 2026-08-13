@@ -2,8 +2,8 @@
 // ESTADO GLOBAL
 // ==================================================================
 let supabaseClient = null;
-let cache = { leads: [], llamadas_pbx: [], llamadas_celular: [], catalogo: [], teams_registro: [] };
-let cargaCompleta = { leads: false, llamadas_pbx: false, llamadas_celular: false, catalogo: false, teams_registro: false };
+let cache = { leads: [], llamadas_pbx: [], llamadas_celular: [], catalogo: [], llamadas_teams: [] };
+let cargaCompleta = { leads: false, llamadas_pbx: false, llamadas_celular: false, catalogo: false, llamadas_teams: false };
 let cruceCache = null;
 let vistaActual = 'config';
 let contenidoModalCelda = '';
@@ -770,7 +770,7 @@ async function recargarUnaTabla(tabla, columnaFecha) {
 
 async function recargarTodoYContadores() {
   console.log('Iniciando recargarTodoYContadores...');
-  cargaCompleta = { leads: false, llamadas_pbx: false, llamadas_celular: false, catalogo: false, teams_registro: false };
+  cargaCompleta = { leads: false, llamadas_pbx: false, llamadas_celular: false, catalogo: false, llamadas_teams: false };
   cruceCache = null;
   try {
     await cargarTablaCompleta('leads', 'fecha_agendada');
@@ -779,11 +779,11 @@ async function recargarTodoYContadores() {
     await cargarTablaCompleta('catalogo', null);
     
     try {
-      await cargarTablaCompleta('teams_registro', null);
+      await cargarTablaCompleta('llamadas_teams', null);
     } catch (teamsErr) {
-      console.log('Tabla teams_registro no disponible aún (normal si es primera vez)');
-      cache.teams_registro = [];
-      cargaCompleta.teams_registro = true;
+      console.log('Tabla llamadas_teams no disponible aún (normal si es primera vez)');
+      cache.llamadas_teams = [];
+      cargaCompleta.llamadas_teams = true;
     }
     
     render();
@@ -1152,7 +1152,21 @@ function abrirDetalleFuente(event, fila) {
     detalleFiltro = { tabla: 'llamadas_celular', telefono, fecha, registroId: registro, registroTabla: registroTabla };
     irA('reg-cel');
   } else {
-    alert('No hay detalle directo para esta fuente: ' + fuente);
+    // Notificación silenciosa en lugar de alert
+    const notif = document.createElement('div');
+    notif.style.position = 'fixed';
+    notif.style.top = '20px';
+    notif.style.right = '20px';
+    notif.style.background = 'rgba(107,114,128,0.15)';
+    notif.style.border = '1px solid rgba(107,114,128,0.5)';
+    notif.style.color = '#d1d5db';
+    notif.style.padding = '12px 16px';
+    notif.style.borderRadius = '8px';
+    notif.style.fontSize = '12px';
+    notif.style.zIndex = '99999';
+    notif.textContent = 'No hay detalle directo para esta fuente: ' + fuente;
+    document.body.appendChild(notif);
+    setTimeout(() => notif.remove(), 2500);
   }
 }
 
@@ -1686,7 +1700,7 @@ async function calcularCruceUnificado() {
     asegurarCache('llamadas_pbx', 'fecha_hora'),
     asegurarCache('llamadas_celular', 'fecha'),
     asegurarCache('catalogo', null),
-    asegurarCache('teams_registro', null)
+    asegurarCache('llamadas_teams', null)
   ]);
 
   let leads = cache.leads.filter(l => {
@@ -1718,7 +1732,7 @@ async function calcularCruceUnificado() {
     let fuente = '';
 
     if (esTeams) {
-      const teamsData = (cache.teams_registro || []).find(t => t.codigo_prospecto === lead.codigo_prospecto);
+      const teamsData = (cache.llamadas_teams || []).find(t => t.codigo_prospecto === lead.codigo_prospecto);
       if (teamsData && teamsData.evidencia_url) {
         estado = 'Cumplió con evidencia en Teams';
         fuente = 'Teams';
@@ -2802,11 +2816,11 @@ async function calcularTeams() {
   await asegurarCache('leads', 'fecha_agendada');
   
   try {
-    await asegurarCache('teams_registro', null);
+    await asegurarCache('llamadas_teams', null);
   } catch (err) {
-    console.log('teams_registro no disponible, usando array vacío');
-    cache.teams_registro = [];
-    cargaCompleta.teams_registro = true;
+    console.log('llamadas_teams no disponible, usando array vacío');
+    cache.llamadas_teams = [];
+    cargaCompleta.llamadas_teams = true;
   }
   
   let leads = cache.leads.filter(l => esReunionTeams(l.tipo_reunion));
@@ -2815,7 +2829,7 @@ async function calcularTeams() {
   
   return leads.map(lead => {
     const leadCode = lead.codigo_prospecto;
-    const teamsData = (cache.teams_registro || []).find(t => t.codigo_prospecto === leadCode) || {};
+    const teamsData = (cache.llamadas_teams || []).find(t => t.codigo_prospecto === leadCode) || {};
     
     const progr = parseFechaHora(lead.fecha_agendada, lead.hora_agendada);
     const ahora = new Date();
@@ -2850,7 +2864,7 @@ async function calcularTeams() {
 }
 
 function abrirModalTeams(key) {
-  let registro = cache.teams_registro.find(t => String(t.id) === String(key));
+  let registro = cache.llamadas_teams.find(t => String(t.id) === String(key));
   let lead = null;
   if (!registro) {
     lead = cache.leads.find(l => String(l.codigo_prospecto) === String(key));
@@ -2893,17 +2907,17 @@ async function guardarTeamsModal(e) {
 
   try {
     if (id) {
-      const { error } = await client.from('teams_registro').update(datos).eq('id', parseInt(id));
+      const { error } = await client.from('llamadas_teams').update(datos).eq('id', parseInt(id));
       if (error) throw error;
       alert('Reunión Teams actualizada');
     } else {
-      const { error } = await client.from('teams_registro').insert([datos]);
+      const { error } = await client.from('llamadas_teams').insert([datos]);
       if (error) throw error;
       alert('Reunión Teams agregada');
     }
     
-    cargaCompleta.teams_registro = false;
-    await cargarTablaCompleta('teams_registro', null);
+    cargaCompleta.llamadas_teams = false;
+    await cargarTablaCompleta('llamadas_teams', null);
     cerrarModalTeams();
     renderRegistroTeams(document.getElementById('main-content'));
   } catch (err) {

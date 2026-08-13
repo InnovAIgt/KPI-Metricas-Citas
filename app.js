@@ -553,11 +553,18 @@ function obtenerUrlAudio(item) {
 }
 
 function obtenerClienteDesdeDestino(destino) {
-  if (!destino) return '';
-  const normalizado = String(destino).trim();
+  if (!destino) return { nombre: '', codigo: '' };
+  const normalizado = normalizarTel(destino);
   const leads = cache.leads || [];
-  const lead = leads.find(l => (l.telefono || '').trim() === normalizado);
-  return lead ? (lead.nombre || lead.codigo_prospecto || '') : '';
+  const lead = leads.find(l => {
+    const telLead = normalizarTel(l.telefono);
+    return telLead === normalizado || String(l.telefono || '').trim() === String(destino).trim();
+  });
+  if (!lead) return { nombre: '', codigo: '' };
+  return {
+    nombre: lead.nombre || lead.nombre_prospecto || '',
+    codigo: lead.codigo_prospecto || lead.codigo || ''
+  };
 }
 
 function generarColorEjecutivo(ejecutivo) {
@@ -585,6 +592,13 @@ function normalizarVistaPbx(item) {
   const copia = { ...item };
   const cliente = obtenerClienteDesdeDestino(item.destino);
 
+  const horaSolo = (() => {
+    if (!fechaHora) return '';
+    const d = new Date(fechaHora);
+    if (Number.isNaN(d.getTime())) return String(fechaHora).split(/[T\s]/)[1]?.slice(0, 8) || '';
+    return d.toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  })();
+
   delete copia.audio_url;
   delete copia.grabacion_url;
   delete copia.solo_fecha;
@@ -595,13 +609,19 @@ function normalizarVistaPbx(item) {
   delete copia.fecha;
   delete copia.transcripcion;
   delete copia.resumen_qa;
+  delete copia.nombre;
+  delete copia.ejecutivo;
 
   return {
     ...copia,
-    'Fecha y hora': fechaHora,
-    ...(anio !== '' ? { 'Año': anio } : {}),
-    ...(mes !== '' && anio !== '' ? { 'Mes / Año': `${String(mes).padStart(2, '0')}/${anio}` } : {}),
-    ...(cliente ? { 'Cliente': cliente } : {}),
+    'Día': dia || '',
+    'Mes': mes || '',
+    'Año': anio || '',
+    'Fecha y hora': horaSolo,
+    'País': item.pais || '',
+    ...(cliente.nombre ? { 'Cliente': cliente.nombre } : {}),
+    ...(cliente.codigo ? { 'Código cliente': cliente.codigo } : {}),
+    'Fuente': 'ISSABEL',
     'Ejecutivo': item.nombre || '',
     Escuchar: obtenerUrlAudio(item) || ''
   };

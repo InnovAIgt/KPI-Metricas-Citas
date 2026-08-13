@@ -204,6 +204,72 @@ function toggleKey() {
   input.type = input.type === 'password' ? 'text' : 'password';
 }
 
+async function resolverAudioPbxPorUniqueid(rawAudioUrl, token) {
+  try {
+    let url = decodeURIComponent(rawAudioUrl || '').trim();
+    if (!url) return rawAudioUrl || '';
+
+    if (!/^https?:\/\//i.test(url)) {
+      const base = (PBX_HOST || 'https://api.red.com.sv').replace(/\/$/, '');
+      const path = url.startsWith('/') ? url : `/${url}`;
+      url = `${base}${path}`;
+    }
+
+    const parsed = new URL(url);
+    const archivoParam = parsed.searchParams.get('archivo');
+    const anio = parsed.searchParams.get('anio');
+    const mes = parsed.searchParams.get('mes');
+    const dia = parsed.searchParams.get('dia');
+    const pais = parsed.searchParams.get('pais');
+
+    if (!archivoParam || !anio || !mes || !dia || !pais) return url;
+
+    const uniqueid = (archivoParam.match(/(\d+\.\d+)\.wav$/i) || [])[1];
+    if (!uniqueid) return url;
+
+    const listUrl = `${(PBX_HOST || 'https://api.red.com.sv').replace(/\/$/, '')}/pbx/api/v1/rawCalls?pais=${pais}&anio=${anio}&mes=${mes}&dia=${dia}`;
+    const listRes = await fetch(listUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!listRes.ok) return url;
+
+    const listData = await listRes.json().catch(() => null);
+    const items = Array.isArray(listData)
+      ? listData
+      : Array.isArray(listData?.info)
+        ? listData.info
+        : Array.isArray(listData?.data)
+          ? listData.data
+          : Array.isArray(listData?.files)
+            ? listData.files
+            : [];
+
+    const nombreReal = items.find((item) => {
+      const name = typeof item === 'string' ? item : (item?.archivo || item?.file || item?.filename || item?.name || item?.url || item?.path || '');
+      const match = String(name).match(/(\d+\.\d+)\.wav$/i);
+      return match && match[1] === uniqueid;
+    });
+
+    if (!nombreReal) return url;
+    const nombreArchivo = typeof nombreReal === 'string'
+      ? nombreReal
+      : (nombreReal.archivo || nombreReal.file || nombreReal.filename || nombreReal.name || nombreReal.url || nombreReal.path || '');
+
+    if (!nombreArchivo) return url;
+
+    const finalUrl = new URL(listUrl);
+    finalUrl.searchParams.set('archivo', nombreArchivo);
+    return finalUrl.toString();
+  } catch (err) {
+    return rawAudioUrl || '';
+  }
+}
+
 async function generarTokenPbxUsuarioPassword(username, password, host = PBX_HOST) {
   const baseHost = (host || 'https://api.red.com.sv').replace(/\/$/, '');
   const res = await fetch(`${baseHost}/login`, {
@@ -366,7 +432,8 @@ function abrirModalGeneradorToken() {
 async function reproducirAudioConToken(urlEncoded) {
   try {
     const rawUrl = decodeURIComponent(urlEncoded);
-    const url = rawUrl && rawUrl.startsWith('http') ? rawUrl : (() => {
+    const resolvedUrl = await resolverAudioPbxPorUniqueid(rawUrl, PBX_BEARER_TOKEN);
+    const url = resolvedUrl && resolvedUrl.startsWith('http') ? resolvedUrl : (() => {
       const base = (PBX_HOST || 'https://api.red.com.sv').replace(/\/$/, '');
       const path = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
       return `${base}${path}`;
@@ -1338,14 +1405,16 @@ function abrirFiltroColumna(contId, col, btnEl) {
 
 function cfpPintarLista(valores) {
   const lista = document.getElementById('cfp-lista');
+  if (!lista || !Array.isArray(valores)) return;
   lista.innerHTML = valores.map(v => {
-    const checked = cfpState.seleccion.has(v) ? 'checked' : '';
-    const safe = v.replace(/"/g, '&quot;');
+    const checked = cfpState && cfpState.seleccion && cfpState.seleccion.has(v) ? 'checked' : '';
+    const safe = String(v || '').replace(/"/g, '&quot;');
     return `<label class="cfp-item"><input type="checkbox" data-val="${safe}" ${checked} onchange="cfpToggle(this)"> <span class="truncate">${v}</span></label>`;
   }).join('');
 }
 
 function cfpToggle(input) {
+  if (!cfpState || !cfpState.seleccion) return;
   const v = input.dataset.val;
   if (input.checked) cfpState.seleccion.add(v);
   else cfpState.seleccion.delete(v);
@@ -1353,8 +1422,9 @@ function cfpToggle(input) {
 }
 
 function cfpFiltrarLista() {
+  if (!cfpState || !Array.isArray(cfpState.valoresUnicos)) return;
   const q = document.getElementById('cfp-search').value.toLowerCase().trim();
-  const filtrados = cfpState.valoresUnicos.filter(v => v.toLowerCase().includes(q));
+  const filtrados = cfpState.valoresUnicos.filter(v => String(v || '').toLowerCase().includes(q));
   cfpPintarLista(filtrados);
   
   if (q.length > 0) {
@@ -1625,7 +1695,7 @@ async function calcularCruceUnificado() {
         fuente = 'Teams';
       }
     } else if (esLlamada) {
-      const candPBX = cache.llamadas
+      const candPBX = cache.llamadas_pbx
         .filter(c => normalizarTel(c.destino) === telLead && telLead)
         .map(c => {
           const rawFechaHora = c.fecha_hora || (c.fecha && c.hora ? `${String(c.fecha).trim()}T${String(c.hora).trim()}` : '');
@@ -2798,7 +2868,7 @@ async function guardarTeamsModal(e) {
 
 function abrirFiltroColumnaResumen(tablaId, col, btnEl) {
   const tabla = document.getElementById(tablaId);
-  if (!tabla) return;
+  if (!tabla || !col || !btnEl) return;
   
   const filas = tabla.querySelectorAll('tbody tr');
   const valoresUnicos = new Set();
@@ -2814,7 +2884,7 @@ function abrirFiltroColumnaResumen(tablaId, col, btnEl) {
     }
   });
 
-  const valoresOrdenados = Array.from(valoresUnicos).sort((a,b) => a.localeCompare(b));
+  const valoresOrdenados = Array.from(valoresUnicos).sort((a,b) => String(a).localeCompare(String(b)));
   cfpState = { 
     tablaId, 
     col, 

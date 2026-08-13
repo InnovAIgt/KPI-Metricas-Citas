@@ -222,12 +222,14 @@ Deno.serve(async (req) => {
     let pbxHostBody = "";
     let pbxUsernameBody = "";
     let pbxPasswordBody = "";
+    let pbxBearerTokenBody = "";
     
     try {
       const body = await req.json();
       pbxHostBody = body.pbx_host || "";
       pbxUsernameBody = body.pbx_username || "";
       pbxPasswordBody = body.pbx_password || "";
+      pbxBearerTokenBody = body.pbx_bearer_token || "";
     } catch (e) {
       // Body no es JSON válido, ignorar
     }
@@ -236,6 +238,7 @@ Deno.serve(async (req) => {
     const redPbxHost = pbxHostBody || Deno.env.get("RED_PBX_HOST") || "https://api.red.com.sv";
     const pbxUsername = pbxUsernameBody || Deno.env.get("PBX_USERNAME") || "";
     const pbxPassword = pbxPasswordBody || Deno.env.get("PBX_PASSWORD") || "";
+    const pbxBearerToken = pbxBearerTokenBody || Deno.env.get("PBX_BEARER_TOKEN") || "";
 
     if (!supabaseUrl || !supabaseKey) {
       return new Response(
@@ -253,16 +256,16 @@ Deno.serve(async (req) => {
     const hace7dias = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
     // Obtener JWT para PBX (siempre hacer login para token fresco)
-    let jwtPbx = "";
+    let jwtPbx = pbxBearerToken;
     let pbxLoginError = null;
-    if (pbxUsername && pbxPassword) {
+    if (!jwtPbx && pbxUsername && pbxPassword) {
       const loginResult = await obtenerJwtPbx(redPbxHost, pbxUsername, pbxPassword);
       if (loginResult.token) {
         jwtPbx = loginResult.token;
       } else {
         pbxLoginError = loginResult.error;
       }
-    } else {
+    } else if (!jwtPbx) {
       pbxLoginError = "PBX_USERNAME o PBX_PASSWORD no configurados";
     }
 

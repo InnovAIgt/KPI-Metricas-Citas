@@ -34,6 +34,8 @@ function refrescarCredencialesPBX() {
   PBX_HOST = document.getElementById('pbx-host').value.trim();
   PBX_USERNAME = document.getElementById('pbx-username').value.trim();
   PBX_PASSWORD = document.getElementById('pbx-password').value.trim();
+  const tokenInput = document.getElementById('pbx-bearer');
+  if (tokenInput) PBX_BEARER_TOKEN = tokenInput.value.trim();
 }
 
 // ==================================================================
@@ -209,7 +211,8 @@ async function sincronizarAPI() {
       body: JSON.stringify({
         pbx_host: PBX_HOST,
         pbx_username: PBX_USERNAME,
-        pbx_password: PBX_PASSWORD
+        pbx_password: PBX_PASSWORD,
+        pbx_bearer_token: PBX_BEARER_TOKEN
       })
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -554,12 +557,40 @@ function obtenerUrlAudio(item) {
 
 function obtenerClienteDesdeDestino(destino) {
   if (!destino) return { nombre: '', codigo: '', pais: '' };
-  const normalizado = normalizarTel(destino);
+  const target = String(destino).trim().replace(/\s+/g, '');
+  const targetDigits = target.replace(/\D/g, '');
+  const target8 = targetDigits.slice(-8);
   const leads = cache.leads || [];
+
   const lead = leads.find(l => {
-    const telLead = normalizarTel(l.telefono);
-    return telLead === normalizado || String(l.telefono || '').trim() === String(destino).trim();
+    const candidatos = [
+      l.telefono,
+      l.telefono_contacto,
+      l.contacto,
+      l.telefono_cliente,
+      l.celular,
+      l.numero,
+      l.numero_telefonico
+    ];
+
+    return candidatos.some(valor => {
+      if (valor == null) return false;
+      const texto = String(valor).trim().replace(/\s+/g, '');
+      if (!texto) return false;
+      const digits = texto.replace(/\D/g, '');
+      if (!digits) return false;
+      const eight = digits.slice(-8);
+      return digits === targetDigits
+        || eight === target8
+        || digits.endsWith(target8)
+        || targetDigits.endsWith(eight)
+        || texto === target
+        || digits === targetDigits
+        || targetDigits.endsWith(eight)
+        || eight === target8;
+    });
   });
+
   if (!lead) return { nombre: '', codigo: '', pais: '' };
   return {
     nombre: lead.nombre || lead.nombre_prospecto || '',

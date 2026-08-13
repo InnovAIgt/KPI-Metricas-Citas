@@ -31,9 +31,6 @@ function refrescarClienteSupabase() {
 }
 
 function refrescarCredencialesPBX() {
-  PBX_HOST = document.getElementById('pbx-host').value.trim();
-  PBX_USERNAME = document.getElementById('pbx-username').value.trim();
-  PBX_PASSWORD = document.getElementById('pbx-password').value.trim();
   const tokenInput = document.getElementById('pbx-bearer');
   if (tokenInput) PBX_BEARER_TOKEN = tokenInput.value.trim();
 }
@@ -160,18 +157,6 @@ function renderConfig(main) {
         Configuración API PBX
       </h2>
       <div>
-        <label class="block text-xs text-gray-400 mb-1">URL del servidor PBX</label>
-        <input type="text" id="pbx-host" value="${PBX_HOST}" class="w-full p-2 text-xs rounded focus:outline-none focus:border-red-500">
-      </div>
-      <div>
-        <label class="block text-xs text-gray-400 mb-1">Usuario PBX</label>
-        <input type="text" id="pbx-username" value="${PBX_USERNAME}" class="w-full p-2 text-xs rounded focus:outline-none focus:border-red-500">
-      </div>
-      <div>
-        <label class="block text-xs text-gray-400 mb-1">Contraseña PBX</label>
-        <input type="password" id="pbx-password" value="${PBX_PASSWORD}" class="w-full p-2 text-xs rounded focus:outline-none focus:border-red-500">
-      </div>
-      <div>
         <label class="block text-xs text-gray-400 mb-1">Bearer Token PBX</label>
         <input type="text" id="pbx-bearer" value="${PBX_BEARER_TOKEN}" class="w-full p-2 text-xs rounded bg-gray-900 focus:outline-none focus:border-red-500">
       </div>
@@ -180,12 +165,12 @@ function renderConfig(main) {
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v2h8z"></path></svg>
           Generar token
         </button>
-        <button onclick="refrescarCredencialesPBX(); alert('Token y credenciales PBX guardadas.')" class="flex-1 bg-slate-700 text-xs px-3 py-1.5 rounded hover:bg-slate-600 flex items-center justify-center gap-1">
+        <button onclick="refrescarCredencialesPBX(); alert('Token PBX guardado.');" class="flex-1 bg-slate-700 text-xs px-3 py-1.5 rounded hover:bg-slate-600 flex items-center justify-center gap-1">
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7a4 4 0 100 8 4 4 0 000-8zM12 7v6m3-3H9"></path></svg>
           Guardar token
         </button>
       </div>
-      <p class="text-[10px] text-gray-400">Si el token vence, genera uno nuevo desde el botón anterior y vuelve a guardarlo aquí.</p>
+      <p class="text-[10px] text-gray-400">Genera el JWT desde el botón anterior y luego guárdalo aquí para usarlo en la reproducción y la sincronización.</p>
       <h3 class="text-xs font-bold text-gray-400">Sincronización con la API externa</h3>
       <button onclick="sincronizarAPI()" class="w-full bg-red-700 hover:bg-red-700 text-white font-bold py-2 px-3 text-xs rounded flex items-center justify-center gap-1">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
@@ -312,10 +297,6 @@ function abrirModalGeneradorToken() {
       <p style="font-size:12px;color:#cbd5e1;margin-bottom:16px;">Obtén un token válido con tu usuario y contraseña del PBX. El token expirará en 24 horas.</p>
       <div style="display:grid;gap:14px;">
         <div>
-          <label style="display:block;font-size:11px;text-transform:uppercase;color:#9ca3af;margin-bottom:6px;">Host PBX</label>
-          <input id="pbx-token-host" type="text" value="${PBX_HOST || 'https://api.red.com.sv'}" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 12px;color:#f8fafc;" />
-        </div>
-        <div>
           <label style="display:block;font-size:11px;text-transform:uppercase;color:#9ca3af;margin-bottom:6px;">Usuario</label>
           <input id="pbx-token-user" type="text" value="${PBX_USERNAME || ''}" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 12px;color:#f8fafc;" />
         </div>
@@ -361,7 +342,7 @@ function abrirModalGeneradorToken() {
   submitBtn.addEventListener('click', async () => {
     const username = document.getElementById('pbx-token-user').value.trim();
     const password = document.getElementById('pbx-token-pass').value.trim();
-    const host = document.getElementById('pbx-token-host').value.trim();
+    const host = PBX_HOST || 'https://api.red.com.sv';
 
     if (!username || !password) {
       setStatus('Debes completar usuario y contraseña.', false);
@@ -405,18 +386,8 @@ function abrirModalGeneradorToken() {
     }
 
     PBX_BEARER_TOKEN = token;
-    PBX_HOST = document.getElementById('pbx-token-host').value.trim() || PBX_HOST;
-    PBX_USERNAME = document.getElementById('pbx-token-user').value.trim() || PBX_USERNAME;
-    PBX_PASSWORD = document.getElementById('pbx-token-pass').value.trim() || PBX_PASSWORD;
-
     const tokenInput = document.getElementById('pbx-bearer');
     if (tokenInput) tokenInput.value = PBX_BEARER_TOKEN;
-    const hostInput = document.getElementById('pbx-host');
-    if (hostInput) hostInput.value = PBX_HOST;
-    const userInput = document.getElementById('pbx-username');
-    if (userInput) userInput.value = PBX_USERNAME;
-    const passInput = document.getElementById('pbx-password');
-    if (passInput) passInput.value = PBX_PASSWORD;
 
     setStatus('Token guardado en la configuración.', true);
   });
@@ -503,8 +474,6 @@ async function sincronizarAPI() {
       },
       body: JSON.stringify({
         pbx_host: PBX_HOST,
-        pbx_username: PBX_USERNAME,
-        pbx_password: PBX_PASSWORD,
         pbx_bearer_token: PBX_BEARER_TOKEN
       })
     });

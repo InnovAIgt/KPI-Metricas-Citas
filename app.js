@@ -199,7 +199,13 @@ function toggleKey() {
 
 async function reproducirAudioConToken(urlEncoded) {
   try {
-    const url = decodeURIComponent(urlEncoded);
+    const rawUrl = decodeURIComponent(urlEncoded);
+    const url = rawUrl && rawUrl.startsWith('http') ? rawUrl : (() => {
+      const base = (PBX_HOST || 'https://api.red.com.sv').replace(/\/$/, '');
+      const path = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
+      return `${base}${path}`;
+    })();
+
     if (!PBX_BEARER_TOKEN) {
       throw new Error('No hay token PBX guardado. Genera uno en Configuración.');
     }
@@ -215,7 +221,8 @@ async function reproducirAudioConToken(urlEncoded) {
       body: JSON.stringify({
         action: 'pbx-audio',
         audio_url: url,
-        pbx_bearer_token: PBX_BEARER_TOKEN
+        pbx_bearer_token: PBX_BEARER_TOKEN,
+        pbx_host: PBX_HOST || 'https://api.red.com.sv'
       })
     });
 

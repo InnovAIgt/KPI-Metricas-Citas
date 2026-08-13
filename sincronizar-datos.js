@@ -221,7 +221,14 @@ Deno.serve(async (req) => {
     if (req.headers.get("x-audio-proxy") === "true") {
       try {
         const body = await req.json();
-        const audioUrl = body?.audio_url;
+        const audioUrlRaw = body?.audio_url;
+        const baseHost = (body?.pbx_host || Deno.env.get("RED_PBX_HOST") || "https://api.red.com.sv").replace(/\/$/, "");
+        const audioUrl = (() => {
+          if (!audioUrlRaw) return "";
+          if (/^https?:\/\//i.test(audioUrlRaw)) return audioUrlRaw;
+          const path = audioUrlRaw.startsWith("/") ? audioUrlRaw : `/${audioUrlRaw}`;
+          return `${baseHost}${path}`;
+        })();
         const bearer = body?.pbx_bearer_token || Deno.env.get("PBX_BEARER_TOKEN") || "";
 
         if (!audioUrl || !bearer) {

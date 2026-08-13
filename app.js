@@ -555,9 +555,14 @@ function obtenerUrlAudio(item) {
   return '';
 }
 
+function normalizarTelefonoComparable(valor) {
+  if (valor === null || valor === undefined) return '';
+  return String(valor).trim().replace(/\s+/g, '').replace(/[^\d+]/g, '').replace(/^\+?502/, '').replace(/^\+/, '').replace(/\+/g, '');
+}
+
 function obtenerClienteDesdeDestino(destino) {
   if (!destino) return { nombre: '', codigo: '', pais: '' };
-  const target = String(destino).trim().replace(/\s+/g, '');
+  const target = normalizarTelefonoComparable(destino);
   const targetDigits = target.replace(/\D/g, '');
   const target8 = targetDigits.slice(-8);
   const leads = cache.leads || [];
@@ -575,19 +580,15 @@ function obtenerClienteDesdeDestino(destino) {
 
     return candidatos.some(valor => {
       if (valor == null) return false;
-      const texto = String(valor).trim().replace(/\s+/g, '');
+      const texto = normalizarTelefonoComparable(valor);
       if (!texto) return false;
       const digits = texto.replace(/\D/g, '');
-      if (!digits) return false;
       const eight = digits.slice(-8);
       return digits === targetDigits
         || eight === target8
         || digits.endsWith(target8)
         || targetDigits.endsWith(eight)
-        || texto === target
-        || digits === targetDigits
-        || targetDigits.endsWith(eight)
-        || eight === target8;
+        || texto === target;
     });
   });
 
@@ -680,6 +681,9 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
     </div>`;
 
   await asegurarCache(tabla, columnaFecha);
+  if (tabla === 'llamadas_pbx' || tabla === 'llamadas') {
+    await asegurarCache('leads', 'fecha_agendada');
+  }
   document.getElementById('estado-tabla').classList.add('hidden');
   
   let datosFiltrados = filtrarPorFechaGlobal(cache[tabla], columnaFecha);

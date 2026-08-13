@@ -217,9 +217,25 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabaseKey = serviceKey;
-    const redPbxHost = Deno.env.get("RED_PBX_HOST") ?? "https://api.red.com.sv";
-    const pbxUsername = Deno.env.get("PBX_USERNAME") ?? "";
-    const pbxPassword = Deno.env.get("PBX_PASSWORD") ?? "";
+    
+    // Leer credenciales del body del request (enviadas desde frontend)
+    let pbxHostBody = "";
+    let pbxUsernameBody = "";
+    let pbxPasswordBody = "";
+    
+    try {
+      const body = await req.json();
+      pbxHostBody = body.pbx_host || "";
+      pbxUsernameBody = body.pbx_username || "";
+      pbxPasswordBody = body.pbx_password || "";
+    } catch (e) {
+      // Body no es JSON válido, ignorar
+    }
+    
+    // Usar credenciales del body si se proporcionan, si no usar variables de entorno
+    const redPbxHost = pbxHostBody || Deno.env.get("RED_PBX_HOST") ?? "https://api.red.com.sv";
+    const pbxUsername = pbxUsernameBody || Deno.env.get("PBX_USERNAME") ?? "";
+    const pbxPassword = pbxPasswordBody || Deno.env.get("PBX_PASSWORD") ?? "";
 
     if (!supabaseUrl || !supabaseKey) {
       return new Response(
@@ -313,6 +329,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         status: huboErrores ? "partial_error" : "success",
+        pbx_bearer_token: jwtPbx || null,
         advertencia_credenciales: !serviceKey
           ? "SUPABASE_SERVICE_ROLE_KEY no está configurada."
           : null,

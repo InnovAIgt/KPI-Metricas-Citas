@@ -13,6 +13,12 @@ let kpi1DetalleCruce = [];
 let SB_URL = "https://sbopifiiyezmvsadwkpg.supabase.co";
 let SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNib3BpZmlieWV6bXZzYWR3c3BnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MzM0OTYsImV4cCI6MjEwMDMwOTQ5Nn0.ZI5y8lroFF529Xr-Otm1fcq6H2lhbh9e3s-WU9O6I7A";
 
+// PBX API Configuration
+let PBX_HOST = "https://api.red.com.sv";
+let PBX_USERNAME = "DMONGE";
+let PBX_PASSWORD = "Sunfl0wer";
+let PBX_BEARER_TOKEN = "";
+
 function getSupabase() {
   if (!supabaseClient) supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
   return supabaseClient;
@@ -22,6 +28,12 @@ function refrescarClienteSupabase() {
   SB_URL = document.getElementById('sb-url').value.trim();
   SB_KEY = document.getElementById('sb-key').value.trim();
   supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+}
+
+function refrescarCredencialesPBX() {
+  PBX_HOST = document.getElementById('pbx-host').value.trim();
+  PBX_USERNAME = document.getElementById('pbx-username').value.trim();
+  PBX_PASSWORD = document.getElementById('pbx-password').value.trim();
 }
 
 // ==================================================================
@@ -141,6 +153,30 @@ function renderConfig(main) {
         </button>
       </div>
       <hr class="border-gray-800">
+      <h2 class="text-sm font-bold text-gray-300 flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+        Configuración API PBX
+      </h2>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">URL del servidor PBX</label>
+        <input type="text" id="pbx-host" value="${PBX_HOST}" class="w-full p-2 text-xs rounded focus:outline-none focus:border-red-500">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Usuario PBX</label>
+        <input type="text" id="pbx-username" value="${PBX_USERNAME}" class="w-full p-2 text-xs rounded focus:outline-none focus:border-red-500">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Contraseña PBX</label>
+        <input type="password" id="pbx-password" value="${PBX_PASSWORD}" class="w-full p-2 text-xs rounded focus:outline-none focus:border-red-500">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Bearer Token PBX (autollenado en sincronización)</label>
+        <input type="text" id="pbx-bearer" value="${PBX_BEARER_TOKEN}" class="w-full p-2 text-xs rounded bg-gray-900 focus:outline-none focus:border-red-500" readonly>
+      </div>
+      <button onclick="refrescarCredencialesPBX(); alert('Credenciales PBX actualizadas.')" class="w-full bg-slate-700 text-xs px-3 py-1.5 rounded hover:bg-slate-600 flex items-center justify-center gap-1">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7a4 4 0 100 8 4 4 0 000-8zM12 7v6m3-3H9"></path></svg>
+        Guardar credenciales PBX
+      </button>
       <h3 class="text-xs font-bold text-gray-400">Sincronización con la API externa</h3>
       <button onclick="sincronizarAPI()" class="w-full bg-red-700 hover:bg-red-700 text-white font-bold py-2 px-3 text-xs rounded flex items-center justify-center gap-1">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
@@ -165,9 +201,24 @@ async function sincronizarAPI() {
   try {
     const res = await fetch(`${SB_URL}/functions/v1/sincronizar-datos`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SB_KEY}`, 'apikey': SB_KEY }
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': `Bearer ${SB_KEY}`, 
+        'apikey': SB_KEY 
+      },
+      body: JSON.stringify({
+        pbx_host: PBX_HOST,
+        pbx_username: PBX_USERNAME,
+        pbx_password: PBX_PASSWORD
+      })
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.pbx_bearer_token) {
+      PBX_BEARER_TOKEN = data.pbx_bearer_token;
+      const tokenInput = document.getElementById('pbx-bearer');
+      if (tokenInput) tokenInput.value = PBX_BEARER_TOKEN;
+    }
     alert("¡Sincronización completada!");
     await recargarTodoYContadores();
   } catch (err) {
@@ -550,7 +601,7 @@ function normalizarVistaPbx(item) {
     'Fecha y hora': fechaHora,
     ...(anio !== '' ? { 'Año': anio } : {}),
     ...(mes !== '' && anio !== '' ? { 'Mes / Año': `${String(mes).padStart(2, '0')}/${anio}` } : {}),
-    ...(cliente ? { Cliente } : {}),
+    ...(cliente ? { 'Cliente': cliente } : {}),
     'Ejecutivo': item.nombre || '',
     Escuchar: obtenerUrlAudio(item) || ''
   };
@@ -1247,7 +1298,7 @@ function esLlamadaTelefonica(tipo) {
 async function calcularCruceUnificado() {
   await Promise.all([
     asegurarCache('leads', 'fecha_agendada'),
-    asegurarCache('llamadas', 'fecha'),
+    asegurarCache('llamadas_pbx', 'fecha_hora'),
     asegurarCache('llamadas_celular', 'fecha'),
     asegurarCache('catalogo', null),
     asegurarCache('teams_registro', null)

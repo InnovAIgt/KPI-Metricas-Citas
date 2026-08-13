@@ -445,19 +445,36 @@ async function reproducirAudioConToken(urlEncoded) {
     box.style.right = '20px';
     box.style.bottom = '70px';
     box.style.zIndex = '9999';
-    box.style.background = '#111827';
-    box.style.border = '1px solid rgba(255,255,255,.12)';
-    box.style.borderRadius = '12px';
-    box.style.padding = '10px';
-    box.style.boxShadow = '0 10px 25px rgba(0,0,0,.35)';
+    box.style.background = 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)';
+    box.style.border = '1px solid rgba(59,130,246,0.4)';
+    box.style.borderRadius = '14px';
+    box.style.padding = '14px';
+    box.style.boxShadow = '0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(59,130,246,0.1)';
+    box.style.minWidth = '300px';
     box.innerHTML = `
-      <div class="text-[10px] text-gray-300 mb-2">Reproducción PBX</div>
-      <audio controls autoplay style="width: 260px;" src="${objectUrl}"></audio>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:600;color:#93c5fd;letter-spacing:0.5px;">🎵 REPRODUCCIÓN DE AUDIO</div>
+        <button type="button" onclick="document.getElementById('pbx-audio-player').remove();" style="background:rgba(239,68,68,0.1);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);padding:4px 8px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:bold;transition:all 0.2s;">✕</button>
+      </div>
+      <audio controls autoplay style="width:100%;height:36px;" src="${objectUrl}"></audio>
     `;
 
     document.body.appendChild(box);
   } catch (err) {
-    alert('No se pudo reproducir el audio: ' + (err && err.message ? err.message : err));
+    const notif = document.createElement('div');
+    notif.style.position = 'fixed';
+    notif.style.top = '20px';
+    notif.style.right = '20px';
+    notif.style.background = 'rgba(239,68,68,0.15)';
+    notif.style.border = '1px solid rgba(239,68,68,0.5)';
+    notif.style.color = '#fecaca';
+    notif.style.padding = '12px 16px';
+    notif.style.borderRadius = '8px';
+    notif.style.fontSize = '12px';
+    notif.style.zIndex = '99999';
+    notif.textContent = 'No se pudo reproducir el audio: ' + (err && err.message ? err.message : err);
+    document.body.appendChild(notif);
+    setTimeout(() => notif.remove(), 4000);
   }
 }
 
@@ -713,6 +730,39 @@ async function asegurarCache(tabla, orden) {
   return cache[tabla];
 }
 
+async function recargarUnaTabla(tabla, columnaFecha) {
+  const estado = document.getElementById('estado-tabla');
+  if (estado) { estado.innerText = 'Recargando...'; estado.classList.remove('hidden'); }
+  try {
+    // Asegurar que los leads están cargados si vamos a renderizar PBX
+    if ((tabla === 'llamadas_pbx' || tabla === 'llamadas') && (!cache.leads || cache.leads.length === 0)) {
+      const sb = getSupabase();
+      const { data } = await sb.from('leads').select('*');
+      cache.leads = data || [];
+      cargaCompleta.leads = true;
+    }
+    
+    const sb = getSupabase();
+    const { data } = await sb.from(tabla).select('*');
+    cache[tabla] = data || [];
+    cargaCompleta[tabla] = true;
+    
+    const tituloMapa = {
+      'llamadas_pbx': 'Llamadas PBX',
+      'llamadas_celular': 'Llamadas Celular',
+      'leads': 'Leads Calificados',
+      'catalogo': 'Catálogo'
+    };
+    const titulo = tituloMapa[tabla] || tabla;
+    const columna = columnaFecha && columnaFecha !== 'null' ? columnaFecha : (tabla === 'llamadas_pbx' ? 'fecha_hora' : tabla === 'llamadas_celular' ? 'fecha' : tabla === 'leads' ? 'fecha_agendada' : 'created_at');
+    
+    renderRegistro(document.getElementById('main-content'), tabla, titulo, columna);
+  } catch (err) {
+    const estado = document.getElementById('estado-tabla');
+    if (estado) estado.innerText = 'Error: ' + err.message;
+  }
+}
+
 async function recargarTodoYContadores() {
   console.log('Iniciando recargarTodoYContadores...');
   cargaCompleta = { leads: false, llamadas_pbx: false, llamadas_celular: false, catalogo: false, teams_registro: false };
@@ -826,9 +876,12 @@ function normalizarTelefonoComparable(valor) {
 function obtenerClienteDesdeDestino(destino) {
   if (!destino) return { nombre: '', codigo: '', pais: '' };
   const target8 = normalizarTelefonoComparable(destino);
+  if (!target8) return { nombre: '', codigo: '', pais: '' };
+  
   const leads = cache.leads || [];
 
   const lead = leads.find(l => {
+    if (!l) return false;
     const candidatos = [
       l.telefono,
       l.telefono_contacto,
@@ -836,11 +889,12 @@ function obtenerClienteDesdeDestino(destino) {
       l.telefono_cliente,
       l.celular,
       l.numero,
-      l.numero_telefonico
+      l.numero_telefonico,
+      l.telefono_prospecto
     ];
 
     return candidatos.some(valor => {
-      if (valor == null) return false;
+      if (valor == null || valor === '') return false;
       const candidate8 = normalizarTelefonoComparable(valor);
       if (!candidate8) return false;
       return candidate8 === target8 || candidate8.endsWith(target8) || target8.endsWith(candidate8);
@@ -848,10 +902,15 @@ function obtenerClienteDesdeDestino(destino) {
   });
 
   if (!lead) return { nombre: '', codigo: '', pais: '' };
+  
+  const nombre = lead.nombre_prospecto || lead.nombre || lead.cliente || '';
+  const codigo = lead.codigo_prospecto || lead.codigo || lead.lead_id || '';
+  const pais = lead.pais || lead.pais_prospecto || '';
+  
   return {
-    nombre: lead.nombre || lead.nombre_prospecto || '',
-    codigo: lead.codigo_prospecto || lead.codigo || '',
-    pais: lead.pais || ''
+    nombre: nombre || '',
+    codigo: codigo || '',
+    pais: pais || ''
   };
 }
 
@@ -906,6 +965,7 @@ function normalizarVistaPbx(item) {
     ...copia,
     'Fecha': fechaFormateada || '',
     'Hora': horaSolo,
+    'País': cliente.pais || item.pais || '',
     'Cliente': cliente.nombre || item.nombre || '',
     'Código cliente': cliente.codigo || item.codigo_prospecto || '',
     'Ejecutivo': item.nombre || '',
@@ -1915,7 +1975,8 @@ function pintarTablaResumenMaestra(datos) {
   ];
 
   const filaHtml = d => {
-    return `<tr class="hover:bg-slate-800/50 text-gray-200">${cols.map(c => {
+    const colorEjecutivo = generarColorEjecutivo(d.ejecutivo || d.asesor_nombre || '');
+    return `<tr class="hover:bg-slate-800/50 text-gray-200 ${colorEjecutivo}">${cols.map(c => {
       let v = d[c.key] ?? '';
       const align = c.kpiGroup ? 'text-center' : ['pais', 'ejecutivo', 'lead', 'resultado', 'telefono', 'fecha_reunion', 'hora_reunion', 'fecha_llamada', 'hora_llamada'].includes(c.key) ? 'text-left' : 'text-right';
       const extraClass = c.kpiGroup ? ` ${c.kpiGroup === 'kpi2' ? 'col-kpi2' : 'col-kpi3'}` : '';
@@ -1955,7 +2016,8 @@ function pintarTablaResumenEjecutivo(filasCatalogo, filasSinCatalogo, total, row
   ];
 
   const filaHtml = (d, esTotal) => {
-    const base = esTotal ? 'bg-[#0f3a4a] text-white font-bold' : 'hover:bg-slate-800/50 text-gray-200';
+    const colorEjecutivo = !esTotal ? generarColorEjecutivo(d.ejecutivo || d.asesor_nombre || '') : '';
+    const base = esTotal ? 'bg-[#0f3a4a] text-white font-bold' : 'hover:bg-slate-800/50 text-gray-200 ' + colorEjecutivo;
     return `<tr class="${base}">${cols.map(c => {
       let v = d[c.key];
       if (c.key === 'pais') v = esTotal ? 'TOTAL' : nombrePais(v);
@@ -2070,7 +2132,8 @@ function pintarTablaResumenEjecutivo(filasCatalogo, filasSinCatalogo, total, row
   ];
 
   const filaHtml = (d, esTotal) => {
-    const base = esTotal ? 'bg-[#0f3a4a] text-white font-bold' : 'hover:bg-slate-800/50 text-gray-200';
+    const colorEjecutivo = !esTotal ? generarColorEjecutivo(d.ejecutivo || '') : '';
+    const base = esTotal ? 'bg-[#0f3a4a] text-white font-bold' : 'hover:bg-slate-800/50 text-gray-200 ' + colorEjecutivo;
     const idAttr = !esTotal ? `id="${rowIdPrefix}${crearIdEjecutivo(d.ejecutivo)}"` : '';
     return `<tr ${idAttr} class="${base}">${cols.map(c => {
       let v = d[c.key];
@@ -2209,7 +2272,8 @@ async function renderResumenKPI1(main) {
 
 function pintarTablaKPI1(datos) {
   const filas = datos.map(d => {
-    return `<tr class="hover:bg-slate-800/50 text-gray-200 cursor-pointer" onclick="mostrarDetalleKPI1('${encodeURIComponent(String(d.ejecutivo || ''))}')">
+    const colorEjecutivo = generarColorEjecutivo(d.ejecutivo || '');
+    return `<tr class="hover:bg-slate-800/50 text-gray-200 cursor-pointer ${colorEjecutivo}" onclick="mostrarDetalleKPI1('${encodeURIComponent(String(d.ejecutivo || ''))}')">
       <td class="p-2.5 text-left">${nombrePais(d.pais)}</td>
       <td class="p-2.5 text-left">${d.ejecutivo}</td>
       <td class="p-2.5 text-right">${d.leads}</td>
@@ -2224,8 +2288,10 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
   const ejecutivo = decodeURIComponent(String(ejecutivoEncoded || ''));
   const registros = (window.kpi1DetalleCruce || []).filter(r => String(r.ejecutivo || '').trim() === ejecutivo);
 
-  const filas = registros.map(r => `
-    <tr class="hover:bg-slate-800/50 text-gray-200">
+  const filas = registros.map(r => {
+    const colorEjecutivo = generarColorEjecutivo(r.ejecutivo || '');
+    return `
+    <tr class="hover:bg-slate-800/50 text-gray-200 ${colorEjecutivo}">
       <td class="p-2.5 text-left">${nombrePais(r.pais) || ''}</td>
       <td class="p-2.5 text-left">${r.ejecutivo || ''}</td>
       <td class="p-2.5 text-left">${r.lead || ''}</td>
@@ -2245,7 +2311,8 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
       <td class="p-2.5 text-right">${r.intentos_totales ?? 0}</td>
       <td class="p-2.5 text-center">${r.catalogo_ok || 'No'}</td>
       <td class="p-2.5 text-left">${r.observacion || ''}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   document.getElementById('kpi1-detalle').innerHTML = `
     <div class="bg-[#111827] border border-gray-800 rounded-lg p-4">
@@ -2395,7 +2462,8 @@ function pintarTablaResumenSLA(datos, rowIdPrefix = '') {
   ];
 
   const filaHtml = (d, esTotal) => {
-    const base = esTotal ? 'bg-[#0f3a4a] text-white font-bold' : 'hover:bg-slate-800/50 text-gray-200 cursor-pointer';
+    const colorEjecutivo = !esTotal ? generarColorEjecutivo(d.ejecutivo || '') : '';
+    const base = esTotal ? 'bg-[#0f3a4a] text-white font-bold' : 'hover:bg-slate-800/50 text-gray-200 cursor-pointer ' + colorEjecutivo;
     const idAttr = !esTotal ? `id="${rowIdPrefix}${crearIdEjecutivo(d.ejecutivo)}"` : '';
     const onclick = esTotal ? '' : `onclick="abrirLeadsDesdeResumen('${encodeURIComponent(String(d.ejecutivo || ''))}','sla')"`;
     return `<tr ${idAttr} class="${base}" ${onclick}>${cols.map(c => {
@@ -2437,7 +2505,8 @@ function pintarTablaResumenRetro(datos, rowIdPrefix = '') {
   ];
 
   const filaHtml = (d, esTotal) => {
-    const base = esTotal ? 'bg-[#0f3a4a] text-white font-bold' : 'hover:bg-slate-800/50 text-gray-200 cursor-pointer';
+    const colorEjecutivo = !esTotal ? generarColorEjecutivo(d.ejecutivo || '') : '';
+    const base = esTotal ? 'bg-[#0f3a4a] text-white font-bold' : 'hover:bg-slate-800/50 text-gray-200 cursor-pointer ' + colorEjecutivo;
     const idAttr = !esTotal ? `id="${rowIdPrefix}${crearIdEjecutivo(d.ejecutivo)}"` : '';
     const onclick = esTotal ? '' : `onclick="abrirLeadsDesdeResumen('${encodeURIComponent(String(d.ejecutivo || ''))}','retro')"`;
     return `<tr ${idAttr} class="${base}" ${onclick}>${cols.map(c => {

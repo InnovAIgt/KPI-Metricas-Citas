@@ -233,9 +233,9 @@ Deno.serve(async (req) => {
     }
     
     // Usar credenciales del body si se proporcionan, si no usar variables de entorno
-    const redPbxHost = pbxHostBody || Deno.env.get("RED_PBX_HOST") ?? "https://api.red.com.sv";
-    const pbxUsername = pbxUsernameBody || Deno.env.get("PBX_USERNAME") ?? "";
-    const pbxPassword = pbxPasswordBody || Deno.env.get("PBX_PASSWORD") ?? "";
+    const redPbxHost = pbxHostBody || Deno.env.get("RED_PBX_HOST") || "https://api.red.com.sv";
+    const pbxUsername = pbxUsernameBody || Deno.env.get("PBX_USERNAME") || "";
+    const pbxPassword = pbxPasswordBody || Deno.env.get("PBX_PASSWORD") || "";
 
     if (!supabaseUrl || !supabaseKey) {
       return new Response(

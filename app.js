@@ -172,13 +172,20 @@ function renderConfig(main) {
         <input type="password" id="pbx-password" value="${PBX_PASSWORD}" class="w-full p-2 text-xs rounded focus:outline-none focus:border-red-500">
       </div>
       <div>
-        <label class="block text-xs text-gray-400 mb-1">Bearer Token PBX (autollenado en sincronización)</label>
-        <input type="text" id="pbx-bearer" value="${PBX_BEARER_TOKEN}" class="w-full p-2 text-xs rounded bg-gray-900 focus:outline-none focus:border-red-500" readonly>
+        <label class="block text-xs text-gray-400 mb-1">Bearer Token PBX</label>
+        <input type="text" id="pbx-bearer" value="${PBX_BEARER_TOKEN}" class="w-full p-2 text-xs rounded bg-gray-900 focus:outline-none focus:border-red-500">
       </div>
-      <button onclick="refrescarCredencialesPBX(); alert('Credenciales PBX actualizadas.')" class="w-full bg-slate-700 text-xs px-3 py-1.5 rounded hover:bg-slate-600 flex items-center justify-center gap-1">
-        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7a4 4 0 100 8 4 4 0 000-8zM12 7v6m3-3H9"></path></svg>
-        Guardar credenciales PBX
-      </button>
+      <div class="flex gap-2">
+        <button onclick="abrirModalGeneradorToken()" class="flex-1 bg-blue-600 text-xs px-3 py-1.5 rounded hover:bg-blue-500 flex items-center justify-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v2h8z"></path></svg>
+          Generar token
+        </button>
+        <button onclick="refrescarCredencialesPBX(); alert('Token y credenciales PBX guardadas.')" class="flex-1 bg-slate-700 text-xs px-3 py-1.5 rounded hover:bg-slate-600 flex items-center justify-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7a4 4 0 100 8 4 4 0 000-8zM12 7v6m3-3H9"></path></svg>
+          Guardar token
+        </button>
+      </div>
+      <p class="text-[10px] text-gray-400">Si el token vence, genera uno nuevo desde el botón anterior y vuelve a guardarlo aquí.</p>
       <h3 class="text-xs font-bold text-gray-400">Sincronización con la API externa</h3>
       <button onclick="sincronizarAPI()" class="w-full bg-red-700 hover:bg-red-700 text-white font-bold py-2 px-3 text-xs rounded flex items-center justify-center gap-1">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
@@ -195,6 +202,165 @@ function renderConfig(main) {
 function toggleKey() {
   const input = document.getElementById('sb-key');
   input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+async function generarTokenPbxUsuarioPassword(username, password, host = PBX_HOST) {
+  const baseHost = (host || 'https://api.red.com.sv').replace(/\/$/, '');
+  const res = await fetch(`${baseHost}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data?.token) {
+    throw new Error(data?.message || `No se pudo generar el token PBX (HTTP ${res.status})`);
+  }
+
+  return data.token;
+}
+
+function abrirModalGeneradorToken() {
+  const modalId = 'pbx-token-modal';
+  let modal = document.getElementById(modalId);
+  if (modal) {
+    modal.remove();
+  }
+
+  modal = document.createElement('div');
+  modal.id = modalId;
+  modal.style.position = 'fixed';
+  modal.style.inset = '0';
+  modal.style.background = 'rgba(2, 6, 23, 0.72)';
+  modal.style.display = 'flex';
+  modal.style.alignItems = 'center';
+  modal.style.justifyContent = 'center';
+  modal.style.zIndex = '99999';
+
+  modal.innerHTML = `
+    <div style="width:min(500px,92vw);background:#111827;border:1px solid rgba(148,163,184,.25);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.45);padding:24px;color:#e5e7eb;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h3 style="font-size:20px;font-weight:700;">Generar Token JWT</h3>
+        <button type="button" onclick="document.getElementById('pbx-token-modal').remove();" style="background:#374151;color:#fff;border:none;border-radius:8px;padding:7px 12px;cursor:pointer;">Cerrar</button>
+      </div>
+      <p style="font-size:12px;color:#cbd5e1;margin-bottom:16px;">Obtén un token válido con tu usuario y contraseña del PBX. El token expirará en 24 horas.</p>
+      <div style="display:grid;gap:14px;">
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;color:#9ca3af;margin-bottom:6px;">Host PBX</label>
+          <input id="pbx-token-host" type="text" value="${PBX_HOST || 'https://api.red.com.sv'}" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 12px;color:#f8fafc;" />
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;color:#9ca3af;margin-bottom:6px;">Usuario</label>
+          <input id="pbx-token-user" type="text" value="${PBX_USERNAME || ''}" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 12px;color:#f8fafc;" />
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;color:#9ca3af;margin-bottom:6px;">Contraseña</label>
+          <input id="pbx-token-pass" type="password" value="${PBX_PASSWORD || ''}" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 12px;color:#f8fafc;" />
+        </div>
+        <div id="pbx-token-status" style="display:none;padding:10px 12px;border-radius:10px;font-size:12px;">
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button type="button" id="pbx-token-submit" style="flex:1;background:#2563eb;color:white;border:none;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer;">Generar Token</button>
+          <button type="button" id="pbx-token-cancel" style="background:#374151;color:white;border:none;border-radius:10px;padding:11px 14px;cursor:pointer;">Limpiar</button>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;color:#9ca3af;margin-bottom:6px;">Token JWT</label>
+          <textarea id="pbx-token-output" rows="4" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 12px;color:#f8fafc;resize:vertical;" placeholder="Token generado aparecerá aquí..."></textarea>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button type="button" id="pbx-token-copy" style="flex:1;background:#16a34a;color:white;border:none;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer;">Copiar Token</button>
+          <button type="button" id="pbx-token-apply" style="flex:1;background:#111827;color:white;border:1px solid rgba(148,163,184,.35);border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer;">Guardar en configuración</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const statusBox = document.getElementById('pbx-token-status');
+  const output = document.getElementById('pbx-token-output');
+  const submitBtn = document.getElementById('pbx-token-submit');
+  const copyBtn = document.getElementById('pbx-token-copy');
+  const applyBtn = document.getElementById('pbx-token-apply');
+  const clearBtn = document.getElementById('pbx-token-cancel');
+
+  const setStatus = (msg, ok = false) => {
+    statusBox.style.display = 'block';
+    statusBox.textContent = msg;
+    statusBox.style.background = ok ? 'rgba(22,163,74,0.12)' : 'rgba(239,68,68,0.12)';
+    statusBox.style.border = ok ? '1px solid rgba(34,197,94,0.4)' : '1px solid rgba(239,68,68,0.4)';
+    statusBox.style.color = ok ? '#bbf7d0' : '#fecaca';
+  };
+
+  submitBtn.addEventListener('click', async () => {
+    const username = document.getElementById('pbx-token-user').value.trim();
+    const password = document.getElementById('pbx-token-pass').value.trim();
+    const host = document.getElementById('pbx-token-host').value.trim();
+
+    if (!username || !password) {
+      setStatus('Debes completar usuario y contraseña.', false);
+      return;
+    }
+
+    try {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Generando...';
+      setStatus('Generando token...', false);
+      const token = await generarTokenPbxUsuarioPassword(username, password, host);
+      output.value = token;
+      setStatus('Token generado correctamente.', true);
+    } catch (err) {
+      setStatus((err && err.message) ? err.message : 'No se pudo generar el token.', false);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Generar Token';
+    }
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    if (!output.value.trim()) {
+      setStatus('Primero genera un token.', false);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(output.value.trim());
+      setStatus('Token copiado al portapapeles.', true);
+    } catch (err) {
+      setStatus('No se pudo copiar automáticamente. Selecciona y copia manualmente.', false);
+    }
+  });
+
+  applyBtn.addEventListener('click', () => {
+    const token = output.value.trim();
+    if (!token) {
+      setStatus('No hay token generado para guardar.', false);
+      return;
+    }
+
+    PBX_BEARER_TOKEN = token;
+    PBX_HOST = document.getElementById('pbx-token-host').value.trim() || PBX_HOST;
+    PBX_USERNAME = document.getElementById('pbx-token-user').value.trim() || PBX_USERNAME;
+    PBX_PASSWORD = document.getElementById('pbx-token-pass').value.trim() || PBX_PASSWORD;
+
+    const tokenInput = document.getElementById('pbx-bearer');
+    if (tokenInput) tokenInput.value = PBX_BEARER_TOKEN;
+    const hostInput = document.getElementById('pbx-host');
+    if (hostInput) hostInput.value = PBX_HOST;
+    const userInput = document.getElementById('pbx-username');
+    if (userInput) userInput.value = PBX_USERNAME;
+    const passInput = document.getElementById('pbx-password');
+    if (passInput) passInput.value = PBX_PASSWORD;
+
+    setStatus('Token guardado en la configuración.', true);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    output.value = '';
+    document.getElementById('pbx-token-user').value = '';
+    document.getElementById('pbx-token-pass').value = '';
+    statusBox.style.display = 'none';
+  });
 }
 
 async function reproducirAudioConToken(urlEncoded) {

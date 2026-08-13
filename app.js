@@ -197,6 +197,52 @@ function toggleKey() {
   input.type = input.type === 'password' ? 'text' : 'password';
 }
 
+async function reproducirAudioConToken(urlEncoded) {
+  try {
+    const url = decodeURIComponent(urlEncoded);
+    if (!PBX_BEARER_TOKEN) {
+      throw new Error('No hay token PBX guardado. Genera uno en Configuración.');
+    }
+
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${PBX_BEARER_TOKEN}`,
+        'Accept': 'audio/*,*/*;q=0.8'
+      }
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const existente = document.getElementById('pbx-audio-player');
+    if (existente) existente.remove();
+
+    const box = document.createElement('div');
+    box.id = 'pbx-audio-player';
+    box.style.position = 'fixed';
+    box.style.right = '20px';
+    box.style.bottom = '70px';
+    box.style.zIndex = '9999';
+    box.style.background = '#111827';
+    box.style.border = '1px solid rgba(255,255,255,.12)';
+    box.style.borderRadius = '12px';
+    box.style.padding = '10px';
+    box.style.boxShadow = '0 10px 25px rgba(0,0,0,.35)';
+    box.innerHTML = `
+      <div class="text-[10px] text-gray-300 mb-2">Reproducción PBX</div>
+      <audio controls autoplay style="width: 260px;" src="${objectUrl}"></audio>
+    `;
+
+    document.body.appendChild(box);
+  } catch (err) {
+    alert('No se pudo reproducir el audio: ' + (err && err.message ? err.message : err));
+  }
+}
+
 async function sincronizarAPI() {
   const estado = document.getElementById('estado-config');
   if (estado) { estado.innerText = "Sincronizando API..."; estado.classList.remove('hidden'); }
@@ -557,14 +603,13 @@ function obtenerUrlAudio(item) {
 
 function normalizarTelefonoComparable(valor) {
   if (valor === null || valor === undefined) return '';
-  return String(valor).trim().replace(/\s+/g, '').replace(/[^\d+]/g, '').replace(/^\+?502/, '').replace(/^\+/, '').replace(/\+/g, '');
+  const digits = String(valor).replace(/\D/g, '');
+  return digits.slice(-8);
 }
 
 function obtenerClienteDesdeDestino(destino) {
   if (!destino) return { nombre: '', codigo: '', pais: '' };
-  const target = normalizarTelefonoComparable(destino);
-  const targetDigits = target.replace(/\D/g, '');
-  const target8 = targetDigits.slice(-8);
+  const target8 = normalizarTelefonoComparable(destino);
   const leads = cache.leads || [];
 
   const lead = leads.find(l => {
@@ -580,15 +625,9 @@ function obtenerClienteDesdeDestino(destino) {
 
     return candidatos.some(valor => {
       if (valor == null) return false;
-      const texto = normalizarTelefonoComparable(valor);
-      if (!texto) return false;
-      const digits = texto.replace(/\D/g, '');
-      const eight = digits.slice(-8);
-      return digits === targetDigits
-        || eight === target8
-        || digits.endsWith(target8)
-        || targetDigits.endsWith(eight)
-        || texto === target;
+      const candidate8 = normalizarTelefonoComparable(valor);
+      if (!candidate8) return false;
+      return candidate8 === target8 || candidate8.endsWith(target8) || target8.endsWith(candidate8);
     });
   });
 
@@ -632,6 +671,8 @@ function normalizarVistaPbx(item) {
     return d.toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
   })();
 
+  const fechaFormateada = [dia, mes, anio].filter(v => v !== '' && v !== null && v !== undefined).map(v => String(v)).join('/');
+
   delete copia.audio_url;
   delete copia.grabacion_url;
   delete copia.solo_fecha;
@@ -647,12 +688,10 @@ function normalizarVistaPbx(item) {
 
   return {
     ...copia,
-    'Día': dia || '',
-    'Mes': mes || '',
-    'Año': anio || '',
-    'Fecha y hora': horaSolo,
-    ...(cliente.nombre ? { 'Cliente': cliente.nombre } : { 'Cliente': '' }),
-    ...(cliente.codigo ? { 'Código cliente': cliente.codigo } : { 'Código cliente': '' }),
+    'Fecha': fechaFormateada || '',
+    'Hora': horaSolo,
+    'Cliente': cliente.nombre || item.nombre || '',
+    'Código cliente': cliente.codigo || item.codigo_prospecto || '',
     'Ejecutivo': item.nombre || '',
     Escuchar: obtenerUrlAudio(item) || ''
   };
@@ -1071,9 +1110,11 @@ function repintar(contId) {
         const url = String(v || '').trim();
         const esValida = /^https?:\/\//i.test(url) || /^data:/i.test(url);
         if (!url || !esValida) return `<td class="p-2 text-gray-500 italic ${cellBase}">Sin audio</td>`;
-        const requiereAuth = /api\.red\.com\.sv.*\/pbx\//i.test(url) || /api\.red\.com\.sv.*\/pbx/i.test(url);
-        if (requiereAuth) {
-          return `<td class="p-2 text-amber-300 ${cellBase}">Audio protegido por token</td>`;
+        const requiereAuth = /api\.red\.com\.sv/i.test(url);
+        if (requiereAuth && PBX_BEARER_TOKEN) {
+          return `<td class="p-2 whitespace-nowrap ${cellBase}">
+            <button type="button" class="bg-red-600 hover:bg-red-700 text-[10px] px-2 py-1 rounded" onclick="reproducirAudioConToken('${encodeURIComponent(url)}')">Escuchar</button>
+          </td>`;
         }
         return `<td class="p-2 whitespace-nowrap ${cellBase}">
           <audio controls preload="metadata" class="h-8 max-w-[240px]" src="${url}">Tu navegador no soporta audio.</audio>

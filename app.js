@@ -553,17 +553,18 @@ function obtenerUrlAudio(item) {
 }
 
 function obtenerClienteDesdeDestino(destino) {
-  if (!destino) return { nombre: '', codigo: '' };
+  if (!destino) return { nombre: '', codigo: '', pais: '' };
   const normalizado = normalizarTel(destino);
   const leads = cache.leads || [];
   const lead = leads.find(l => {
     const telLead = normalizarTel(l.telefono);
     return telLead === normalizado || String(l.telefono || '').trim() === String(destino).trim();
   });
-  if (!lead) return { nombre: '', codigo: '' };
+  if (!lead) return { nombre: '', codigo: '', pais: '' };
   return {
     nombre: lead.nombre || lead.nombre_prospecto || '',
-    codigo: lead.codigo_prospecto || lead.codigo || ''
+    codigo: lead.codigo_prospecto || lead.codigo || '',
+    pais: lead.pais || ''
   };
 }
 
@@ -618,10 +619,8 @@ function normalizarVistaPbx(item) {
     'Mes': mes || '',
     'Año': anio || '',
     'Fecha y hora': horaSolo,
-    'País': item.pais || '',
-    ...(cliente.nombre ? { 'Cliente': cliente.nombre } : {}),
-    ...(cliente.codigo ? { 'Código cliente': cliente.codigo } : {}),
-    'Fuente': 'ISSABEL',
+    ...(cliente.nombre ? { 'Cliente': cliente.nombre } : { 'Cliente': '' }),
+    ...(cliente.codigo ? { 'Código cliente': cliente.codigo } : { 'Código cliente': '' }),
     'Ejecutivo': item.nombre || '',
     Escuchar: obtenerUrlAudio(item) || ''
   };
@@ -1037,6 +1036,10 @@ function repintar(contId) {
         const url = String(v || '').trim();
         const esValida = /^https?:\/\//i.test(url) || /^data:/i.test(url);
         if (!url || !esValida) return `<td class="p-2 text-gray-500 italic ${cellBase}">Sin audio</td>`;
+        const requiereAuth = /api\.red\.com\.sv.*\/pbx\//i.test(url) || /api\.red\.com\.sv.*\/pbx/i.test(url);
+        if (requiereAuth) {
+          return `<td class="p-2 text-amber-300 ${cellBase}">Audio protegido por token</td>`;
+        }
         return `<td class="p-2 whitespace-nowrap ${cellBase}">
           <audio controls preload="metadata" class="h-8 max-w-[240px]" src="${url}">Tu navegador no soporta audio.</audio>
           <div class="text-[11px] mt-1"><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-red-300 hover:text-red-200">Ver link</a></div>

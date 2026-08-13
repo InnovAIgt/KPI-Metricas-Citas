@@ -495,20 +495,34 @@ function obtenerUrlAudio(item) {
     if (typeof valor === 'string' && valor.trim()) {
       const texto = valor.trim();
       if (texto.startsWith('/')) return `https://api.red.com.sv${texto}`;
-      return texto;
+      if (texto.startsWith('http')) return texto;
     }
   }
-
-  if (item.uniqueid && item.extension && (item.anio || item.fecha_hora)) {
-    const pais = item.pais || 'GT';
-    const anio = item.anio || new Date(item.fecha_hora || item.fecha || Date.now()).getFullYear();
-    const mes = item.mes || new Date(item.fecha_hora || item.fecha || Date.now()).getMonth() + 1;
-    const dia = item.dia || new Date(item.fecha_hora || item.fecha || Date.now()).getDate();
-    const archivo = `Grabacion_Ext_${item.extension}_${item.uniqueid}.wav`;
-    return `https://api.red.com.sv/pbx/api/v1/rawCalls?pais=${pais}&anio=${anio}&mes=${String(mes).padStart(2, '0')}&dia=${String(dia).padStart(2, '0')}&archivo=${encodeURIComponent(archivo)}`;
-  }
-
   return '';
+}
+
+function obtenerClienteDesdeDestino(destino) {
+  if (!destino) return '';
+  const normalizado = String(destino).trim();
+  const leads = cache.leads || [];
+  const lead = leads.find(l => (l.telefono || '').trim() === normalizado);
+  return lead ? (lead.nombre || lead.codigo_prospecto || '') : '';
+}
+
+function generarColorEjecutivo(ejecutivo) {
+  if (!ejecutivo) return '';
+  const hash = String(ejecutivo).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const colores = [
+    'bg-blue-950 border-l-4 border-blue-500',
+    'bg-red-950 border-l-4 border-red-500',
+    'bg-green-950 border-l-4 border-green-500',
+    'bg-amber-950 border-l-4 border-amber-500',
+    'bg-purple-950 border-l-4 border-purple-500',
+    'bg-pink-950 border-l-4 border-pink-500',
+    'bg-teal-950 border-l-4 border-teal-500',
+    'bg-cyan-950 border-l-4 border-cyan-500'
+  ];
+  return colores[hash % colores.length];
 }
 
 function normalizarVistaPbx(item) {
@@ -518,6 +532,7 @@ function normalizarVistaPbx(item) {
   const mes = item.mes ?? (fechaHora ? new Date(fechaHora).getMonth() + 1 : '');
   const dia = item.dia ?? (fechaHora ? new Date(fechaHora).getDate() : '');
   const copia = { ...item };
+  const cliente = obtenerClienteDesdeDestino(item.destino);
 
   delete copia.audio_url;
   delete copia.grabacion_url;
@@ -527,12 +542,16 @@ function normalizarVistaPbx(item) {
   delete copia.dia;
   delete copia.fecha_hora;
   delete copia.fecha;
+  delete copia.transcripcion;
+  delete copia.resumen_qa;
 
   return {
     ...copia,
     'Fecha y hora': fechaHora,
     ...(anio !== '' ? { 'Año': anio } : {}),
     ...(mes !== '' && anio !== '' ? { 'Mes / Año': `${String(mes).padStart(2, '0')}/${anio}` } : {}),
+    ...(cliente ? { Cliente } : {}),
+    'Ejecutivo': item.nombre || '',
     Escuchar: obtenerUrlAudio(item) || ''
   };
 }
@@ -924,7 +943,8 @@ function repintar(contId) {
   const columnasExpandibles = ['resumen_qa', 'transcripcion'];
 
   const filas = filtrados.slice(0, 10000).map(fila => {
-    return `<tr class="hover:bg-slate-800/50" data-fuente="${fila['Fuente cruda'] || fila['Fuente'] || ''}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_llamada'] || ''}" data-registro="${fila['__registro_id'] || ''}" data-registro-tabla="${fila['__registro_tabla'] || ''}" onclick="abrirDetalleFuente(event, this)">${columnasUnicas.map(c => {
+    const colorEjecutivo = generarColorEjecutivo(fila.Ejecutivo || fila.nombre || '');
+    return `<tr class="hover:bg-slate-800/50 ${colorEjecutivo}" data-fuente="${fila['Fuente cruda'] || fila['Fuente'] || ''}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_llamada'] || ''}" data-registro="${fila['__registro_id'] || ''}" data-registro-tabla="${fila['__registro_tabla'] || ''}" onclick="abrirDetalleFuente(event, this)">${columnasUnicas.map(c => {
       const isSla = /^KPI[_\s]*SLA/i.test(c);
       const isRetro = /^KPI[_\s]*RETROALIMENTACION/i.test(c);
       const cellBase = isSla ? 'col-kpi-sla' : isRetro ? 'col-kpi-retro' : '';

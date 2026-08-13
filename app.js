@@ -204,12 +204,19 @@ async function reproducirAudioConToken(urlEncoded) {
       throw new Error('No hay token PBX guardado. Genera uno en Configuración.');
     }
 
-    const res = await fetch(url, {
-      method: 'GET',
+    const res = await fetch(`${SB_URL}/functions/v1/sincronizar-datos`, {
+      method: 'POST',
       headers: {
-        'Authorization': `Bearer ${PBX_BEARER_TOKEN}`,
-        'Accept': 'audio/*,*/*;q=0.8'
-      }
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SB_KEY}`,
+        'apikey': SB_KEY,
+        'x-audio-proxy': 'true'
+      },
+      body: JSON.stringify({
+        action: 'pbx-audio',
+        audio_url: url,
+        pbx_bearer_token: PBX_BEARER_TOKEN
+      })
     });
 
     if (!res.ok) {

@@ -214,6 +214,48 @@ Deno.serve(async (req) => {
   }
 
   try {
+    if (req.headers.get("x-audio-proxy") === "true") {
+      try {
+        const body = await req.json();
+        const audioUrl = body?.audio_url;
+        const bearer = body?.pbx_bearer_token || Deno.env.get("PBX_BEARER_TOKEN") || "";
+
+        if (!audioUrl || !bearer) {
+          return new Response(JSON.stringify({ status: "error", message: "Falta audio_url o pbx_bearer_token" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        const audioRes = await fetch(audioUrl, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${bearer}`,
+            "Accept": "audio/*,*/*;q=0.8"
+          }
+        });
+
+        if (!audioRes.ok) {
+          return new Response(JSON.stringify({ status: "error", message: `Audio PBX no disponible: HTTP ${audioRes.status}` }), {
+            status: audioRes.status,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        const audioBlob = await audioRes.blob();
+        const contentType = audioRes.headers.get("content-type") || "audio/wav";
+        return new Response(audioBlob, {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": contentType, "Cache-Control": "no-store" }
+        });
+      } catch (proxyErr: any) {
+        return new Response(JSON.stringify({ status: "error", message: proxyErr.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabaseKey = serviceKey;

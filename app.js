@@ -2852,6 +2852,14 @@ async function actualizarEditable(contId, rowId, col, valor) {
       const filaCache = cache.leads.find(r => String(obtenerClaveFilaRegistro(r)) === String(rowId) || String(r.id) === String(idPersistente) || String(r.codigo_prospecto) === String(codigoProspecto));
       if (filaCache) filaCache[dbCol] = parsed;
     }
+
+    if (vistaActual === 'reg-leads') {
+      try {
+        await cargarTablaCompleta('leads', 'fecha_agendada');
+      } catch (err) {
+        console.warn('No se pudo recargar leads tras actualizar KPI:', err);
+      }
+    }
   }
   // Update select visual class if present in the DOM
   try {

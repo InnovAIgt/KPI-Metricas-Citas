@@ -2870,16 +2870,29 @@ document.addEventListener('focusout', event => {
 });
 
 async function actualizarEditable(contId, rowId, col, valor) {
-  if (!contId || !rowId || !col) return;
+  console.log('🔴 actualizarEditable LLAMADA:', { contId, rowId, col, valor });
+  if (!contId || !rowId || !col) {
+    console.log('❌ Falta parámetro, retornando');
+    return;
+  }
   const datos = window.__datosBase[contId];
-  if (!Array.isArray(datos)) return;
+  console.log('🔴 Datos base:', { datosExists: !!datos, datosIsArray: Array.isArray(datos), datosLength: datos?.length });
+  if (!Array.isArray(datos)) {
+    console.log('❌ Datos no es array, retornando');
+    return;
+  }
   const parsedValue = parseBooleanValue(valor);
+  console.log('🔴 Valor parseado:', parsedValue);
 
   const filaBase = resolverFilaPorRowId(datos, rowId)
     || encontrarLeadRealPorIdentidad(cache.leads, rowId)
     || encontrarLeadRealPorIdentidad(window.__datosBase['tabla-dinamica'], rowId);
 
-  if (!filaBase) return;
+  console.log('🔴 Fila encontrada:', !!filaBase, filaBase);
+  if (!filaBase) {
+    console.log('❌ No se encontró fila, retornando');
+    return;
+  }
   filaBase[col] = parsedValue;
 
   const ultimo = window.__ultimoFiltrado[contId];
@@ -2890,10 +2903,13 @@ async function actualizarEditable(contId, rowId, col, valor) {
   }
 
   const dbCol = colToDbField[col];
+  console.log('🔴 dbCol:', { col, dbCol });
   if (contId === 'tabla-dinamica' && dbCol) {
     const parsed = parsedValue;
     const codigoProspecto = String(filaBase.codigo_prospecto || filaBase.lead || filaBase.codigo || '').trim();
     const idPersistente = String(filaBase.id || filaBase.__rowId || '').trim();
+    console.log('🔴 IDs extraídos:', { codigoProspecto, idPersistente });
+    console.log('🔴 Llamando actualizarLeadKPI...');
     await actualizarLeadKPI(idPersistente, codigoProspecto, dbCol, parsed);
 
     const leadCache = encontrarLeadRealPorIdentidad(cache.leads, rowId, codigoProspecto, idPersistente);
@@ -2916,7 +2932,9 @@ async function actualizarEditable(contId, rowId, col, valor) {
         });
         const datatoRenderizar = datosFiltrados.map(({ opportunity_stage, stage, opportunityStage, ...rest }) => normalizarFilaLeads(rest));
         window.__datosBase['tabla-dinamica'] = datatoRenderizar;
+        console.log('🔴 Repintando tabla...');
         repintar('tabla-dinamica');
+        console.log('✅ Repintado completado');
       } catch (err) {
         console.warn('No se pudo recargar leads tras actualizar KPI:', err);
       }
@@ -2931,8 +2949,10 @@ async function actualizarEditable(contId, rowId, col, valor) {
       } else {
         sel.classList.remove('kpi-yes'); sel.classList.add('kpi-no');
       }
+      console.log('✅ Clases CSS actualizadas en el select');
     }
-  } catch (e) { /* ignore DOM errors */ }
+  } catch (e) { console.error('Error actualizando CSS:', e); }
+  console.log('✅ actualizarEditable COMPLETADA');
 }
 
 function normalizarFilaLeads(item) {

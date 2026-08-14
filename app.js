@@ -2905,6 +2905,18 @@ async function actualizarEditable(contId, rowId, col, valor) {
     if (vistaActual === 'reg-leads') {
       try {
         await cargarTablaCompleta('leads', 'fecha_agendada');
+        let datosFiltrados = filtrarPorFechaGlobal(cache.leads, 'fecha_agendada');
+        const vistos = new Set();
+        datosFiltrados = datosFiltrados.filter(item => {
+          const clave = String(item.codigo_prospecto || item.telefono || item.nombre_prospecto || item.id || '').trim();
+          if (!clave) return true;
+          if (vistos.has(clave)) return false;
+          vistos.add(clave);
+          return true;
+        });
+        const datatoRenderizar = datosFiltrados.map(({ opportunity_stage, stage, opportunityStage, ...rest }) => normalizarFilaLeads(rest));
+        window.__datosBase['tabla-dinamica'] = datatoRenderizar;
+        repintar('tabla-dinamica');
       } catch (err) {
         console.warn('No se pudo recargar leads tras actualizar KPI:', err);
       }
@@ -2971,8 +2983,12 @@ function normalizarFilaLeads(item) {
     ['KPI RETROALIMENTACION ETAPA 4', 'kpi_retroalimentacion_etapa_4']
   ];
   for (const [label, col] of kpis) {
-    if (item.hasOwnProperty(col)) salida[label] = item[col];
-    else if (salida[label] === undefined) salida[label] = 0;
+    if (item.hasOwnProperty(col)) {
+      const rawVal = item[col];
+      salida[label] = Boolean(parseBooleanValue(rawVal));
+    } else if (salida[label] === undefined) {
+      salida[label] = false;
+    }
   }
   return salida;
 }

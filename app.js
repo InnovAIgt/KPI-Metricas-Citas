@@ -3005,51 +3005,84 @@ async function actualizarLeadKPI(id, codigoProspecto, dbCol, valor) {
     const codigo = String(codigoProspecto ?? '').trim();
     const idReal = String(id ?? '').trim();
 
+    console.log('🔵 ACTUALIZANDO KPI - PARAMS:', {
+      idReal,
+      codigo,
+      dbCol,
+      valorBooleano
+    });
+
     const intentos = [];
     if (idReal) intentos.push({ campo: 'id', valor: idReal });
     if (codigo) intentos.push({ campo: 'codigo_prospecto', valor: codigo });
+    
     if (!intentos.length) {
-      console.error('No se encontró clave para actualizar lead:', dbCol, valor);
+      console.error('❌ No se encontró clave para actualizar lead:', dbCol, valor);
+      alert('ERROR: No se encontró ID ni código del prospecto');
       return;
     }
+
+    console.log('🔵 Intentando actualizar con:', intentos);
 
     let datoActualizado = null;
     let claveUsada = null;
 
     for (const intento of intentos) {
+      console.log(`🟡 Intento ${intento.campo}="${intento.valor}"...`);
+      
       const { data, error } = await cliente
         .from('leads')
         .update(updateData)
         .eq(intento.campo, intento.valor)
         .select('id, codigo_prospecto');
 
+      console.log(`   Response:`, { data, error });
+
       if (!error && data && data.length > 0) {
         datoActualizado = data[0];
         claveUsada = intento.campo;
+        console.log(`✅ UPDATE exitoso con ${intento.campo}`);
         break;
+      } else if (error) {
+        console.warn(`   ❌ Error con ${intento.campo}:`, error.message);
+      } else if (data && data.length === 0) {
+        console.warn(`   ⚠️ Encontrado 0 registros con ${intento.campo}="${intento.valor}"`);
       }
     }
 
     if (!datoActualizado) {
+      console.log('🟡 UPDATE no funcionó, intentando UPSERT...');
       const fallback = {};
       if (idReal) fallback.id = idReal;
       if (codigo) fallback.codigo_prospecto = codigo;
       if (!Object.keys(fallback).length) throw new Error('No se encontró identificador del lead para guardar');
       fallback[dbCol] = valorBooleano;
       const conflictKey = idReal ? 'id' : 'codigo_prospecto';
-      const { error: errorUpsert } = await cliente
+      
+      console.log(`🟡 Ejecutando UPSERT con conflictKey="${conflictKey}":`, fallback);
+      
+      const { error: errorUpsert, data: dataUpsert } = await cliente
         .from('leads')
         .upsert([fallback], { onConflict: conflictKey, ignoreDuplicates: false });
-      if (errorUpsert) throw new Error(errorUpsert.message || 'No se pudo guardar el KPI en Supabase');
+        
+      console.log(`   UPSERT Response:`, { data: dataUpsert, error: errorUpsert });
+      
+      if (errorUpsert) {
+        throw new Error(`UPSERT Error: ${errorUpsert.message || JSON.stringify(errorUpsert)}`);
+      }
       claveUsada = conflictKey;
     }
 
     cargaCompleta.leads = false;
     cache.leads = [];
-    console.log('KPI guardado correctamente:', { claveUsada, dbCol, valorBooleano, id: idReal, codigoProspecto: codigo });
+    const mensaje = `✅ KPI guardado correctamente con ${claveUsada}`;
+    console.log(mensaje, { dbCol, valorBooleano, id: idReal, codigoProspecto: codigo });
+    alert(mensaje);
   } catch (err) {
-    console.error('Error guardando KPI en leads:', err);
-    mostrarToast('No se pudo guardar el KPI en Supabase. Revisa la política RLS de la tabla leads.', 'error');
+    console.error('❌ Error guardando KPI en leads:', err);
+    console.error('   Stack:', err.stack);
+    alert(`ERROR: ${err.message}`);
+    mostrarToast(`Error: ${err.message}`, 'error');
   }
 }
 

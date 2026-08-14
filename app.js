@@ -2919,23 +2919,44 @@ async function actualizarLeadKPI(id, codigoProspecto, dbCol, valor) {
   if (!dbCol) return;
   try {
     const cliente = getSupabase();
+    const valorBooleano = Boolean(parseBooleanValue(valor));
     const updateData = {};
-    updateData[dbCol] = parseBooleanValue(valor);
+    updateData[dbCol] = valorBooleano;
+
     let query = cliente.from('leads').update(updateData);
+    let claveUsada = null;
+
     if (id) {
+      claveUsada = 'id';
       query = query.eq('id', id);
     } else if (codigoProspecto) {
+      claveUsada = 'codigo_prospecto';
       query = query.eq('codigo_prospecto', codigoProspecto);
     } else {
       console.error('No se encontró clave para actualizar lead:', dbCol, valor);
       return;
     }
-    const { error } = await query;
+
+    const { data, error } = await query.select('id');
     if (error) {
-      console.error('Error guardando KPI en leads:', error.message, { id, codigoProspecto, dbCol, valor });
+      const fallback = codigoProspecto ? { codigo_prospecto: codigoProspecto, [dbCol]: valorBooleano } : { id, [dbCol]: valorBooleano };
+      const { error: errorUpsert } = await cliente.from('leads').upsert([fallback], { onConflict: codigoProspecto ? 'codigo_prospecto' : 'id', ignoreDuplicates: false });
+      if (errorUpsert) {
+        throw new Error(errorUpsert.message || 'No se pudo guardar el KPI en Supabase');
+      }
+    } else if (!data || data.length === 0) {
+      const fallbackQuery = cliente.from('leads').update(updateData);
+      const fallbackSelector = codigoProspecto ? fallbackQuery.eq('codigo_prospecto', codigoProspecto) : fallbackQuery.eq('id', id);
+      const { error: errorFallback } = await fallbackSelector.select('id');
+      if (errorFallback) {
+        throw new Error(errorFallback.message || 'No se encontró el lead para actualizar');
+      }
     }
+
+    console.log('KPI guardado correctamente:', { claveUsada, dbCol, valorBooleano, id, codigoProspecto });
   } catch (err) {
     console.error('Error guardando KPI en leads:', err);
+    mostrarToast('No se pudo guardar el KPI en Supabase. Revisa la política RLS de la tabla leads.', 'error');
   }
 }
 

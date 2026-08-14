@@ -919,9 +919,26 @@ function obtenerClienteDesdeDestino(destino) {
   };
 }
 
+const mapaColoresUsuario = new Map();
+
+function normalizarClaveUsuario(valor) {
+  if (valor === null || valor === undefined) return '';
+  const texto = String(valor).trim();
+  if (!texto) return '';
+  const sinAcentos = texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[_\-\s]+/g, '')
+    .toLowerCase();
+  return sinAcentos.replace(/[^a-z0-9]/g, '');
+}
+
 function generarColorEjecutivo(ejecutivo) {
-  if (!ejecutivo) return '';
-  const hash = String(ejecutivo).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const clave = normalizarClaveUsuario(ejecutivo);
+  if (!clave) return '';
+  if (mapaColoresUsuario.has(clave)) return mapaColoresUsuario.get(clave);
+
+  const hash = clave.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
   // Colores que funcionan en modo claro y oscuro combinando borde grueso + fondo semi-transparente
   const colores = [
     'bg-blue-100 dark:bg-blue-950 border-l-4 border-blue-600 dark:border-blue-400',
@@ -933,7 +950,9 @@ function generarColorEjecutivo(ejecutivo) {
     'bg-teal-100 dark:bg-teal-950 border-l-4 border-teal-600 dark:border-teal-400',
     'bg-cyan-100 dark:bg-cyan-950 border-l-4 border-cyan-600 dark:border-cyan-400'
   ];
-  return colores[hash % colores.length];
+  const color = colores[hash % colores.length];
+  mapaColoresUsuario.set(clave, color);
+  return color;
 }
 
 function normalizarVistaPbx(item) {

@@ -1343,6 +1343,28 @@ function parseBooleanValue(valor) {
   return raw === 'true' || raw === '1' || raw === 'si' || raw === 'sí' || raw === 'yes';
 }
 
+function obtenerClaveFilaRegistro(registro, fallback = '') {
+  if (!registro || typeof registro !== 'object') return String(fallback || '');
+  const candidatos = [
+    registro.id,
+    registro.__rowId,
+    registro.codigo_prospecto,
+    registro.codigo,
+    registro.lead,
+    registro.lead_id,
+    registro.nombre_prospecto,
+    registro.telefono,
+    registro.telefono_contacto,
+    registro.contacto,
+    registro.cliente
+  ];
+  for (const valor of candidatos) {
+    const texto = String(valor ?? '').trim();
+    if (texto) return texto;
+  }
+  return String(fallback || '');
+}
+
 function repintar(contId) {
   const datosBase = window.__datosBase[contId] || [];
   const filtros = filtroColState[contId] || {};
@@ -1468,9 +1490,10 @@ function repintar(contId) {
   const filas = filtrados.slice(0, 10000).map((fila, idx) => {
     const ejecutorValue = fila.Ejecutivo || fila.ejecutivo || fila.Usuario || fila.usuario || fila.asesor_nombre || fila.asesor || fila.nombre || fila.operador || '';
     const rowColorKey = ejecutorValue || fila['__telefono_comparado'] || fila.telefono || fila.destino || fila['destino'] || fila['Lead'] || fila['codigo_prospecto'] || `row-${idx}`;
+    const rowKey = obtenerClaveFilaRegistro(fila, `row-${idx}`);
     const colorEjecutivo = generarColorEjecutivo(rowColorKey);
     const fuenteFila = normalizarFuenteLlamada(fila.__fuente_pbx || fila['Fuente cruda'] || fila['Fuente'] || '');
-    return `<tr class="hover:bg-slate-800/50 ${colorEjecutivo}" data-fuente="${fuenteFila}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_llamada'] || ''}" data-registro="${fila['__registro_id'] || ''}" data-registro-tabla="${fila['__registro_tabla'] || ''}" onclick="abrirDetalleFuente(event, this)">${columnasUnicas.map(c => {
+    return `<tr class="hover:bg-slate-800/50 ${colorEjecutivo}" data-row="${rowKey}" data-fuente="${fuenteFila}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_llamada'] || ''}" data-registro="${fila['__registro_id'] || ''}" data-registro-tabla="${fila['__registro_tabla'] || ''}" onclick="abrirDetalleFuente(event, this)">${columnasUnicas.map(c => {
       const isSla = /^KPI[_\s]*SLA/i.test(c);
       const isRetro = /^KPI[_\s]*RETROALIMENTACION/i.test(c);
       const cellBase = isSla ? 'col-kpi-sla' : isRetro ? 'col-kpi-retro' : '';
@@ -1504,10 +1527,11 @@ function repintar(contId) {
         </td>`;
       }
       if (editableColumnsSet.has(normalizeEditableCol(c))) {
-        const value = (v === true || String(v).toLowerCase() === 'true') ? 'true' : 'false';
+        const value = (v === true || String(v).toLowerCase() === 'true' || String(v).toLowerCase() === 'si' || String(v).toLowerCase() === 'sí') ? 'true' : 'false';
         const selectedYes = value === 'true' ? 'selected' : '';
         const selectedNo = value === 'false' ? 'selected' : '';
-        return `<td class="p-2 max-w-[140px] ${cellBase}"><div class="kpi-cell"><select class="kpi-select ${value === 'true' ? 'kpi-yes' : 'kpi-no'}" data-cont="${contId}" data-row="${fila.id || fila.__rowId || ''}" data-col="${c}" onchange="actualizarEditable(this.dataset.cont, this.dataset.row, this.dataset.col, this.value)" onclick="event.stopPropagation()"><option value="false" ${selectedNo}>No</option><option value="true" ${selectedYes}>Sí</option></select></div></td>`;
+        const rowKey = obtenerClaveFilaRegistro(fila, `row-${idx}`);
+        return `<td class="p-2 max-w-[140px] ${cellBase}"><div class="kpi-cell"><select class="kpi-select ${value === 'true' ? 'kpi-yes' : 'kpi-no'}" data-cont="${contId}" data-row="${rowKey}" data-col="${c}" onchange="actualizarEditable(this.dataset.cont, this.dataset.row, this.dataset.col, this.value)" onclick="event.stopPropagation()"><option value="false" ${selectedNo}>No</option><option value="true" ${selectedYes}>Sí</option></select></div></td>`;
       }
       return `<td class="p-2 whitespace-nowrap text-gray-300 ${cellBase}">${contenidoCelda}</td>`;
     }).join('')}</tr>`;
@@ -2806,13 +2830,14 @@ function actualizarEditable(contId, rowId, col, valor) {
   const datos = window.__datosBase[contId];
   if (!Array.isArray(datos)) return;
   const parsedValue = parseBooleanValue(valor);
-  const fila = datos.find(r => String(r.id || r.__rowId) === String(rowId));
+
+  const fila = datos.find(r => obtenerClaveFilaRegistro(r) === String(rowId));
   if (!fila) return;
   fila[col] = parsedValue;
 
   const ultimo = window.__ultimoFiltrado[contId];
   if (Array.isArray(ultimo)) {
-    const fila2 = ultimo.find(r => String(r.id || r.__rowId) === String(rowId));
+    const fila2 = ultimo.find(r => obtenerClaveFilaRegistro(r) === String(rowId));
     if (fila2) fila2[col] = parsedValue;
   }
 
@@ -2820,10 +2845,11 @@ function actualizarEditable(contId, rowId, col, valor) {
   if (contId === 'tabla-dinamica' && dbCol) {
     const parsed = parsedValue;
     const codigoProspecto = fila.codigo_prospecto || fila.lead || fila.codigo;
-    actualizarLeadKPI(fila.id, codigoProspecto, dbCol, parsed);
+    const idPersistente = fila.id || fila.__rowId || codigoProspecto;
+    actualizarLeadKPI(idPersistente, codigoProspecto, dbCol, parsed);
 
     if (Array.isArray(cache.leads)) {
-      const filaCache = cache.leads.find(r => String(r.id) === String(rowId) || String(r.codigo_prospecto) === String(codigoProspecto));
+      const filaCache = cache.leads.find(r => String(obtenerClaveFilaRegistro(r)) === String(rowId) || String(r.id) === String(idPersistente) || String(r.codigo_prospecto) === String(codigoProspecto));
       if (filaCache) filaCache[dbCol] = parsed;
     }
   }

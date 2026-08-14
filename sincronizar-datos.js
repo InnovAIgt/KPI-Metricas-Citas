@@ -276,6 +276,7 @@ Deno.serve(async (req) => {
     let pbxUsernameBody = "";
     let pbxPasswordBody = "";
     let pbxBearerTokenBody = "";
+    let pbxPaisBody = "SV";
     
     try {
       const body = await req.json();
@@ -283,6 +284,7 @@ Deno.serve(async (req) => {
       pbxUsernameBody = body.pbx_username || "";
       pbxPasswordBody = body.pbx_password || "";
       pbxBearerTokenBody = body.pbx_bearer_token || "";
+      pbxPaisBody = body.pbx_pais || body.pais || "SV";
     } catch (e) {
       // Body no es JSON válido, ignorar
     }
@@ -292,6 +294,7 @@ Deno.serve(async (req) => {
     const pbxUsername = pbxUsernameBody || Deno.env.get("PBX_USERNAME") || "";
     const pbxPassword = pbxPasswordBody || Deno.env.get("PBX_PASSWORD") || "";
     const pbxBearerToken = pbxBearerTokenBody || Deno.env.get("PBX_BEARER_TOKEN") || "";
+    const pbxPais = String(pbxPaisBody || "SV").trim().toUpperCase() === "GT" ? "GT" : "SV";
 
     if (!supabaseUrl || !supabaseKey) {
       return new Response(
@@ -340,7 +343,7 @@ Deno.serve(async (req) => {
       ),
       fetchApiConDiagnostico(
         "llamadas_pbx",
-        `${redPbxHost}/pbx/api/v1/getCalls2?desde=${hace7dias}&hasta=${hoy}&pais=GT`,
+        `${redPbxHost}/pbx/api/v1/getCalls2?desde=${hace7dias}&hasta=${hoy}&pais=${pbxPais}`,
         headersPbx
       ),
     ]);

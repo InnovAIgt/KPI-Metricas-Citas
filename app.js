@@ -18,6 +18,16 @@ let PBX_HOST = "https://api.red.com.sv";
 let PBX_USERNAME = "DMONGE";
 let PBX_PASSWORD = "Sunfl0wer";
 let PBX_BEARER_TOKEN = "";
+let PBX_PAIS = "SV";
+
+function actualizarPaisPbxDesdeUI() {
+  const el = document.getElementById('global-pais-pbx');
+  if (el && el.value) {
+    PBX_PAIS = String(el.value).trim().toUpperCase() || 'SV';
+  } else {
+    PBX_PAIS = 'SV';
+  }
+}
 
 function getSupabase() {
   if (!supabaseClient) supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
@@ -61,6 +71,11 @@ function establecerFechasPorDefecto() {
   const semana = obtenerSemanaActual();
   document.getElementById('global-desde').value = semana.desde;
   document.getElementById('global-hasta').value = semana.hasta;
+  const paisSelect = document.getElementById('global-pais-pbx');
+  if (paisSelect && !paisSelect.value) {
+    paisSelect.value = 'SV';
+  }
+  actualizarPaisPbxDesdeUI();
 }
 
 function aplicarTema(tema) {
@@ -108,6 +123,7 @@ function irA(view) {
 }
 
 function render() {
+  actualizarPaisPbxDesdeUI();
   const main = document.getElementById('main-content');
   if (vistaActual === 'config') return renderConfig(main);
   if (vistaActual === 'criterios') return renderCriterios(main);
@@ -478,6 +494,7 @@ async function sincronizarAPI() {
   const estado = document.getElementById('estado-config');
   if (estado) { estado.innerText = "Sincronizando API..."; estado.classList.remove('hidden'); }
   try {
+    actualizarPaisPbxDesdeUI();
     const res = await fetch(`${SB_URL}/functions/v1/sincronizar-datos`, {
       method: 'POST',
       headers: { 
@@ -487,7 +504,8 @@ async function sincronizarAPI() {
       },
       body: JSON.stringify({
         pbx_host: PBX_HOST,
-        pbx_bearer_token: PBX_BEARER_TOKEN
+        pbx_bearer_token: PBX_BEARER_TOKEN,
+        pbx_pais: PBX_PAIS || 'SV'
       })
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1037,6 +1055,14 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
   document.getElementById('estado-tabla').classList.add('hidden');
   
   let datosFiltrados = filtrarPorFechaGlobal(cache[tabla], columnaFecha);
+
+  if (tabla === 'llamadas_pbx' || tabla === 'llamadas') {
+    actualizarPaisPbxDesdeUI();
+    datosFiltrados = datosFiltrados.filter(item => {
+      const pais = String(item.pais || item.PAIS || 'SV').trim().toUpperCase();
+      return !pais || pais === PBX_PAIS;
+    });
+  }
 
   if (tabla === 'leads') {
     datosFiltrados = datosFiltrados.map(item => ({
@@ -3060,6 +3086,10 @@ function aplicarFiltroResumen() {
 
 window.addEventListener('DOMContentLoaded', async () => {
   supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+  const paisPbx = document.getElementById('global-pais-pbx');
+  if (paisPbx) {
+    paisPbx.addEventListener('change', actualizarPaisPbxDesdeUI);
+  }
   initTheme();
   establecerFechasPorDefecto();
   irA('catalogo');

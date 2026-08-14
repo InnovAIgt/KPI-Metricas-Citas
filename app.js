@@ -146,7 +146,7 @@ function renderConfig(main) {
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
           Ver/Ocultar
         </button>
-        <button onclick="refrescarClienteSupabase(); alert('Credenciales actualizadas.')" class="bg-slate-700 text-xs px-3 py-1.5 rounded hover:bg-slate-600 flex items-center gap-1">
+        <button onclick="refrescarClienteSupabase(); mostrarToast('Credenciales actualizadas.')" class="bg-slate-700 text-xs px-3 py-1.5 rounded hover:bg-slate-600 flex items-center gap-1">
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7a4 4 0 100 8 4 4 0 000-8zM12 7v6m3-3H9"></path></svg>
           Guardar credenciales
         </button>
@@ -165,7 +165,7 @@ function renderConfig(main) {
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v2h8z"></path></svg>
           Generar token
         </button>
-        <button onclick="refrescarCredencialesPBX(); alert('Token PBX guardado.');" class="flex-1 bg-slate-700 text-xs px-3 py-1.5 rounded hover:bg-slate-600 flex items-center justify-center gap-1">
+        <button onclick="refrescarCredencialesPBX(); mostrarToast('Token PBX guardado.')" class="flex-1 bg-slate-700 text-xs px-3 py-1.5 rounded hover:bg-slate-600 flex items-center justify-center gap-1">
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7a4 4 0 100 8 4 4 0 000-8zM12 7v6m3-3H9"></path></svg>
           Guardar token
         </button>
@@ -497,10 +497,10 @@ async function sincronizarAPI() {
       const tokenInput = document.getElementById('pbx-bearer');
       if (tokenInput) tokenInput.value = PBX_BEARER_TOKEN;
     }
-    alert("¡Sincronización completada!");
+    mostrarToast('Sincronización completada.');
     await recargarTodoYContadores();
   } catch (err) {
-    alert("Error al sincronizar: " + err.message);
+    mostrarToast('Error al sincronizar: ' + err.message, 'error');
   } finally {
     if (estado) estado.classList.add('hidden');
   }
@@ -637,7 +637,7 @@ function abrirModalNuevo() {
 
 async function abrirModalEditar(id) {
   const ejec = cache.catalogo.find(e => e.id === id);
-  if (!ejec) return alert('Ejecutivo no encontrado');
+  if (!ejec) return mostrarToast('Ejecutivo no encontrado', 'error');
 
   document.getElementById('modal-titulo').textContent = 'Editar Ejecutivo';
   document.getElementById('ejecutivo-id').value = ejec.id;
@@ -666,11 +666,11 @@ async function guardarEjecutivo(e) {
     if (id) {
       const { error } = await client.from('catalogo').update(datos).eq('id', parseInt(id));
       if (error) throw error;
-      alert('Ejecutivo actualizado');
+      mostrarToast('Ejecutivo actualizado');
     } else {
       const { error } = await client.from('catalogo').insert([datos]);
       if (error) throw error;
-      alert('Ejecutivo agregado');
+      mostrarToast('Ejecutivo agregado');
     }
     
     cargaCompleta.catalogo = false;
@@ -678,7 +678,7 @@ async function guardarEjecutivo(e) {
     cerrarModal();
     renderCatalogo(document.getElementById('main-content'));
   } catch (err) {
-    alert('Error: ' + err.message);
+    mostrarToast('Error: ' + err.message, 'error');
   }
 }
 
@@ -689,13 +689,13 @@ async function confirmarEliminar(id) {
   try {
     const { error } = await client.from('catalogo').delete().eq('id', id);
     if (error) throw error;
-    alert('Ejecutivo eliminado');
+    mostrarToast('Ejecutivo eliminado');
     
     cargaCompleta.catalogo = false;
     await cargarTablaCompleta('catalogo', null);
     renderCatalogo(document.getElementById('main-content'));
   } catch (err) {
-    alert('Error: ' + err.message);
+    mostrarToast('Error: ' + err.message, 'error');
   }
 }
 
@@ -781,7 +781,7 @@ async function recargarTodoYContadores() {
     console.log('Recargar completado!');
   } catch (err) {
     console.error('Error:', err);
-    alert('Error al recargar: ' + err.message);
+    mostrarToast('Error al recargar: ' + err.message, 'error');
   }
 }
 
@@ -948,6 +948,16 @@ function generarColorEjecutivo(ejecutivo) {
   return mapaColoresUsuario.get(clave);
 }
 
+function normalizarFuenteLlamada(valor) {
+  const texto = String(valor || '').trim();
+  if (!texto) return '';
+  const lower = texto.toLowerCase();
+  if (lower === 'pbx' || lower === 'issabel') return 'Issabel';
+  if (lower === 'celular' || lower === 'cell' || lower === 'mobile') return 'Celular';
+  if (lower === 'teams') return 'Teams';
+  return texto;
+}
+
 function normalizarVistaPbx(item) {
   if (!item || typeof item !== 'object') return item;
   const fechaHora = item.fecha_hora || item.fecha || '';
@@ -956,6 +966,7 @@ function normalizarVistaPbx(item) {
   const dia = item.dia ?? (fechaHora ? new Date(fechaHora).getDate() : '');
   const copia = { ...item };
   const cliente = obtenerClienteDesdeDestino(item.destino);
+  const paisPbx = String(item.pais || item.PAIS || '').trim() || 'GT';
 
   const horaSolo = (() => {
     if (!fechaHora) return '';
@@ -965,6 +976,8 @@ function normalizarVistaPbx(item) {
   })();
 
   const fechaFormateada = [dia, mes, anio].filter(v => v !== '' && v !== null && v !== undefined).map(v => String(v)).join('/');
+
+  if (!copia.pais && !copia.PAIS) copia.pais = 'GT';
 
   delete copia.audio_url;
   delete copia.grabacion_url;
@@ -981,6 +994,8 @@ function normalizarVistaPbx(item) {
 
   return {
     ...copia,
+    'País': paisPbx || 'GT',
+    'Fuente': 'Issabel',
     'Fecha': fechaFormateada || '',
     'Hora': horaSolo,
     'Ejecutivo': item.nombre || '',
@@ -1147,36 +1162,48 @@ function abrirModalCeldaFromEl(el) {
   }
 }
 
+function mostrarToast(mensaje, tipo = 'info') {
+  const existing = document.getElementById('toast-global');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'toast-global';
+  toast.style.position = 'fixed';
+  toast.style.bottom = '20px';
+  toast.style.right = '20px';
+  toast.style.zIndex = '99999';
+  toast.style.maxWidth = '280px';
+  toast.style.padding = '10px 14px';
+  toast.style.borderRadius = '10px';
+  toast.style.fontSize = '12px';
+  toast.style.fontWeight = '600';
+  toast.style.lineHeight = '1.4';
+  toast.style.boxShadow = '0 10px 25px rgba(15, 23, 42, 0.28)';
+  toast.style.border = '1px solid rgba(148, 163, 184, 0.3)';
+  toast.style.background = tipo === 'error' ? 'rgba(127, 29, 29, 0.92)' : 'rgba(15, 23, 42, 0.9)';
+  toast.style.color = '#f8fafc';
+  toast.textContent = mensaje;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2600);
+}
+
 function abrirDetalleFuente(event, fila) {
   if (!fila) return;
-  const fuente = fila.dataset.fuente || '';
+  const fuente = normalizarFuenteLlamada(fila.dataset.fuente || '');
   const telefono = fila.dataset.tel || '';
   const fecha = fila.dataset.fecha || '';
   const registro = fila.dataset.registro || '';
   const registroTabla = fila.dataset.registroTabla || '';
+  const fuenteLower = String(fuente || '').trim().toLowerCase();
 
-  if (fuente.toLowerCase() === 'pbx') {
+  if (fuenteLower === 'issabel' || fuenteLower === 'pbx') {
     detalleFiltro = { tabla: 'llamadas_pbx', telefono, fecha, registroId: registro, registroTabla: registroTabla };
     irA('reg-pbx');
-  } else if (fuente.toLowerCase() === 'celular') {
+  } else if (fuenteLower === 'celular') {
     detalleFiltro = { tabla: 'llamadas_celular', telefono, fecha, registroId: registro, registroTabla: registroTabla };
     irA('reg-cel');
   } else {
-    // Notificación silenciosa en lugar de alert
-    const notif = document.createElement('div');
-    notif.style.position = 'fixed';
-    notif.style.top = '20px';
-    notif.style.right = '20px';
-    notif.style.background = 'rgba(107,114,128,0.15)';
-    notif.style.border = '1px solid rgba(107,114,128,0.5)';
-    notif.style.color = '#d1d5db';
-    notif.style.padding = '12px 16px';
-    notif.style.borderRadius = '8px';
-    notif.style.fontSize = '12px';
-    notif.style.zIndex = '99999';
-    notif.textContent = 'No hay detalle directo para esta fuente: ' + fuente;
-    document.body.appendChild(notif);
-    setTimeout(() => notif.remove(), 2500);
+    mostrarToast('No hay detalle directo para esta fuente: ' + fuente, 'info');
   }
 }
 
@@ -1225,9 +1252,9 @@ function cerrarModalCelda() {
 
 function copiarAlPortapapeles() {
   navigator.clipboard.writeText(contenidoModalCelda).then(() => {
-    alert('¡Copiado al portapapeles!');
+    mostrarToast('¡Copiado al portapapeles!');
   }).catch(err => {
-    alert('Error al copiar: ' + err);
+    mostrarToast('Error al copiar: ' + err, 'error');
   });
 }
 
@@ -1391,11 +1418,12 @@ function repintar(contId) {
 
   const columnasExpandibles = ['resumen_qa', 'transcripcion'];
 
-  const filas = filtrados.slice(0, 10000).map(fila => {
-    // Busca el ejecutivo/operador/asesor en diferentes columnas (case-insensitive)
-    const ejecutorValue = fila.Ejecutivo || fila.ejecutivo || fila.operador || fila.usuario || fila.asesor_nombre || fila.asesor || fila.nombre || '';
-    const colorEjecutivo = generarColorEjecutivo(ejecutorValue);
-    return `<tr class="hover:bg-slate-800/50 ${colorEjecutivo}" data-fuente="${fila['Fuente cruda'] || fila['Fuente'] || ''}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_llamada'] || ''}" data-registro="${fila['__registro_id'] || ''}" data-registro-tabla="${fila['__registro_tabla'] || ''}" onclick="abrirDetalleFuente(event, this)">${columnasUnicas.map(c => {
+  const filas = filtrados.slice(0, 10000).map((fila, idx) => {
+    const ejecutorValue = fila.Ejecutivo || fila.ejecutivo || fila.Usuario || fila.usuario || fila.asesor_nombre || fila.asesor || fila.nombre || fila.operador || '';
+    const rowColorKey = ejecutorValue || fila['__telefono_comparado'] || fila.telefono || fila.destino || fila['destino'] || fila['Lead'] || fila['codigo_prospecto'] || `row-${idx}`;
+    const colorEjecutivo = generarColorEjecutivo(rowColorKey);
+    const fuenteFila = normalizarFuenteLlamada(fila['Fuente cruda'] || fila['Fuente'] || '');
+    return `<tr class="hover:bg-slate-800/50 ${colorEjecutivo}" data-fuente="${fuenteFila}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_llamada'] || ''}" data-registro="${fila['__registro_id'] || ''}" data-registro-tabla="${fila['__registro_tabla'] || ''}" onclick="abrirDetalleFuente(event, this)">${columnasUnicas.map(c => {
       const isSla = /^KPI[_\s]*SLA/i.test(c);
       const isRetro = /^KPI[_\s]*RETROALIMENTACION/i.test(c);
       const cellBase = isSla ? 'col-kpi-sla' : isRetro ? 'col-kpi-retro' : '';
@@ -1539,7 +1567,7 @@ document.addEventListener('click', (e) => {
 // ==================================================================
 function exportarXLSX(contId, nombre) {
   const datos = window.__ultimoFiltrado[contId] || cache[nombre] || [];
-  if (!datos.length) return alert("No hay datos para exportar.");
+  if (!datos.length) return mostrarToast('No hay datos para exportar.', 'error');
   const ws = XLSX.utils.json_to_sheet(datos.map(({acciones, __rowId, ...d}) => d));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, nombre.slice(0, 30));
@@ -1547,7 +1575,7 @@ function exportarXLSX(contId, nombre) {
 }
 
 function exportarXLSXGenerico(datos, nombre) {
-  if (!datos || datos.length === 0) return alert("No hay datos para exportar.");
+  if (!datos || datos.length === 0) return mostrarToast('No hay datos para exportar.', 'error');
   const ws = XLSX.utils.json_to_sheet(datos);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, nombre.slice(0, 30));
@@ -1760,7 +1788,7 @@ async function calcularCruceUnificado() {
         .map(c => {
           const rawFechaHora = c.fecha_hora || (c.fecha && c.hora ? `${String(c.fecha).trim()}T${String(c.hora).trim()}` : '');
           return {
-            fuente: 'PBX',
+            fuente: 'Issabel',
             fechaHora: parseFechaHoraString(rawFechaHora),
             raw: c,
             operador: String(c.nombre || c.usuario || '').trim().toLowerCase()
@@ -1857,11 +1885,12 @@ async function calcularCruceUnificado() {
 
     const diferenciaHoras = minutosAHoras(diferenciaMinFirmada);
 
+    const fuenteNormalizada = normalizarFuenteLlamada(coincidencia?.fuente || fuente || '');
     const rawFechaLlamada = coincidencia
-      ? String(coincidencia.fuente === 'PBX' ? coincidencia.raw.fecha_hora || '' : coincidencia.raw.fecha || '').trim()
+      ? String(fuenteNormalizada === 'Issabel' ? coincidencia.raw.fecha_hora || '' : coincidencia.raw.fecha || '').trim()
       : '';
     const rawHoraLlamada = coincidencia
-      ? coincidencia.fuente === 'PBX'
+      ? fuenteNormalizada === 'Issabel'
         ? (String(coincidencia.raw.fecha_hora || '').trim().split(/T| /)[1] || '').slice(0, 8)
         : String(coincidencia.raw.hora || '').trim()
       : '';
@@ -1870,11 +1899,11 @@ async function calcularCruceUnificado() {
     let duracionMin = null;
     let estadoTipo = '';
     if (coincidencia) {
-      if (coincidencia.fuente === 'PBX') {
+      if (fuenteNormalizada === 'Issabel') {
         duracionSeg = coincidencia.raw.duracion_segundos != null ? Number(coincidencia.raw.duracion_segundos) : hhmmssASegundos(coincidencia.raw.duracion_hh_mm_ss);
         duracionMin = segundosAMinutos(duracionSeg);
         estadoTipo = coincidencia.raw.estado || '';
-      } else if (coincidencia.fuente === 'Celular') {
+      } else if (fuenteNormalizada === 'Celular') {
         duracionSeg = hhmmssASegundos(coincidencia.raw.duracion);
         duracionMin = segundosAMinutos(duracionSeg);
         estadoTipo = (coincidencia.raw.tipo || '').toUpperCase();
@@ -1891,7 +1920,7 @@ async function calcularCruceUnificado() {
       hora_reunion: lead.hora_agendada,
       resultado: estado,
       cumplio: estado === 'Cumplió en fecha y horario' || estado === 'Cumplió con evidencia en Teams' ? 'Sí' : 'No',
-      fuente: fuente,
+      fuente: normalizarFuenteLlamada(fuente || 'Issabel'),
       fecha_contacto: (coincidencia && coincidencia.fechaHora) ? formatearFechaCorta(coincidencia.fechaHora) : '',
       hora_contacto: (coincidencia && coincidencia.fechaHora) ? formatearHoraCorta(coincidencia.fechaHora) : '',
       diferencia_min: diferenciaMin,
@@ -1901,7 +1930,7 @@ async function calcularCruceUnificado() {
       intentos_totales: Array.isArray(candidatas) ? candidatas.length : 0,
       catalogo_ok: ejec ? 'Sí' : 'No',
       observacion: coincidencia?.raw?.observacion || coincidencia?.raw?.nota || coincidencia?.raw?.detalle || coincidencia?.raw?.comentario || '',
-      vendedor_extension: coincidencia?.fuente === 'PBX' ? (coincidencia?.raw?.usuario || coincidencia?.raw?.nombre || '') : ''
+      vendedor_extension: fuenteNormalizada === 'Issabel' ? (coincidencia?.raw?.usuario || coincidencia?.raw?.nombre || '') : ''
     };
     return outObj;
   });
@@ -2878,7 +2907,7 @@ function abrirModalTeams(key) {
   let lead = null;
   if (!registro) {
     lead = cache.leads.find(l => String(l.codigo_prospecto) === String(key));
-    if (!lead) return alert('Registro no encontrado');
+    if (!lead) return mostrarToast('Registro no encontrado', 'error');
   }
 
   document.getElementById('teams-id').value = registro?.id || '';
@@ -2919,11 +2948,11 @@ async function guardarTeamsModal(e) {
     if (id) {
       const { error } = await client.from('llamadas_teams').update(datos).eq('id', parseInt(id));
       if (error) throw error;
-      alert('Reunión Teams actualizada');
+      mostrarToast('Reunión Teams actualizada');
     } else {
       const { error } = await client.from('llamadas_teams').insert([datos]);
       if (error) throw error;
-      alert('Reunión Teams agregada');
+      mostrarToast('Reunión Teams agregada');
     }
     
     cargaCompleta.llamadas_teams = false;
@@ -2931,7 +2960,7 @@ async function guardarTeamsModal(e) {
     cerrarModalTeams();
     renderRegistroTeams(document.getElementById('main-content'));
   } catch (err) {
-    alert('Error: ' + err.message);
+    mostrarToast('Error: ' + err.message, 'error');
   }
 }
 

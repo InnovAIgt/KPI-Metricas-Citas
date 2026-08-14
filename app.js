@@ -920,6 +920,20 @@ function obtenerClienteDesdeDestino(destino) {
 }
 
 const mapaColoresUsuario = new Map();
+const paletaColoresUsuarios = [
+  'bg-blue-100 dark:bg-blue-950 border-l-4 border-blue-600 dark:border-blue-400',
+  'bg-red-100 dark:bg-red-950 border-l-4 border-red-600 dark:border-red-400',
+  'bg-green-100 dark:bg-green-950 border-l-4 border-green-600 dark:border-green-400',
+  'bg-amber-100 dark:bg-amber-950 border-l-4 border-amber-600 dark:border-amber-400',
+  'bg-purple-100 dark:bg-purple-950 border-l-4 border-purple-600 dark:border-purple-400',
+  'bg-pink-100 dark:bg-pink-950 border-l-4 border-pink-600 dark:border-pink-400',
+  'bg-teal-100 dark:bg-teal-950 border-l-4 border-teal-600 dark:border-teal-400',
+  'bg-cyan-100 dark:bg-cyan-950 border-l-4 border-cyan-600 dark:border-cyan-400',
+  'bg-orange-100 dark:bg-orange-950 border-l-4 border-orange-600 dark:border-orange-400',
+  'bg-indigo-100 dark:bg-indigo-950 border-l-4 border-indigo-600 dark:border-indigo-400',
+  'bg-emerald-100 dark:bg-emerald-950 border-l-4 border-emerald-600 dark:border-emerald-400',
+  'bg-rose-100 dark:bg-rose-950 border-l-4 border-rose-600 dark:border-rose-400'
+];
 
 function normalizarClaveUsuario(valor) {
   if (valor === null || valor === undefined) return '';
@@ -936,23 +950,11 @@ function normalizarClaveUsuario(valor) {
 function generarColorEjecutivo(ejecutivo) {
   const clave = normalizarClaveUsuario(ejecutivo);
   if (!clave) return '';
-  if (mapaColoresUsuario.has(clave)) return mapaColoresUsuario.get(clave);
-
-  const hash = clave.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  // Colores que funcionan en modo claro y oscuro combinando borde grueso + fondo semi-transparente
-  const colores = [
-    'bg-blue-100 dark:bg-blue-950 border-l-4 border-blue-600 dark:border-blue-400',
-    'bg-red-100 dark:bg-red-950 border-l-4 border-red-600 dark:border-red-400',
-    'bg-green-100 dark:bg-green-950 border-l-4 border-green-600 dark:border-green-400',
-    'bg-amber-100 dark:bg-amber-950 border-l-4 border-amber-600 dark:border-amber-400',
-    'bg-purple-100 dark:bg-purple-950 border-l-4 border-purple-600 dark:border-purple-400',
-    'bg-pink-100 dark:bg-pink-950 border-l-4 border-pink-600 dark:border-pink-400',
-    'bg-teal-100 dark:bg-teal-950 border-l-4 border-teal-600 dark:border-teal-400',
-    'bg-cyan-100 dark:bg-cyan-950 border-l-4 border-cyan-600 dark:border-cyan-400'
-  ];
-  const color = colores[hash % colores.length];
-  mapaColoresUsuario.set(clave, color);
-  return color;
+  if (!mapaColoresUsuario.has(clave)) {
+    const siguienteIndice = mapaColoresUsuario.size % paletaColoresUsuarios.length;
+    mapaColoresUsuario.set(clave, paletaColoresUsuarios[siguienteIndice]);
+  }
+  return mapaColoresUsuario.get(clave);
 }
 
 function normalizarVistaPbx(item) {

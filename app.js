@@ -740,7 +740,7 @@ async function cargarTablaCompleta(tabla, orden) {
 }
 
 async function asegurarCache(tabla, orden) {
-  if (!cargaCompleta[tabla]) await cargarTablaCompleta(tabla, orden);
+  if (tabla === 'leads' || !cargaCompleta[tabla]) await cargarTablaCompleta(tabla, orden);
   return cache[tabla];
 }
 
@@ -2906,6 +2906,9 @@ function normalizarFilaLeads(item) {
     salida[key] = item[key];
   }
 
+  salida.codigo_prospecto = salida.codigo_prospecto || salida.lead || item.codigo_prospecto || item.lead || '';
+  salida.id = salida.id || item.id || '';
+
   const kpis = [
     ['KPI SLA ETAPA 1', 'kpi_sla_etapa_1'],
     ['KPI SLA ETAPA 2', 'kpi_sla_etapa_2'],
@@ -2961,6 +2964,8 @@ async function actualizarLeadKPI(id, codigoProspecto, dbCol, valor) {
       }
     }
 
+    cargaCompleta.leads = false;
+    cache.leads = [];
     console.log('KPI guardado correctamente:', { claveUsada, dbCol, valorBooleano, id, codigoProspecto });
   } catch (err) {
     console.error('Error guardando KPI en leads:', err);

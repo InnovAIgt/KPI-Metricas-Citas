@@ -2825,7 +2825,7 @@ document.addEventListener('focusout', event => {
   actualizarEditable(target.dataset.cont, target.dataset.row, target.dataset.col, value);
 });
 
-function actualizarEditable(contId, rowId, col, valor) {
+async function actualizarEditable(contId, rowId, col, valor) {
   if (!contId || !rowId || !col) return;
   const datos = window.__datosBase[contId];
   if (!Array.isArray(datos)) return;
@@ -2846,7 +2846,7 @@ function actualizarEditable(contId, rowId, col, valor) {
     const parsed = parsedValue;
     const codigoProspecto = fila.codigo_prospecto || fila.lead || fila.codigo;
     const idPersistente = fila.id || fila.__rowId || codigoProspecto;
-    actualizarLeadKPI(idPersistente, codigoProspecto, dbCol, parsed);
+    await actualizarLeadKPI(idPersistente, codigoProspecto, dbCol, parsed);
 
     if (Array.isArray(cache.leads)) {
       const filaCache = cache.leads.find(r => String(obtenerClaveFilaRegistro(r)) === String(rowId) || String(r.id) === String(idPersistente) || String(r.codigo_prospecto) === String(codigoProspecto));

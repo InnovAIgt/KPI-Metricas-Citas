@@ -1319,18 +1319,25 @@ const editableColumnsSet = new Set(editableColumns.map(c => normalizeEditableCol
 const colToDbField = {
   'KPI SLA ETAPA 1': 'kpi_sla_etapa_1',
   'KPI_SLA_ETAPA_1': 'kpi_sla_etapa_1',
+  'kpi_sla_etapa_1': 'kpi_sla_etapa_1',
   'KPI SLA ETAPA 2': 'kpi_sla_etapa_2',
   'KPI_SLA_ETAPA_2': 'kpi_sla_etapa_2',
+  'kpi_sla_etapa_2': 'kpi_sla_etapa_2',
   'KPI SLA ETAPA 3': 'kpi_sla_etapa_3',
   'KPI_SLA_ETAPA_3': 'kpi_sla_etapa_3',
+  'kpi_sla_etapa_3': 'kpi_sla_etapa_3',
   'KPI RETROALIMENTACION ETAPA 1': 'kpi_retroalimentacion_etapa_1',
   'KPI_RETROALIMENTACION_ETAPA_1': 'kpi_retroalimentacion_etapa_1',
+  'kpi_retroalimentacion_etapa_1': 'kpi_retroalimentacion_etapa_1',
   'KPI RETROALIMENTACION ETAPA 2': 'kpi_retroalimentacion_etapa_2',
   'KPI_RETROALIMENTACION_ETAPA_2': 'kpi_retroalimentacion_etapa_2',
+  'kpi_retroalimentacion_etapa_2': 'kpi_retroalimentacion_etapa_2',
   'KPI RETROALIMENTACION ETAPA 3': 'kpi_retroalimentacion_etapa_3',
   'KPI_RETROALIMENTACION_ETAPA_3': 'kpi_retroalimentacion_etapa_3',
+  'kpi_retroalimentacion_etapa_3': 'kpi_retroalimentacion_etapa_3',
   'KPI RETROALIMENTACION ETAPA 4': 'kpi_retroalimentacion_etapa_4',
-  'KPI_RETROALIMENTACION_ETAPA_4': 'kpi_retroalimentacion_etapa_4'
+  'KPI_RETROALIMENTACION_ETAPA_4': 'kpi_retroalimentacion_etapa_4',
+  'kpi_retroalimentacion_etapa_4': 'kpi_retroalimentacion_etapa_4'
 };
 
 function normalizarNombreColumna(col) {
@@ -2903,7 +2910,10 @@ async function actualizarEditable(contId, rowId, col, valor) {
   }
 
   const dbCol = colToDbField[col];
-  console.log('🔴 dbCol:', { col, dbCol });
+  console.log('🔴 dbCol lookup:', { col, dbCol, found: !!dbCol });
+  if (!dbCol) {
+    console.warn('⚠️ ADVERTENCIA: No se encontró dbCol para col:', col, '\nClaves disponibles:', Object.keys(colToDbField));
+  }
   if (contId === 'tabla-dinamica' && dbCol) {
     const parsed = parsedValue;
     const codigoProspecto = String(filaBase.codigo_prospecto || filaBase.lead || filaBase.codigo || '').trim();

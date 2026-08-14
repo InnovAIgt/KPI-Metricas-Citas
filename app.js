@@ -966,7 +966,13 @@ function normalizarVistaPbx(item) {
   const dia = item.dia ?? (fechaHora ? new Date(fechaHora).getDate() : '');
   const copia = { ...item };
   const cliente = obtenerClienteDesdeDestino(item.destino);
-  const paisPbx = String(item.pais || item.PAIS || '').trim() || 'GT';
+
+  delete copia.pais;
+  delete copia.PAIS;
+  delete copia.fuente;
+  delete copia.Fuente;
+  delete copia['fuente'];
+  delete copia['Fuente'];
 
   const horaSolo = (() => {
     if (!fechaHora) return '';
@@ -994,7 +1000,6 @@ function normalizarVistaPbx(item) {
 
   return {
     ...copia,
-    'País': paisPbx || 'GT',
     'Fuente': 'Issabel',
     'Fecha': fechaFormateada || '',
     'Hora': horaSolo,
@@ -1042,7 +1047,23 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
   }
 
   if (tabla === 'llamadas_pbx' || tabla === 'llamadas') {
-    datosFiltrados = datosFiltrados.map(item => normalizarVistaPbx(item));
+    datosFiltrados = datosFiltrados.map(item => {
+      const normalizado = normalizarVistaPbx(item);
+      const limpio = { ...normalizado };
+      const keysToDrop = new Set([
+        'País', 'Pais', 'pais', 'PAIS', 'pais_llamada', 'Pais llamado',
+        'Fuente', 'fuente', 'FUENTE', 'fuente_llamada', 'Fuente llamada',
+        'Fuente cruda', 'fuente_cruda', 'source', 'Source'
+      ]);
+      Object.keys(limpio).forEach((key) => {
+        const normalized = normalizarNombreColumna(key);
+        if (keysToDrop.has(key) || normalized === 'pais' || normalized === 'fuente' || normalized === 'fuente_llamada' || normalized === 'pais_llamada' || normalized === 'fuente_cruda') {
+          delete limpio[key];
+        }
+      });
+      limpio.__fuente_pbx = 'Issabel';
+      return limpio;
+    });
   }
 
   if (tabla === 'leads') {
@@ -1422,7 +1443,7 @@ function repintar(contId) {
     const ejecutorValue = fila.Ejecutivo || fila.ejecutivo || fila.Usuario || fila.usuario || fila.asesor_nombre || fila.asesor || fila.nombre || fila.operador || '';
     const rowColorKey = ejecutorValue || fila['__telefono_comparado'] || fila.telefono || fila.destino || fila['destino'] || fila['Lead'] || fila['codigo_prospecto'] || `row-${idx}`;
     const colorEjecutivo = generarColorEjecutivo(rowColorKey);
-    const fuenteFila = normalizarFuenteLlamada(fila['Fuente cruda'] || fila['Fuente'] || '');
+    const fuenteFila = normalizarFuenteLlamada(fila.__fuente_pbx || fila['Fuente cruda'] || fila['Fuente'] || '');
     return `<tr class="hover:bg-slate-800/50 ${colorEjecutivo}" data-fuente="${fuenteFila}" data-tel="${fila['__telefono_comparado'] || ''}" data-fecha="${fila['__fecha_llamada'] || ''}" data-registro="${fila['__registro_id'] || ''}" data-registro-tabla="${fila['__registro_tabla'] || ''}" onclick="abrirDetalleFuente(event, this)">${columnasUnicas.map(c => {
       const isSla = /^KPI[_\s]*SLA/i.test(c);
       const isRetro = /^KPI[_\s]*RETROALIMENTACION/i.test(c);
@@ -1682,6 +1703,16 @@ function formatearFechaCorta(d) {
   return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
+function esFechaServidorCaido(dateLike) {
+  if (!dateLike) return false;
+  const fecha = parseFecha(dateLike);
+  if (!fecha) return false;
+  const objetivo = new Date('2026-08-03T00:00:00');
+  return fecha.getFullYear() === objetivo.getFullYear()
+    && fecha.getMonth() === objetivo.getMonth()
+    && fecha.getDate() === objetivo.getDate();
+}
+
 function parseFecha(fecha) {
   if (!fecha) return null;
   if (fecha instanceof Date && !Number.isNaN(fecha.getTime())) return fecha;
@@ -1882,6 +1913,11 @@ async function calcularCruceUnificado() {
     const diferenciaMinFirmada = coincidencia && progr
       ? Math.round(((coincidencia.fechaHora - progr) / 60000) * 10) / 10
       : null;
+
+    if (esFechaServidorCaido(obtenerLeadFecha(lead)) && ['Sin llamada encontrada', 'Llamó el mismo día fuera de horario', 'Llamó en otra fecha', 'Sin evidencia en Teams', 'No cumplió'].some(v => estado.includes(v))) {
+      estado = 'Pendiente de evaluar';
+      fuente = 'Pendiente';
+    }
 
     const diferenciaHoras = minutosAHoras(diferenciaMinFirmada);
 

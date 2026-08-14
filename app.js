@@ -1385,6 +1385,30 @@ function resolverFilaPorRowId(datos, rowId) {
   }) || null;
 }
 
+function encontrarLeadRealPorIdentidad(lista, rowId, codigoProspecto = '', idPersistente = '') {
+  if (!Array.isArray(lista)) return null;
+  const candidatos = [
+    String(rowId ?? '').trim(),
+    String(codigoProspecto ?? '').trim(),
+    String(idPersistente ?? '').trim()
+  ].filter(Boolean);
+  if (!candidatos.length) return null;
+
+  return lista.find(r => {
+    const compare = [
+      String(r.__rowKey ?? ''),
+      String(r.id ?? ''),
+      String(r.__rowId ?? ''),
+      String(r.codigo_prospecto ?? ''),
+      String(r.lead ?? ''),
+      String(r.codigo ?? ''),
+      String(r.telefono ?? ''),
+      String(r.nombre_prospecto ?? '')
+    ].map(v => v.trim());
+    return candidatos.some(c => compare.includes(c));
+  }) || null;
+}
+
 function repintar(contId) {
   const datosBase = window.__datosBase[contId] || [];
   const filtros = filtroColState[contId] || {};
@@ -2851,37 +2875,32 @@ async function actualizarEditable(contId, rowId, col, valor) {
   if (!Array.isArray(datos)) return;
   const parsedValue = parseBooleanValue(valor);
 
-  const fila = resolverFilaPorRowId(datos, rowId);
-  if (!fila) return;
-  fila[col] = parsedValue;
+  const filaBase = resolverFilaPorRowId(datos, rowId)
+    || encontrarLeadRealPorIdentidad(cache.leads, rowId)
+    || encontrarLeadRealPorIdentidad(window.__datosBase['tabla-dinamica'], rowId);
+
+  if (!filaBase) return;
+  filaBase[col] = parsedValue;
 
   const ultimo = window.__ultimoFiltrado[contId];
   if (Array.isArray(ultimo)) {
-    const fila2 = resolverFilaPorRowId(ultimo, rowId);
+    const fila2 = resolverFilaPorRowId(ultimo, rowId)
+      || encontrarLeadRealPorIdentidad(ultimo, rowId, filaBase.codigo_prospecto || '', filaBase.id || '');
     if (fila2) fila2[col] = parsedValue;
   }
 
   const dbCol = colToDbField[col];
   if (contId === 'tabla-dinamica' && dbCol) {
     const parsed = parsedValue;
-    const codigoProspecto = String(fila.codigo_prospecto || fila.lead || fila.codigo || '').trim();
-    const idPersistente = String(fila.id || fila.__rowId || '').trim();
+    const codigoProspecto = String(filaBase.codigo_prospecto || filaBase.lead || filaBase.codigo || '').trim();
+    const idPersistente = String(filaBase.id || filaBase.__rowId || '').trim();
     await actualizarLeadKPI(idPersistente, codigoProspecto, dbCol, parsed);
 
-    if (Array.isArray(cache.leads)) {
-      const filaCache = cache.leads.find(r => {
-        const claves = [
-          String(r.__rowKey ?? ''),
-          String(r.id ?? ''),
-          String(r.__rowId ?? ''),
-          String(r.codigo_prospecto ?? ''),
-          String(r.lead ?? ''),
-          String(r.codigo ?? '')
-        ];
-        return claves.some(v => v && (v === String(rowId) || v === codigoProspecto || v === idPersistente));
-      });
-      if (filaCache) filaCache[dbCol] = parsed;
-    }
+    const leadCache = encontrarLeadRealPorIdentidad(cache.leads, rowId, codigoProspecto, idPersistente);
+    if (leadCache) leadCache[dbCol] = parsed;
+
+    const leadBase = encontrarLeadRealPorIdentidad(window.__datosBase['tabla-dinamica'], rowId, codigoProspecto, idPersistente);
+    if (leadBase) leadBase[dbCol] = parsed;
 
     if (vistaActual === 'reg-leads') {
       try {
@@ -2970,34 +2989,43 @@ async function actualizarLeadKPI(id, codigoProspecto, dbCol, valor) {
     const codigo = String(codigoProspecto ?? '').trim();
     const idReal = String(id ?? '').trim();
 
-    let query = cliente.from('leads').update(updateData);
-    let claveUsada = null;
-
-    if (codigo) {
-      claveUsada = 'codigo_prospecto';
-      query = query.eq('codigo_prospecto', codigo);
-    } else if (idReal) {
-      claveUsada = 'id';
-      query = query.eq('id', idReal);
-    } else {
+    const intentos = [];
+    if (idReal) intentos.push({ campo: 'id', valor: idReal });
+    if (codigo) intentos.push({ campo: 'codigo_prospecto', valor: codigo });
+    if (!intentos.length) {
       console.error('No se encontró clave para actualizar lead:', dbCol, valor);
       return;
     }
 
-    const { data, error } = await query.select('id, codigo_prospecto');
-    if (error) {
-      if (codigo && idReal) {
-        const fallback = { id: idReal, codigo_prospecto: codigo, [dbCol]: valorBooleano };
-        const { error: errorUpsert } = await cliente.from('leads').upsert([fallback], { onConflict: 'codigo_prospecto', ignoreDuplicates: false });
-        if (errorUpsert) throw new Error(errorUpsert.message || 'No se pudo guardar el KPI en Supabase');
-      } else {
-        throw new Error(error.message || 'No se pudo guardar el KPI en Supabase');
+    let datoActualizado = null;
+    let claveUsada = null;
+
+    for (const intento of intentos) {
+      const { data, error } = await cliente
+        .from('leads')
+        .update(updateData)
+        .eq(intento.campo, intento.valor)
+        .select('id, codigo_prospecto');
+
+      if (!error && data && data.length > 0) {
+        datoActualizado = data[0];
+        claveUsada = intento.campo;
+        break;
       }
-    } else if (!data || data.length === 0) {
-      const fallbackQuery = cliente.from('leads').update(updateData);
-      const fallbackSelector = codigo ? fallbackQuery.eq('codigo_prospecto', codigo) : fallbackQuery.eq('id', idReal);
-      const { error: errorFallback } = await fallbackSelector.select('id');
-      if (errorFallback) throw new Error(errorFallback.message || 'No se encontró el lead para actualizar');
+    }
+
+    if (!datoActualizado) {
+      const fallback = {};
+      if (idReal) fallback.id = idReal;
+      if (codigo) fallback.codigo_prospecto = codigo;
+      if (!Object.keys(fallback).length) throw new Error('No se encontró identificador del lead para guardar');
+      fallback[dbCol] = valorBooleano;
+      const conflictKey = idReal ? 'id' : 'codigo_prospecto';
+      const { error: errorUpsert } = await cliente
+        .from('leads')
+        .upsert([fallback], { onConflict: conflictKey, ignoreDuplicates: false });
+      if (errorUpsert) throw new Error(errorUpsert.message || 'No se pudo guardar el KPI en Supabase');
+      claveUsada = conflictKey;
     }
 
     cargaCompleta.leads = false;

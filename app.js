@@ -447,17 +447,21 @@ async function reproducirAudioConToken(urlEncoded) {
     const box = document.createElement('div');
     box.id = 'pbx-audio-player';
     box.style.position = 'fixed';
-    box.style.right = '20px';
-    box.style.bottom = '70px';
+    box.style.left = '50%';
+    box.style.top = '54%';
+    box.style.transform = 'translate(-50%, -50%)';
     box.style.zIndex = '9999';
-    box.style.background = 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)';
-    box.style.border = '1px solid rgba(59,130,246,0.4)';
+    box.style.background = 'linear-gradient(135deg, rgba(15,23,42,0.98), rgba(15,23,42,0.94))';
+    box.style.border = '1px solid rgba(96,165,250,0.45)';
     box.style.borderRadius = '14px';
     box.style.padding = '14px';
-    box.style.boxShadow = '0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(59,130,246,0.1)';
-    box.style.minWidth = '300px';
+    box.style.boxShadow = '0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(59,130,246,0.15)';
+    box.style.minWidth = '320px';
+    box.style.maxWidth = '42vw';
+    box.style.width = 'min(420px, 80vw)';
+    box.style.backdropFilter = 'blur(2px)';
     box.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;">
         <div style="font-size:12px;font-weight:600;color:#93c5fd;letter-spacing:0.5px;">🎵 REPRODUCCIÓN DE AUDIO</div>
         <button type="button" onclick="document.getElementById('pbx-audio-player').remove();" style="background:rgba(239,68,68,0.1);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);padding:4px 8px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:bold;transition:all 0.2s;">✕</button>
       </div>
@@ -466,20 +470,7 @@ async function reproducirAudioConToken(urlEncoded) {
 
     document.body.appendChild(box);
   } catch (err) {
-    const notif = document.createElement('div');
-    notif.style.position = 'fixed';
-    notif.style.top = '20px';
-    notif.style.right = '20px';
-    notif.style.background = 'rgba(239,68,68,0.15)';
-    notif.style.border = '1px solid rgba(239,68,68,0.5)';
-    notif.style.color = '#fecaca';
-    notif.style.padding = '12px 16px';
-    notif.style.borderRadius = '8px';
-    notif.style.fontSize = '12px';
-    notif.style.zIndex = '99999';
-    notif.textContent = 'No se pudo reproducir el audio: ' + (err && err.message ? err.message : err);
-    document.body.appendChild(notif);
-    setTimeout(() => notif.remove(), 4000);
+    console.warn('No se pudo reproducir el audio:', err);
   }
 }
 

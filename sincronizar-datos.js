@@ -204,7 +204,7 @@ function normalizarCallRow(registro: any) {
     anio: registro.ANIO ?? registro.anio ?? null,
     mes: registro.MES ?? registro.mes ?? null,
     dia: registro.DIA ?? registro.dia ?? null,
-    pais: registro.PAIS || registro.pais || registro.country || registro.pais_code || "GT",
+    pais: registro.PAIS || registro.pais || registro.country || registro.pais_code || null,
     audio_url: registro.audio_url || registro.grabacion_url || null,
   };
 }

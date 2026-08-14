@@ -1001,8 +1001,6 @@ function normalizarVistaPbx(item) {
 
   const fechaFormateada = [dia, mes, anio].filter(v => v !== '' && v !== null && v !== undefined).map(v => String(v)).join('/');
 
-  if (!copia.pais && !copia.PAIS) copia.pais = 'GT';
-
   delete copia.audio_url;
   delete copia.grabacion_url;
   delete copia.solo_fecha;
@@ -1059,8 +1057,10 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
   if (tabla === 'llamadas_pbx' || tabla === 'llamadas') {
     actualizarPaisPbxDesdeUI();
     datosFiltrados = datosFiltrados.filter(item => {
-      const pais = String(item.pais || item.PAIS || 'SV').trim().toUpperCase();
-      return !pais || pais === PBX_PAIS;
+      const rawPais = item?.pais ?? item?.PAIS ?? item?.country ?? item?.pais_llamada ?? item?.['Pais'];
+      if (rawPais === null || rawPais === undefined || String(rawPais).trim() === '') return true;
+      const pais = String(rawPais).trim().toUpperCase();
+      return pais === PBX_PAIS;
     });
   }
 

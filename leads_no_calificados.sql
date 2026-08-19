@@ -3,6 +3,7 @@ create table if not exists public.leads_no_calificados (
   client_id text not null,
   client_name text not null default '',
   advisor_name text not null default '',
+  telefono text not null default '',
   created_at timestamptz not null,
   created_at_sv text null,
   updated_at timestamptz not null default now(),
@@ -14,6 +15,12 @@ create index if not exists idx_leads_no_calificados_created_at
 
 create index if not exists idx_leads_no_calificados_client_id
   on public.leads_no_calificados using btree (client_id);
+
+alter table public.leads_no_calificados
+  add column if not exists telefono text not null default '';
+
+create index if not exists idx_leads_no_calificados_telefono
+  on public.leads_no_calificados using btree (telefono);
 
 alter table public.leads_no_calificados enable row level security;
 

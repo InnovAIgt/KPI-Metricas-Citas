@@ -12,7 +12,7 @@ const BATCH_SIZE = 500;
 // Esquema de columnas permitidas por tabla
 const COLUMNAS_PERMITIDAS = {
   leads: ["codigo_prospecto", "nombre", "telefono", "fecha_agendada", "hora_agendada", "fecha_creado", "hora_creado", "tipo_reunion", "asesor_nombre", "pais", "created_at"],
-  leads_no_calificados: ["client_id", "client_name", "advisor_name", "created_at", "created_at_sv"],
+  leads_no_calificados: ["client_id", "client_name", "advisor_name", "telefono", "created_at", "created_at_sv"],
   llamadas_celular: ["id", "fecha", "hora", "destino", "duracion", "tipo", "linea", "usuario", "operador", "dia_consultado", "created_at"],
   llamadas_pbx: ["uniqueid", "extension", "prefijo", "destino", "duracion_minutos", "duracion_segundos", "duracion_hh_mm_ss", "estado", "nombre", "fecha_hora", "solo_fecha", "anio", "mes", "dia", "pais", "audio_url", "created_at"],
 };
@@ -211,6 +211,17 @@ function normalizarCallRow(registro: any) {
   };
 }
 
+function normalizarLeadNoCalificado(registro: any) {
+  return {
+    client_id: registro?.client_id || registro?.lead_id || "",
+    client_name: registro?.client_name || registro?.nombre || "",
+    advisor_name: registro?.advisor_name || registro?.ejecutivo || "",
+    telefono: registro?.phone || registro?.client_phone || registro?.telefono || registro?.phone_number || "",
+    created_at: registro?.created_at || null,
+    created_at_sv: registro?.created_at_sv || null,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", {
@@ -363,7 +374,7 @@ Deno.serve(async (req) => {
     ]);
 
     const dataLeads = extraerRegistros(leadsRes.data).map((r) => ({ ...r }));
-    const dataLeadsNoCalificados = extraerRegistros(leadsNoCalificadosRes.data).map((r) => ({ ...r }));
+    const dataLeadsNoCalificados = extraerRegistros(leadsNoCalificadosRes.data).map(normalizarLeadNoCalificado);
     const dataCelular = extraerRegistros(celularRes.data).map((r) => ({ ...r }));
     const dataLlamadas = extraerRegistros(llamadasRes.data).map(normalizarCallRow);
 

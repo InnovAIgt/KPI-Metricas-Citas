@@ -213,6 +213,7 @@ function render() {
   if (vistaActual === 'catalogo') return renderCatalogo(main);
   if (vistaActual === 'res-kpis' || vistaActual === 'res-ejecutivo') return renderResumenKpis(main);
   if (vistaActual === 'res-kpi1') return renderResumenKPI1(main);
+  if (vistaActual === 'res-no-kpi1') return renderResumenNoCalificadosKPI1(main);
   if (vistaActual === 'res-sla') return renderResumenSLA(main);
   if (vistaActual === 'res-retro') return renderResumenRetro(main);
   if (vistaActual === 'res-detalle') return renderDetalleUnificado(main);
@@ -596,6 +597,35 @@ async function sincronizarAPI() {
 // VISTA: CRITERIOS
 // ==================================================================
 function renderCriterios(main) {
+  if (modoDashboard === 'no-calificados') {
+    main.innerHTML = `
+      <div class="max-w-4xl space-y-4">
+        <div class="bg-[#7f1d1d]/10 border border-red-900 rounded-lg p-4">
+          <h2 class="text-sm font-bold text-red-300 mb-1">Criterios de Leads No Calificados</h2>
+          <p class="text-xs text-gray-400">Se evalúa únicamente la atención telefónica por PBX o Celular.</p>
+        </div>
+        <div class="bg-[#111827] border border-gray-800 rounded-lg overflow-hidden">
+          <div class="bg-[#1e293b] px-4 py-2.5"><h3 class="text-xs font-bold text-gray-200 uppercase tracking-wider">Estados de cumplimiento</h3></div>
+          <div class="p-4 text-xs text-gray-300 space-y-2">
+            <p><span class="badge bg-emerald-900 text-emerald-300">Cumplió</span> La llamada del ejecutivo ocurrió entre las 8:00 AM y 6:00 PM, de lunes a viernes, dentro de la primera hora desde la entrada del lead.</p>
+            <p><span class="badge bg-red-900 text-red-300">No cumplió</span> Terminó la hora límite y no se identificó una llamada válida del ejecutivo.</p>
+            <p><span class="badge bg-amber-900 text-amber-300">Cumplió a otra hora</span> Se encontró una llamada del ejecutivo, pero fuera de la primera hora permitida.</p>
+            <p><span class="badge bg-sky-900 text-sky-300">Pendiente de evaluar</span> Todavía no vence la primera hora de atención.</p>
+            <p><span class="badge bg-gray-700 text-gray-300">Fuera de horario laboral</span> El lead entró fuera de lunes a viernes entre 8:00 AM y 6:00 PM.</p>
+          </div>
+        </div>
+        <div class="bg-[#111827] border border-gray-800 rounded-lg overflow-hidden">
+          <div class="bg-[#1e293b] px-4 py-2.5"><h3 class="text-xs font-bold text-gray-200 uppercase tracking-wider">Regla de evaluación</h3></div>
+          <div class="p-4 text-xs text-gray-300 space-y-2">
+            <p>La ventana válida es de lunes a viernes, de 8:00 AM a 6:00 PM.</p>
+            <p>El tiempo máximo de atención es de 60 minutos desde la entrada del lead.</p>
+            <p>Solo se consideran llamadas salientes de PBX y Celular.</p>
+            <p>El cruce se realiza comparando los últimos 8 dígitos del teléfono del lead contra el número destino de las llamadas PBX y Celular.</p>
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
   const seccion = (titulo, icono, contenidoHtml) => `
     <div class="bg-[#111827] border border-gray-800 rounded-lg overflow-hidden">
       <div class="bg-[#1e293b] px-4 py-2.5 flex items-center gap-2">
@@ -1120,6 +1150,7 @@ function normalizarVistaLeadsNoCalificados(item) {
     'Número de lead': item?.client_id || '',
     'Nombre del lead': item?.client_name || '',
     'Ejecutivo asignado': item?.advisor_name || '',
+    'Teléfono': item?.telefono || '',
     'Fecha y hora de entrada': item?.created_at_sv || item?.created_at || ''
   };
 }
@@ -2631,6 +2662,105 @@ function pintarTablaKPI1(datos) {
     </tr>`;
   }).join('');
   document.getElementById('tbody-kpi1').innerHTML = filas || `<tr><td colspan="5" class="p-4 text-center text-gray-400">No hay datos disponibles para este rango.</td></tr>`;
+}
+
+function esHorarioLaboralNoCalificado(fecha) {
+  if (!fecha || Number.isNaN(fecha.getTime())) return false;
+  const dia = fecha.getDay();
+  const minutos = fecha.getHours() * 60 + fecha.getMinutes();
+  return dia >= 1 && dia <= 5 && minutos >= 8 * 60 && minutos <= 18 * 60;
+}
+
+function obtenerOperadoresEjecutivo(nombre) {
+  const ejecutivo = String(nombre || '').trim().toLowerCase();
+  const catalogo = (cache.catalogo || []).find(item => String(item.nombre_ejecutivo || '').trim().toLowerCase() === ejecutivo);
+  if (!catalogo) return new Set();
+  return new Set([catalogo.usuario, catalogo.extension, catalogo.nombre_ejecutivo]
+    .filter(Boolean)
+    .map(valor => String(valor).trim().toLowerCase()));
+}
+
+function calcularKPI1NoCalificados(datos) {
+  const llamadas = [
+    ...(cache.llamadas_pbx || []).map(llamada => ({
+      fecha: parseFechaHoraString(llamada.fecha_hora || ''),
+      telefono: normalizarTel(llamada.destino),
+      operador: String(llamada.usuario || llamada.nombre || llamada.extension || '').trim().toLowerCase(),
+      saliente: true
+    })),
+    ...(cache.llamadas_celular || []).filter(llamada => String(llamada.tipo || '').trim().toLowerCase() === 'saliente').map(llamada => ({
+      fecha: llamada.fecha && llamada.hora ? new Date(`${String(llamada.fecha).split('T')[0]}T${llamada.hora}`) : null,
+      telefono: normalizarTel(llamada.destino),
+      operador: String(llamada.usuario || '').trim().toLowerCase(),
+      saliente: true
+    }))
+  ].filter(llamada => llamada.fecha && !Number.isNaN(llamada.fecha.getTime()));
+
+  return datos.map(lead => {
+    const entrada = parseFecha(lead.created_at);
+    const ejecutivo = lead.advisor_name || 'Sin asignar';
+    if (!entrada || !esHorarioLaboralNoCalificado(entrada)) {
+      return { ...lead, ejecutivo, resultado: 'Fuera de horario laboral', cumplio: false };
+    }
+
+    const limite = new Date(entrada.getTime() + 60 * 60000);
+    const telefonoLead = normalizarTel(lead.telefono);
+    const operadores = obtenerOperadoresEjecutivo(ejecutivo);
+    const llamadasPorTelefono = llamadas.filter(llamada => telefonoLead && llamada.telefono === telefonoLead);
+    const llamadasEjecutivo = llamadasPorTelefono.filter(llamada => !operadores.size || operadores.has(llamada.operador));
+    const llamadaValida = llamadasEjecutivo.find(llamada =>
+      llamada.fecha >= entrada && llamada.fecha <= limite && esHorarioLaboralNoCalificado(llamada.fecha)
+    );
+    const llamadaPosterior = llamadasEjecutivo.find(llamada => llamada.fecha >= entrada);
+    const ahora = new Date();
+    let resultado = 'No cumplió';
+    if (llamadaValida) resultado = 'Cumplió';
+    else if (llamadaPosterior) resultado = 'Cumplió a otra hora';
+    else if (ahora < limite) resultado = 'Pendiente de evaluar';
+
+    return { ...lead, ejecutivo, resultado, cumplio: resultado === 'Cumplió', telefono: lead.telefono || '' };
+  });
+}
+
+function resumirKPI1NoCalificados(datos) {
+  const grupos = new Map();
+  datos.forEach(item => {
+    const key = item.ejecutivo.toLowerCase();
+    if (!grupos.has(key)) grupos.set(key, { ejecutivo: item.ejecutivo, leads: 0, cumplio: 0, no_cumplio: 0, otra_hora: 0, pendientes: 0, fuera_horario: 0 });
+    const grupo = grupos.get(key);
+    grupo.leads++;
+    if (item.resultado === 'Cumplió') grupo.cumplio++;
+    else if (item.resultado === 'Cumplió a otra hora') grupo.otra_hora++;
+    else if (item.resultado === 'Pendiente de evaluar') grupo.pendientes++;
+    else if (item.resultado === 'Fuera de horario laboral') grupo.fuera_horario++;
+    else grupo.no_cumplio++;
+  });
+  return Array.from(grupos.values()).map(grupo => ({
+    ...grupo,
+    pct_cumplimiento: grupo.leads ? `${Math.round((grupo.cumplio / grupo.leads) * 100)}%` : '0%'
+  }));
+}
+
+async function renderResumenNoCalificadosKPI1(main) {
+  main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800 space-y-4">
+    <div class="flex justify-between items-center">
+      <div><h2 class="text-sm font-bold text-gray-300">KPI 1: Cumplimiento Leads No Calificados</h2><p class="text-[11px] text-gray-500 mt-1">Atención telefónica dentro de la primera hora laboral.</p></div>
+      <button onclick="renderResumenNoCalificadosKPI1(document.getElementById('main-content'))" class="bg-red-600 hover:bg-red-700 text-xs px-3 py-1.5 rounded">Recalcular</button>
+    </div>
+    <span id="estado-no-kpi1" class="text-xs text-red-300">Calculando...</span>
+    <div id="tabla-no-kpi1" class="overflow-auto"></div>
+  </div>`;
+
+  await Promise.all([
+    asegurarCache('leads_no_calificados', 'created_at'),
+    asegurarCache('llamadas_pbx', 'fecha_hora'),
+    asegurarCache('llamadas_celular', 'fecha'),
+    asegurarCache('catalogo', null)
+  ]);
+  const datos = calcularKPI1NoCalificados(filtrarPorFechaGlobal(cache.leads_no_calificados, 'created_at'));
+  const resumen = resumirKPI1NoCalificados(datos);
+  document.getElementById('estado-no-kpi1').textContent = `${datos.length} leads evaluados`;
+  document.getElementById('tabla-no-kpi1').innerHTML = `<table class="w-full text-xs border-collapse"><thead><tr>${['Ejecutivo','Leads','Cumplió','No cumplió','Cumplió a otra hora','Pendientes','Fuera de horario','% Cumplimiento'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${resumen.map(item => `<tr class="${generarColorEjecutivo(item.ejecutivo)}"><td class="p-2">${item.ejecutivo}</td><td class="p-2">${item.leads}</td><td class="p-2">${item.cumplio}</td><td class="p-2">${item.no_cumplio}</td><td class="p-2">${item.otra_hora}</td><td class="p-2">${item.pendientes}</td><td class="p-2">${item.fuera_horario}</td><td class="p-2">${item.pct_cumplimiento}</td></tr>`).join('')}</tbody></table>`;
 }
 
 function mostrarDetalleKPI1(ejecutivoEncoded) {

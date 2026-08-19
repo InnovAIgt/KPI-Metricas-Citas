@@ -1660,15 +1660,8 @@ function repintar(contId) {
         const url = String(v || '').trim();
         const esValida = /^https?:\/\//i.test(url) || /^data:/i.test(url);
         if (!url || !esValida) return `<td class="p-2 text-gray-500 italic ${cellBase}">Sin audio</td>`;
-        const requiereAuth = /api\.red\.com\.sv/i.test(url);
-        if (requiereAuth && PBX_BEARER_TOKEN) {
-          return `<td class="p-2 whitespace-nowrap ${cellBase}" onclick="event.stopPropagation()">
-            <button type="button" class="bg-red-600 hover:bg-red-700 text-[10px] px-2 py-1 rounded" onclick="event.stopPropagation(); reproducirAudioConToken('${encodeURIComponent(url)}')">Escuchar</button>
-          </td>`;
-        }
         return `<td class="p-2 whitespace-nowrap ${cellBase}" onclick="event.stopPropagation()">
-          <audio controls preload="metadata" class="h-8 max-w-[240px]" src="${url}" onclick="event.stopPropagation()">Tu navegador no soporta audio.</audio>
-          <div class="text-[11px] mt-1"><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-red-300 hover:text-red-200" onclick="event.stopPropagation()">Ver link</a></div>
+          <button type="button" class="bg-red-600 hover:bg-red-700 text-[10px] px-2 py-1 rounded" onclick="event.stopPropagation(); reproducirAudioConToken('${encodeURIComponent(url)}')">Escuchar</button>
         </td>`;
       }
       if (editableColumnsSet.has(normalizeEditableCol(c))) {

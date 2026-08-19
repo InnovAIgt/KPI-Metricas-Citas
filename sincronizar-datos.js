@@ -237,8 +237,11 @@ Deno.serve(async (req) => {
         const bearer = loginResult.token || Deno.env.get("PBX_BEARER_TOKEN") || "";
 
         if (!audioUrl || !bearer) {
-          return new Response(JSON.stringify({ status: "error", message: "Falta audio_url o pbx_bearer_token" }), {
-            status: 400,
+          const message = !audioUrl
+            ? "Falta la URL del audio."
+            : `No se pudo autenticar con PBX: ${loginResult.error || "configura PBX_USERNAME y PBX_PASSWORD en los secretos de la Edge Function."}`;
+          return new Response(JSON.stringify({ status: "error", message }), {
+            status: 502,
             headers: { ...corsHeaders, "Content-Type": "application/json" }
           });
         }

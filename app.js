@@ -54,10 +54,22 @@ async function iniciarSesion(event) {
   submit.disabled = true;
   submit.textContent = 'Ingresando...';
   error.textContent = '';
-  const { error: authError } = await getSupabase().auth.signInWithPassword({ email, password });
-  if (authError) error.textContent = 'Correo o contraseña incorrectos.';
-  submit.disabled = false;
-  submit.textContent = 'Entrar';
+  try {
+    const { error: authError } = await getSupabase().auth.signInWithPassword({ email, password });
+    if (authError) {
+      const mensaje = String(authError.message || '').toLowerCase();
+      error.textContent = mensaje.includes('not confirmed')
+        ? 'El correo aún no está confirmado en Supabase.'
+        : mensaje.includes('invalid login credentials')
+          ? 'Correo o contraseña incorrectos. Verifica que uses el mismo correo creado en Supabase.'
+          : `No se pudo iniciar sesión: ${authError.message}`;
+    }
+  } catch (authError) {
+    error.textContent = 'No se pudo conectar con el servicio de autenticación.';
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'Entrar';
+  }
 }
 
 async function cerrarSesion() {

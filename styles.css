@@ -145,6 +145,20 @@ body.theme-light .result-default { background: rgba(71, 85, 105, 0.09) !importan
 body.theme-light .kpi-header .kpi-title { color: #0f172a !important; }
 body.theme-light .table-button { background: #ef4444 !important; }
 body.theme-light .badge { color: #0f172a !important; }
+body.theme-light table tbody tr[class*="bg-"] { color: #1f2937 !important; background-color: #ffffff !important; border-bottom-color: #dfe7f1 !important; }
+body.theme-light table tbody tr[class*="bg-"] td { color: #1f2937 !important; }
+body.theme-light table tbody tr[class*="bg-blue-"] { background-color: #eff6ff !important; }
+body.theme-light table tbody tr[class*="bg-red-"] { background-color: #fff1f2 !important; }
+body.theme-light table tbody tr[class*="bg-green-"] { background-color: #f0fdf4 !important; }
+body.theme-light table tbody tr[class*="bg-amber-"] { background-color: #fffbeb !important; }
+body.theme-light table tbody tr[class*="bg-purple-"] { background-color: #faf5ff !important; }
+body.theme-light table tbody tr[class*="bg-pink-"] { background-color: #fdf2f8 !important; }
+body.theme-light table tbody tr[class*="bg-teal-"] { background-color: #f0fdfa !important; }
+body.theme-light table tbody tr[class*="bg-cyan-"] { background-color: #ecfeff !important; }
+body.theme-light table tbody tr[class*="bg-orange-"] { background-color: #fff7ed !important; }
+body.theme-light table tbody tr[class*="bg-indigo-"] { background-color: #eef2ff !important; }
+body.theme-light table tbody tr[class*="bg-emerald-"] { background-color: #ecfdf5 !important; }
+body.theme-light table tbody tr[class*="bg-rose-"] { background-color: #fff1f2 !important; }
 
 .logo-wrapper { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
 .app-logo { width: 44px; height: 44px; object-fit: contain; }

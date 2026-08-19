@@ -212,11 +212,17 @@ function normalizarCallRow(registro: any) {
 }
 
 function normalizarLeadNoCalificado(registro: any) {
+  const telefono = registro?.client_phone
+    || registro?.phone
+    || registro?.phone_number
+    || registro?.telefono
+    || registro?.numero_cliente
+    || "";
   return {
     client_id: registro?.client_id || registro?.lead_id || "",
     client_name: registro?.client_name || registro?.nombre || "",
     advisor_name: registro?.advisor_name || registro?.ejecutivo || "",
-    telefono: registro?.phone || registro?.client_phone || registro?.telefono || registro?.phone_number || "",
+    telefono: String(telefono).trim(),
     created_at: registro?.created_at || null,
     created_at_sv: registro?.created_at_sv || null,
   };
@@ -375,6 +381,7 @@ Deno.serve(async (req) => {
 
     const dataLeads = extraerRegistros(leadsRes.data).map((r) => ({ ...r }));
     const dataLeadsNoCalificados = extraerRegistros(leadsNoCalificadosRes.data).map(normalizarLeadNoCalificado);
+    const telefonosNoCalificados = dataLeadsNoCalificados.filter((registro) => registro.telefono).length;
     const dataCelular = extraerRegistros(celularRes.data).map((r) => ({ ...r }));
     const dataLlamadas = extraerRegistros(llamadasRes.data).map(normalizarCallRow);
 
@@ -429,6 +436,7 @@ Deno.serve(async (req) => {
         registros_recibidos: {
           leads: dataLeads.length,
           leads_no_calificados: dataLeadsNoCalificados.length,
+          telefonos_leads_no_calificados: telefonosNoCalificados,
           llamadas_celular: dataCelular.length,
           llamadas_pbx: dataLlamadas.length,
         },

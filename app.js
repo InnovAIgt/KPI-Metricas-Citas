@@ -10,6 +10,7 @@ let contenidoModalCelda = '';
 let detalleFiltro = null;
 let kpi1DetalleCruce = [];
 let modoDashboard = 'calificados';
+let temporizadorLeads = null;
 
 let SB_URL = "https://sbopifiiyezmvsadwkpg.supabase.co";
 let SB_KEY = "sb_publishable_1drMMd0cMfJLz0tlEhq1_Q_JLdfpygh";
@@ -1150,12 +1151,55 @@ function normalizarVistaLeadsNoCalificados(item) {
     'Número de lead': item?.client_id || '',
     'Nombre del lead': item?.client_name || '',
     'Ejecutivo asignado': item?.advisor_name || '',
-    'Teléfono': item?.telefono || '',
+    'Teléfono': item?.telefono || item?.client_phone || '',
     'Fecha y hora de entrada': item?.created_at_sv || item?.created_at || ''
   };
 }
 
+function obtenerFechaEntradaLead(item) {
+  if (!item) return null;
+  if (item.created_at) return parseFecha(item.created_at);
+  return parseFechaHora(item.fecha_creado, item.hora_creado);
+}
+
+function esHorarioLaboral(fecha) {
+  if (!fecha || Number.isNaN(fecha.getTime())) return false;
+  const dia = fecha.getDay();
+  const minutos = fecha.getHours() * 60 + fecha.getMinutes();
+  return dia >= 1 && dia <= 5 && minutos >= 8 * 60 && minutos < 18 * 60;
+}
+
+function calcularIndicadoresLead(fechaReunion, horaReunion, fechaEntrada, horaEntrada) {
+  const reunion = parseFechaHora(fechaReunion, horaReunion);
+  const entrada = fechaEntrada instanceof Date
+    ? fechaEntrada
+    : fechaEntrada ? parseFechaHora(fechaEntrada, horaEntrada) : null;
+  let restante = 'Sin fecha de reunión';
+  if (reunion) {
+    const horas = (reunion.getTime() - Date.now()) / 3600000;
+    restante = horas > 0 ? `${horas.toFixed(1)} h` : 'Reunión iniciada';
+  }
+  return {
+    'Tiempo restante reunión': restante,
+    'Entrada fuera de horario': entrada ? (esHorarioLaboral(entrada) ? 'No' : 'Sí') : 'Sin fecha'
+  };
+}
+
+function actualizarIndicadoresLeads() {
+  const datos = window.__datosBase['tabla-dinamica'];
+  if (!Array.isArray(datos) || vistaActual !== 'reg-leads') return;
+  datos.forEach(fila => {
+    const indicadores = calcularIndicadoresLead(fila.__fechaReunion, fila.__horaReunion, fila.__fechaEntrada, fila.__horaEntrada);
+    Object.assign(fila, indicadores);
+  });
+  repintar('tabla-dinamica');
+}
+
 async function renderRegistro(main, tabla, titulo, columnaFecha) {
+  if (temporizadorLeads) {
+    clearInterval(temporizadorLeads);
+    temporizadorLeads = null;
+  }
   main.innerHTML = `
     <div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
       <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
@@ -1264,6 +1308,9 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
   }
 
   pintarTablaConFiltros('tabla-dinamica', datosFiltrados);
+  if (tabla === 'leads') {
+    temporizadorLeads = setInterval(actualizarIndicadoresLeads, 60000);
+  }
 }
 
 async function renderRegistroTeams(main) {
@@ -1718,6 +1765,10 @@ function repintar(contId) {
       if (c === 'acciones') return `<td class="p-2 ${cellBase}">${v}</td>`;
       if (c === 'Estado' || c === 'Resultado') return `<td class="p-2 whitespace-nowrap ${cellBase}">${badgeEstadoCruce(v)}</td>`;
       if (c === 'Cumplió') return `<td class="p-2 whitespace-nowrap ${cellBase}">${badgeCumplio(v)}</td>`;
+      if (c === 'Entrada fuera de horario') {
+        const clase = v === 'Sí' ? 'bg-amber-900 text-amber-300' : v === 'No' ? 'bg-emerald-900 text-emerald-300' : 'bg-gray-700 text-gray-300';
+        return `<td class="p-2 whitespace-nowrap ${cellBase}"><span class="badge ${clase}">${v}</span></td>`;
+      }
       if (columnasExpandibles.includes(c) && v && String(v).length > 50) {
         const encoded = encodeURIComponent(String(v));
         return `<td class="p-2 max-w-xs ${cellBase}"><span class="celda-expandible" data-col="${c}" data-val="${encoded}" onclick="abrirModalCeldaFromEl(this)">Ver contenido...</span></td>`;
@@ -2190,6 +2241,10 @@ async function calcularCruceUnificado() {
     }
 
     const diferenciaHoras = minutosAHoras(diferenciaMinFirmada);
+    const entradaLead = obtenerFechaEntradaLead(lead);
+    const horasHastaLlamada = entradaLead && coincidencia?.fechaHora
+      ? Math.max(0, (coincidencia.fechaHora.getTime() - entradaLead.getTime()) / 3600000)
+      : null;
 
     const fuenteNormalizada = normalizarFuenteLlamada(coincidencia?.fuente || fuente || '');
     const rawFechaLlamada = coincidencia
@@ -2229,6 +2284,8 @@ async function calcularCruceUnificado() {
       fuente: normalizarFuenteLlamada(fuente || 'Issabel'),
       fecha_contacto: (coincidencia && coincidencia.fechaHora) ? formatearFechaCorta(coincidencia.fechaHora) : '',
       hora_contacto: (coincidencia && coincidencia.fechaHora) ? formatearHoraCorta(coincidencia.fechaHora) : '',
+      tiempo_llamada_horas: horasHastaLlamada == null ? 'Sin llamada' : `${horasHastaLlamada.toFixed(1)} h`,
+      entrada_fuera_horario: entradaLead ? (esHorarioLaboral(entradaLead) ? 'No' : 'Sí') : 'Sin fecha',
       diferencia_min: diferenciaMin,
       duracion_seg: duracionSeg,
       estado_llamada: estadoTipo || '',
@@ -2283,8 +2340,10 @@ function construirResumenMaestra(cruce) {
     telefono: r.telefono || '',
     fecha_reunion: formatearFechaValor(r.fecha_reunion || ''),
     hora_reunion: r.hora_reunion || '',
-    fecha_llamada: r.fecha_llamada_corta || '',
-    hora_llamada: r.hora_llamada_corta || '',
+    fecha_llamada: r.fecha_llamada_corta || r.fecha_contacto || '',
+    hora_llamada: r.hora_llamada_corta || r.hora_contacto || '',
+    tiempo_llamada_horas: r.tiempo_llamada_horas || '',
+    entrada_fuera_horario: r.entrada_fuera_horario || 'Sin fecha',
     kpi_sla_etapa_1: r.kpi_sla_etapa_1 ? 'Sí' : 'No',
     kpi_sla_etapa_2: r.kpi_sla_etapa_2 ? 'Sí' : 'No',
     kpi_sla_etapa_3: r.kpi_sla_etapa_3 ? 'Sí' : 'No',
@@ -2331,6 +2390,8 @@ function pintarTablaResumenMaestra(datos) {
     { key: 'hora_reunion', label: 'Hora reunión' },
     { key: 'fecha_llamada', label: 'Fecha llamada' },
     { key: 'hora_llamada', label: 'Hora llamada' },
+    { key: 'tiempo_llamada_horas', label: 'Tiempo hasta llamada (h)' },
+    { key: 'entrada_fuera_horario', label: 'Entrada fuera de horario' },
     { key: 'kpi_sla_etapa_1', labelTitle: 'KPI 2', labelSubtitle: 'Etapa 1', kpiGroup: 'kpi2' },
     { key: 'kpi_sla_etapa_2', labelTitle: 'KPI 2', labelSubtitle: 'Etapa 2', kpiGroup: 'kpi2' },
     { key: 'kpi_sla_etapa_3', labelTitle: 'KPI 2', labelSubtitle: 'Etapa 3', kpiGroup: 'kpi2' },
@@ -2348,6 +2409,10 @@ function pintarTablaResumenMaestra(datos) {
       const extraClass = c.kpiGroup ? ` ${c.kpiGroup === 'kpi2' ? 'col-kpi2' : 'col-kpi3'}` : '';
       if (c.key === 'resultado') {
         v = `<span class="${claseResultado(v)}">${v}</span>`;
+      }
+      if (c.key === 'entrada_fuera_horario') {
+        const clase = v === 'Sí' ? 'bg-amber-900 text-amber-300' : v === 'No' ? 'bg-emerald-900 text-emerald-300' : 'bg-gray-700 text-gray-300';
+        v = `<span class="badge ${clase}">${v}</span>`;
       }
       return `<td class="p-2.5 whitespace-nowrap ${align}${extraClass}">${v}</td>`;
     }).join('')}</tr>`;
@@ -2706,7 +2771,7 @@ function calcularKPI1NoCalificados(datos) {
     }
 
     const limite = new Date(entrada.getTime() + 60 * 60000);
-    const telefonoLead = normalizarTel(lead.telefono);
+    const telefonoLead = normalizarTel(lead.telefono || lead.client_phone);
     const operadores = obtenerOperadoresEjecutivo(ejecutivo);
     const llamadasPorTelefono = llamadas.filter(llamada => telefonoLead && llamada.telefono === telefonoLead);
     const llamadasEjecutivo = llamadasPorTelefono.filter(llamada => !operadores.size || operadores.has(llamada.operador));
@@ -2720,7 +2785,7 @@ function calcularKPI1NoCalificados(datos) {
     else if (llamadaPosterior) resultado = 'Cumplió a otra hora';
     else if (ahora < limite) resultado = 'Pendiente de evaluar';
 
-    return { ...lead, ejecutivo, resultado, cumplio: resultado === 'Cumplió', telefono: lead.telefono || '', hora_llamada: llamadaPosterior ? llamadaPosterior.fecha.toLocaleTimeString('es-SV') : '', fuente: llamadaPosterior?.fuente || '' };
+    return { ...lead, ejecutivo, resultado, cumplio: resultado === 'Cumplió', telefono: lead.telefono || lead.client_phone || '', hora_llamada: llamadaPosterior ? llamadaPosterior.fecha.toLocaleTimeString('es-SV') : '', fuente: llamadaPosterior?.fuente || '' };
   });
 }
 
@@ -3294,6 +3359,16 @@ function normalizarFilaLeads(item) {
   const codigoProspectoReal = String(item.codigo_prospecto ?? item.lead ?? salida.lead ?? '').trim();
   salida.codigo_prospecto = codigoProspectoReal || '';
   delete salida.lead;
+  Object.assign(salida, calcularIndicadoresLead(
+    salida.fecha_agendada,
+    salida.hora_agendada,
+    item.created_at ? parseFecha(item.created_at) : item.fecha_creado,
+    item.hora_creado
+  ));
+  salida.__fechaReunion = salida.fecha_agendada || '';
+  salida.__horaReunion = salida.hora_agendada || '';
+  salida.__fechaEntrada = item.created_at ? parseFecha(item.created_at) : (item.fecha_creado || '');
+  salida.__horaEntrada = item.hora_creado || '';
   salida.id = String(item.id ?? salida.id ?? '').trim();
   salida.__rowKey = String(salida.id || codigoProspectoReal || salida.telefono || salida.nombre_prospecto || '').trim();
 

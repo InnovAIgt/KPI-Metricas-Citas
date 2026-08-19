@@ -62,7 +62,9 @@ async function iniciarSesion(event) {
         ? 'El correo aún no está confirmado en Supabase.'
         : mensaje.includes('invalid login credentials')
           ? 'Correo o contraseña incorrectos. Verifica que uses el mismo correo creado en Supabase.'
-          : `No se pudo iniciar sesión: ${authError.message}`;
+          : mensaje.includes('invalid api key')
+            ? 'API key de Supabase inválida. Abre Configuración (ícono ⚙️) y actualiza la URL y Anon Key desde tu proyecto Supabase.'
+            : `No se pudo iniciar sesión: ${authError.message}`;
     }
   } catch (authError) {
     error.textContent = 'No se pudo conectar con el servicio de autenticación.';
@@ -75,6 +77,22 @@ async function iniciarSesion(event) {
 async function cerrarSesion() {
   await getSupabase().auth.signOut();
   mostrarPantallaLogin();
+}
+
+function mostrarConfiguracionLogin() {
+  const mensaje = `Obtén tus credenciales de Supabase:
+  
+1. Ve a supabase.com y abre tu proyecto
+2. Haz clic en "Settings" (Configuración) en la parte inferior del menú
+3. Abre "API" en la sección "Configuration"
+4. Copia:
+   - Project URL → Pégalo en el campo "URL de Supabase"
+   - Anon Public Key → Pégalo en "Anon Key de Supabase"
+5. Haz clic en "Guardar credenciales"
+6. Recarga esta página (Ctrl+F5)
+7. Intenta iniciar sesión nuevamente`;
+  
+  alert(mensaje);
 }
 
 function refrescarClienteSupabase() {

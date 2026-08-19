@@ -26,6 +26,12 @@ body { background-color: var(--bg); color: var(--text); }
 .login-card button[type="submit"]:hover { background:#b91c1c; }
 .login-card button[type="submit"]:disabled { opacity:.65; cursor:wait; }
 .login-error { min-height:1rem; margin-top:.75rem; color:#fca5a5; font-size:.75rem; }
+.login-footer { margin-top:1.5rem; padding-top:1rem; border-top:1px solid #cbd5e1; text-align:center; }
+.login-help-text { color:#64748b; font-size:.70rem; margin-bottom:.75rem; }
+.login-config-btn { padding:.45rem .75rem; border:1px solid #cbd5e1; border-radius:.375rem; background:#f1f5f9; color:#334155; font-size:.75rem; cursor:pointer; }
+.login-config-btn:hover { background:#e2e8f0; }
++.login-config-btn { padding:.45rem .75rem; border:1px solid #cbd5e1; border-radius:.375rem; background:#f1f5f9; color:#334155; font-size:.75rem; cursor:pointer; }
++.login-config-btn:hover { background:#e2e8f0; }
 .logout-btn { padding:.35rem .65rem; border:1px solid #64748b; border-radius:.375rem; color:#cbd5e1; font-size:.7rem; cursor:pointer; background:transparent; }
 .logout-btn:hover { background:#334155; color:#fff; }
 input, select { background-color: var(--input-bg); color: var(--input-text); border: 1px solid var(--panel-border); }
@@ -61,8 +67,9 @@ body.theme-light .login-brand p,
 body.theme-light .login-description { color:#64748b; }
 body.theme-light .login-card h2 { color:#0f172a; }
 body.theme-light .login-card label { color:#334155; }
-body.theme-light .logout-btn { color:#334155; border-color:#94a3b8; }
-body.theme-light .logout-btn:hover { background:#e2e8f0; color:#0f172a; }
+body.theme-light .login-help-text { color:#475569; }
+body.theme-light .login-config-btn { border-color:#94a3b8; background:#ffffff; color:#0f172a; }
+body.theme-light .login-config-btn:hover { background:#f1f5f9; }
 
 body.theme-light #main-content,
 body.theme-light main,

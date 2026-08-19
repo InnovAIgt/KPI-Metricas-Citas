@@ -21,11 +21,9 @@ let PBX_BEARER_TOKEN = "";
 let PBX_PAIS = "SV";
 
 function actualizarPaisPbxDesdeUI() {
-  const el = document.getElementById('global-pais-pbx');
+  const el = document.getElementById('pbx-pais');
   if (el && el.value) {
     PBX_PAIS = String(el.value).trim().toUpperCase() || 'SV';
-  } else {
-    PBX_PAIS = 'SV';
   }
 }
 
@@ -71,11 +69,6 @@ function establecerFechasPorDefecto() {
   const semana = obtenerSemanaActual();
   document.getElementById('global-desde').value = semana.desde;
   document.getElementById('global-hasta').value = semana.hasta;
-  const paisSelect = document.getElementById('global-pais-pbx');
-  if (paisSelect && !paisSelect.value) {
-    paisSelect.value = 'SV';
-  }
-  actualizarPaisPbxDesdeUI();
 }
 
 function aplicarTema(tema) {
@@ -1038,6 +1031,12 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
             Exportar XLSX
           </button>
+          ${tabla === 'llamadas_pbx' ? `
+          <label class="text-[11px] text-gray-500">País</label>
+          <select id="pbx-pais" onchange="actualizarPaisPbxDesdeUI(); render()" class="p-1.5 text-xs rounded">
+            <option value="SV" ${PBX_PAIS === 'SV' ? 'selected' : ''}>SV</option>
+            <option value="GT" ${PBX_PAIS === 'GT' ? 'selected' : ''}>GT</option>
+          </select>` : ''}
         </div>
       </div>
       <span id="estado-tabla" class="text-xs text-red-300">Cargando...</span>
@@ -1819,6 +1818,11 @@ function parseFecha(fecha) {
   if (fecha instanceof Date && !Number.isNaN(fecha.getTime())) return fecha;
   const valor = String(fecha).trim();
   if (!valor) return null;
+  const isoCalendario = valor.match(/^(\d{4})[\/-](\d{2})[\/-](\d{2})(?:$|[T\s])/);
+  if (isoCalendario) {
+    const d = new Date(Number(isoCalendario[1]), Number(isoCalendario[2]) - 1, Number(isoCalendario[3]));
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
   const iso = new Date(valor);
   if (!Number.isNaN(iso.getTime())) return iso;
   const partes = valor.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
@@ -1833,7 +1837,12 @@ function parseFecha(fecha) {
 }
 
 function formatearFechaValor(fecha) {
-  const d = parseFecha(fecha);
+  const valor = String(fecha || '').trim();
+  const isoCalendario = valor.match(/^(\d{4})[\/-](\d{2})[\/-](\d{2})(?:$|[T\s])/);
+  if (isoCalendario) return `${isoCalendario[3]}/${isoCalendario[2]}/${isoCalendario[1]}`;
+  const latamCalendario = valor.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})(?:$|[T\s])/);
+  if (latamCalendario) return `${latamCalendario[1]}/${latamCalendario[2]}/${latamCalendario[3]}`;
+  const d = parseFecha(valor);
   if (!d) return String(fecha || '');
   const dd = String(d.getDate()).padStart(2, '0');
   const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -2999,7 +3008,6 @@ function normalizarFilaLeads(item) {
 
   const codigoProspectoReal = String(item.codigo_prospecto ?? item.lead ?? salida.lead ?? '').trim();
   salida.codigo_prospecto = codigoProspectoReal || '';
-  salida.lead = codigoProspectoReal || salida.lead || '';
   salida.id = String(item.id ?? salida.id ?? '').trim();
   salida.__rowKey = String(salida.id || codigoProspectoReal || salida.telefono || salida.nombre_prospecto || '').trim();
 
@@ -3289,7 +3297,7 @@ function aplicarFiltroResumen() {
 
 window.addEventListener('DOMContentLoaded', async () => {
   supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
-  const paisPbx = document.getElementById('global-pais-pbx');
+  const paisPbx = document.getElementById('pbx-pais');
   if (paisPbx) {
     paisPbx.addEventListener('change', actualizarPaisPbxDesdeUI);
   }

@@ -15,8 +15,8 @@ let SB_KEY = "sb_publishable_1drMMd0cMfJLz0tlEhq1_Q_JLdfpygh";
 
 // PBX API Configuration
 let PBX_HOST = "https://api.red.com.sv";
-let PBX_USERNAME = "DMONGE";
-let PBX_PASSWORD = "Sunfl0wer";
+let PBX_USERNAME = "";
+let PBX_PASSWORD = "";
 let PBX_BEARER_TOKEN = "";
 let PBX_PAIS = "SV";
 
@@ -488,10 +488,6 @@ async function reproducirAudioConToken(urlEncoded) {
       return `${base}${path}`;
     })();
 
-    if (!PBX_BEARER_TOKEN) {
-      throw new Error('No hay token PBX guardado. Genera uno en Configuración.');
-    }
-
     const res = await fetch(`${SB_URL}/functions/v1/sincronizar-datos`, {
       method: 'POST',
       headers: {
@@ -503,7 +499,6 @@ async function reproducirAudioConToken(urlEncoded) {
       body: JSON.stringify({
         action: 'pbx-audio',
         audio_url: url,
-        pbx_bearer_token: PBX_BEARER_TOKEN,
         pbx_host: PBX_HOST || 'https://api.red.com.sv'
       })
     });
@@ -561,17 +556,11 @@ async function sincronizarAPI() {
       },
       body: JSON.stringify({
         pbx_host: PBX_HOST,
-        pbx_bearer_token: PBX_BEARER_TOKEN,
         pbx_pais: PBX_PAIS || 'SV'
       })
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    if (data.pbx_bearer_token) {
-      PBX_BEARER_TOKEN = data.pbx_bearer_token;
-      const tokenInput = document.getElementById('pbx-bearer');
-      if (tokenInput) tokenInput.value = PBX_BEARER_TOKEN;
-    }
     mostrarToast('Sincronización completada.');
     await recargarTodoYContadores();
   } catch (err) {

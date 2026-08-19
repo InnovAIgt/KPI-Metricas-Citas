@@ -229,7 +229,12 @@ Deno.serve(async (req) => {
           const path = audioUrlRaw.startsWith("/") ? audioUrlRaw : `/${audioUrlRaw}`;
           return `${baseHost}${path}`;
         })();
-        const bearer = body?.pbx_bearer_token || Deno.env.get("PBX_BEARER_TOKEN") || "";
+        const loginResult = await obtenerJwtPbx(
+          baseHost,
+          Deno.env.get("PBX_USERNAME") || "",
+          Deno.env.get("PBX_PASSWORD") || ""
+        );
+        const bearer = loginResult.token || Deno.env.get("PBX_BEARER_TOKEN") || "";
 
         if (!audioUrl || !bearer) {
           return new Response(JSON.stringify({ status: "error", message: "Falta audio_url o pbx_bearer_token" }), {
@@ -271,7 +276,7 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabaseKey = serviceKey;
     
-    // Leer credenciales del body del request (enviadas desde frontend)
+    // La autenticacion PBX vive en secretos de la Edge Function, nunca en el navegador.
     let pbxHostBody = "";
     let pbxUsernameBody = "";
     let pbxPasswordBody = "";
@@ -289,11 +294,10 @@ Deno.serve(async (req) => {
       // Body no es JSON válido, ignorar
     }
     
-    // Usar credenciales del body si se proporcionan, si no usar variables de entorno
-    const redPbxHost = pbxHostBody || Deno.env.get("RED_PBX_HOST") || "https://api.red.com.sv";
-    const pbxUsername = pbxUsernameBody || Deno.env.get("PBX_USERNAME") || "";
-    const pbxPassword = pbxPasswordBody || Deno.env.get("PBX_PASSWORD") || "";
-    const pbxBearerToken = pbxBearerTokenBody || Deno.env.get("PBX_BEARER_TOKEN") || "";
+    const redPbxHost = Deno.env.get("RED_PBX_HOST") || "https://api.red.com.sv";
+    const pbxUsername = Deno.env.get("PBX_USERNAME") || "";
+    const pbxPassword = Deno.env.get("PBX_PASSWORD") || "";
+    const pbxBearerToken = Deno.env.get("PBX_BEARER_TOKEN") || "";
     const pbxPais = String(pbxPaisBody || "SV").trim().toUpperCase() === "GT" ? "GT" : "SV";
 
     if (!supabaseUrl || !supabaseKey) {
@@ -388,7 +392,6 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         status: huboErrores ? "partial_error" : "success",
-        pbx_bearer_token: jwtPbx || null,
         advertencia_credenciales: !serviceKey
           ? "SUPABASE_SERVICE_ROLE_KEY no está configurada."
           : null,

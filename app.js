@@ -2685,12 +2685,14 @@ function calcularKPI1NoCalificados(datos) {
     ...(cache.llamadas_pbx || []).map(llamada => ({
       fecha: parseFechaHoraString(llamada.fecha_hora || ''),
       telefono: normalizarTel(llamada.destino),
+      fuente: 'PBX',
       operador: String(llamada.usuario || llamada.nombre || llamada.extension || '').trim().toLowerCase(),
       saliente: true
     })),
     ...(cache.llamadas_celular || []).filter(llamada => String(llamada.tipo || '').trim().toLowerCase() === 'saliente').map(llamada => ({
       fecha: llamada.fecha && llamada.hora ? new Date(`${String(llamada.fecha).split('T')[0]}T${llamada.hora}`) : null,
       telefono: normalizarTel(llamada.destino),
+      fuente: 'Celular',
       operador: String(llamada.usuario || '').trim().toLowerCase(),
       saliente: true
     }))
@@ -2700,7 +2702,7 @@ function calcularKPI1NoCalificados(datos) {
     const entrada = parseFecha(lead.created_at);
     const ejecutivo = lead.advisor_name || 'Sin asignar';
     if (!entrada || !esHorarioLaboralNoCalificado(entrada)) {
-      return { ...lead, ejecutivo, resultado: 'Fuera de horario laboral', cumplio: false };
+      return { ...lead, ejecutivo, resultado: 'Fuera de horario laboral', cumplio: false, hora_llamada: '', fuente: '' };
     }
 
     const limite = new Date(entrada.getTime() + 60 * 60000);
@@ -2718,7 +2720,7 @@ function calcularKPI1NoCalificados(datos) {
     else if (llamadaPosterior) resultado = 'Cumplió a otra hora';
     else if (ahora < limite) resultado = 'Pendiente de evaluar';
 
-    return { ...lead, ejecutivo, resultado, cumplio: resultado === 'Cumplió', telefono: lead.telefono || '' };
+    return { ...lead, ejecutivo, resultado, cumplio: resultado === 'Cumplió', telefono: lead.telefono || '', hora_llamada: llamadaPosterior ? llamadaPosterior.fecha.toLocaleTimeString('es-SV') : '', fuente: llamadaPosterior?.fuente || '' };
   });
 }
 
@@ -2741,6 +2743,14 @@ function resumirKPI1NoCalificados(datos) {
   }));
 }
 
+function mostrarDetalleNoCalificados(ejecutivoEncoded) {
+  const ejecutivo = decodeURIComponent(String(ejecutivoEncoded || ''));
+  const registros = (window.kpi1NoCalificadosDetalle || []).filter(item => item.ejecutivo === ejecutivo);
+  const detalle = document.getElementById('detalle-no-kpi1');
+  if (!detalle) return;
+  detalle.innerHTML = `<div class="overflow-auto rounded-lg border border-gray-800"><div class="flex items-center justify-between p-3 border-b border-gray-800"><h3 class="text-xs font-bold text-gray-200">Detalle de ${ejecutivo}</h3><span class="text-[11px] text-gray-500">${registros.length} leads</span></div><table class="w-full text-xs border-collapse"><thead><tr>${['Lead','Nombre','Teléfono','Entrada','Resultado','Hora llamada','Fuente'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${registros.map(item => `<tr class="${generarColorEjecutivo(ejecutivo)}"><td class="p-2">${item.client_id || ''}</td><td class="p-2">${item.client_name || ''}</td><td class="p-2">${item.telefono || ''}</td><td class="p-2">${item.created_at_sv || item.created_at || ''}</td><td class="p-2">${item.resultado || ''}</td><td class="p-2">${item.hora_llamada || 'No encontrada'}</td><td class="p-2">${item.fuente || ''}</td></tr>`).join('') || '<tr><td colspan="7" class="p-3 text-center text-gray-500">No hay detalle.</td></tr>'}</tbody></table></div>`;
+}
+
 async function renderResumenNoCalificadosKPI1(main) {
   main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800 space-y-4">
     <div class="flex justify-between items-center">
@@ -2749,6 +2759,7 @@ async function renderResumenNoCalificadosKPI1(main) {
     </div>
     <span id="estado-no-kpi1" class="text-xs text-red-300">Calculando...</span>
     <div id="tabla-no-kpi1" class="overflow-auto"></div>
+    <div id="detalle-no-kpi1" class="overflow-auto"></div>
   </div>`;
 
   await Promise.all([
@@ -2758,9 +2769,10 @@ async function renderResumenNoCalificadosKPI1(main) {
     asegurarCache('catalogo', null)
   ]);
   const datos = calcularKPI1NoCalificados(filtrarPorFechaGlobal(cache.leads_no_calificados, 'created_at'));
+  window.kpi1NoCalificadosDetalle = datos;
   const resumen = resumirKPI1NoCalificados(datos);
   document.getElementById('estado-no-kpi1').textContent = `${datos.length} leads evaluados`;
-  document.getElementById('tabla-no-kpi1').innerHTML = `<table class="w-full text-xs border-collapse"><thead><tr>${['Ejecutivo','Leads','Cumplió','No cumplió','Cumplió a otra hora','Pendientes','Fuera de horario','% Cumplimiento'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${resumen.map(item => `<tr class="${generarColorEjecutivo(item.ejecutivo)}"><td class="p-2">${item.ejecutivo}</td><td class="p-2">${item.leads}</td><td class="p-2">${item.cumplio}</td><td class="p-2">${item.no_cumplio}</td><td class="p-2">${item.otra_hora}</td><td class="p-2">${item.pendientes}</td><td class="p-2">${item.fuera_horario}</td><td class="p-2">${item.pct_cumplimiento}</td></tr>`).join('')}</tbody></table>`;
+  document.getElementById('tabla-no-kpi1').innerHTML = `<table class="w-full text-xs border-collapse"><thead><tr>${['Ejecutivo','Leads','Cumplió','No cumplió','Cumplió a otra hora','Pendientes','Fuera de horario','% Cumplimiento'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${resumen.map(item => `<tr class="cursor-pointer hover:bg-slate-800/50 ${generarColorEjecutivo(item.ejecutivo)}" onclick="mostrarDetalleNoCalificados('${encodeURIComponent(item.ejecutivo)}')"><td class="p-2">${item.ejecutivo}</td><td class="p-2">${item.leads}</td><td class="p-2">${item.cumplio}</td><td class="p-2">${item.no_cumplio}</td><td class="p-2">${item.otra_hora}</td><td class="p-2">${item.pendientes}</td><td class="p-2">${item.fuera_horario}</td><td class="p-2">${item.pct_cumplimiento}</td></tr>`).join('')}</tbody></table>`;
 }
 
 function mostrarDetalleKPI1(ejecutivoEncoded) {

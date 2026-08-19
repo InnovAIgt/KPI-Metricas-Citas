@@ -12,6 +12,7 @@ const BATCH_SIZE = 500;
 // Esquema de columnas permitidas por tabla
 const COLUMNAS_PERMITIDAS = {
   leads: ["codigo_prospecto", "nombre", "telefono", "fecha_agendada", "hora_agendada", "fecha_creado", "hora_creado", "tipo_reunion", "asesor_nombre", "pais", "created_at"],
+  leads_no_calificados: ["client_id", "client_name", "advisor_name", "created_at", "created_at_sv"],
   llamadas_celular: ["id", "fecha", "hora", "destino", "duracion", "tipo", "linea", "usuario", "operador", "dia_consultado", "created_at"],
   llamadas_pbx: ["uniqueid", "extension", "prefijo", "destino", "duracion_minutos", "duracion_segundos", "duracion_hh_mm_ss", "estado", "nombre", "fecha_hora", "solo_fecha", "anio", "mes", "dia", "pais", "audio_url", "created_at"],
 };
@@ -43,7 +44,8 @@ async function upsertEnLotes(
   // Filtrar columnas no permitidas
   const registrosFiltrados = filtrarColumnas(registros, tabla);
 
-  const validos = registrosFiltrados.filter((r) => r?.[onConflictCol] != null && r?.[onConflictCol] !== "");
+  const columnasClave = onConflictCol.split(",").map((col) => col.trim()).filter(Boolean);
+  const validos = registrosFiltrados.filter((r) => columnasClave.every((col) => r?.[col] != null && r?.[col] !== ""));
   const sinClave = registrosFiltrados.length - validos.length;
 
   for (let i = 0; i < validos.length; i += BATCH_SIZE) {
@@ -337,11 +339,16 @@ Deno.serve(async (req) => {
       headersPbx.headers = { "Authorization": `Bearer ${jwtPbx}` };
     }
 
-    const [leadsRes, celularRes, llamadasRes] = await Promise.all([
+    const [leadsRes, leadsNoCalificadosRes, celularRes, llamadasRes] = await Promise.all([
       fetchApiConDiagnostico(
         "leads",
         "https://prospektia.red.com.sv/api/external/leads-calificados",
         { method: "GET", headers: { "X-API-Key": "RedApi_2026_SuperSegura_9XK2" } }
+      ),
+      fetchApiConDiagnostico(
+        "leads_no_calificados",
+        "https://prospektia.red.com.sv/api/audit/leads-no-calificados?limit=1000&offset=0",
+        { method: "GET", headers: { "X-API-Key": Deno.env.get("PROSPEKTIA_API_KEY") || "RedApi_2026_SuperSegura_9XK2" } }
       ),
       fetchApiConDiagnostico(
         "llamadas_celular",
@@ -356,6 +363,7 @@ Deno.serve(async (req) => {
     ]);
 
     const dataLeads = extraerRegistros(leadsRes.data).map((r) => ({ ...r }));
+    const dataLeadsNoCalificados = extraerRegistros(leadsNoCalificadosRes.data).map((r) => ({ ...r }));
     const dataCelular = extraerRegistros(celularRes.data).map((r) => ({ ...r }));
     const dataLlamadas = extraerRegistros(llamadasRes.data).map(normalizarCallRow);
 
@@ -373,6 +381,7 @@ Deno.serve(async (req) => {
 
     const diagnosticoApis = {
       leads: leadsRes.diagnostico,
+      leads_no_calificados: leadsNoCalificadosRes.diagnostico,
       llamadas_celular: celularRes.diagnostico,
       llamadas_pbx: llamadasRes.diagnostico,
     };
@@ -381,6 +390,9 @@ Deno.serve(async (req) => {
       dataLeadsDedup.length > 0
         ? upsertEnLotes(supabase, "leads", dataLeadsDedup, "codigo_prospecto")
         : { tabla: "leads", insertados: 0, sinClave: 0, errores: [] },
+      dataLeadsNoCalificados.length > 0
+        ? upsertEnLotes(supabase, "leads_no_calificados", dataLeadsNoCalificados, "client_id,created_at")
+        : { tabla: "leads_no_calificados", insertados: 0, sinClave: 0, errores: [] },
       dataCelular.length > 0
         ? upsertEnLotes(supabase, "llamadas_celular", dataCelular, "id")
         : { tabla: "llamadas_celular", insertados: 0, sinClave: 0, errores: [] },
@@ -405,6 +417,7 @@ Deno.serve(async (req) => {
           : null,
         registros_recibidos: {
           leads: dataLeads.length,
+          leads_no_calificados: dataLeadsNoCalificados.length,
           llamadas_celular: dataCelular.length,
           llamadas_pbx: dataLlamadas.length,
         },

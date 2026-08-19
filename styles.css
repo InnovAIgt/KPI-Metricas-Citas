@@ -44,6 +44,8 @@ table td { padding: 0.45rem 0.5rem !important; }
 .kpi-header br { display: block; margin-bottom: 0.1rem; }
 td { border-bottom: 1px solid var(--border-color); }
 .sidebar-btn { display:flex; align-items:center; gap:.5rem; width:100%; text-align:left; padding:.6rem .8rem; border-radius:.5rem; font-size:.82rem; color: var(--text-secondary); cursor:pointer; border:none; background:none; }
+.dashboard-brand-switch { cursor:pointer; border:none; background:transparent; color:inherit; }
+.dashboard-brand-switch:hover { background:rgba(148,163,184,.08); }
 
 body.theme-light {
   --bg: #f3f6fb;

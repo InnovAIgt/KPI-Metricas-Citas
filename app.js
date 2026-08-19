@@ -2,13 +2,14 @@
 // ESTADO GLOBAL
 // ==================================================================
 let supabaseClient = null;
-let cache = { leads: [], llamadas_pbx: [], llamadas_celular: [], llamadas_whatsapp: [], catalogo: [], llamadas_teams: [] };
-let cargaCompleta = { leads: false, llamadas_pbx: false, llamadas_celular: false, llamadas_whatsapp: false, catalogo: false, llamadas_teams: false };
+let cache = { leads: [], leads_no_calificados: [], llamadas_pbx: [], llamadas_celular: [], llamadas_whatsapp: [], catalogo: [], llamadas_teams: [] };
+let cargaCompleta = { leads: false, leads_no_calificados: false, llamadas_pbx: false, llamadas_celular: false, llamadas_whatsapp: false, catalogo: false, llamadas_teams: false };
 let cruceCache = null;
 let vistaActual = 'config';
 let contenidoModalCelda = '';
 let detalleFiltro = null;
 let kpi1DetalleCruce = [];
+let modoDashboard = 'calificados';
 
 let SB_URL = "https://sbopifiiyezmvsadwkpg.supabase.co";
 let SB_KEY = "sb_publishable_1drMMd0cMfJLz0tlEhq1_Q_JLdfpygh";
@@ -178,6 +179,26 @@ function irA(view) {
   render();
 }
 
+function alternarDashboard() {
+  modoDashboard = modoDashboard === 'calificados' ? 'no-calificados' : 'calificados';
+  actualizarMarcaDashboard();
+  actualizarMenuDashboard();
+  irA(modoDashboard === 'calificados' ? 'reg-leads' : 'reg-no-calificados');
+}
+
+function actualizarMarcaDashboard() {
+  const titulo = document.getElementById('dashboard-brand-title');
+  const subtitulo = document.getElementById('dashboard-brand-subtitle');
+  if (titulo) titulo.textContent = modoDashboard === 'calificados' ? 'KPI CITAS' : 'KPI CITAS';
+  if (subtitulo) subtitulo.textContent = modoDashboard === 'calificados' ? 'LEADS CALIFICADOS' : 'LEADS NO CALIFICADOS';
+}
+
+function actualizarMenuDashboard() {
+  document.querySelectorAll('[data-dashboard-mode]').forEach(elemento => {
+    elemento.classList.toggle('hidden', elemento.dataset.dashboardMode !== modoDashboard);
+  });
+}
+
 function render() {
   actualizarPaisPbxDesdeUI();
   const main = document.getElementById('main-content');
@@ -187,6 +208,7 @@ function render() {
   if (vistaActual === 'reg-cel') return renderRegistro(main, 'llamadas_celular', 'Llamadas Celular', 'fecha');
   if (vistaActual === 'reg-whatsapp') return renderRegistro(main, 'llamadas_whatsapp', 'Llamadas WhatsApp', 'fecha_llamada');
   if (vistaActual === 'reg-leads') return renderRegistro(main, 'leads', 'Leads Calificados', 'fecha_agendada');
+  if (vistaActual === 'reg-no-calificados') return renderRegistro(main, 'leads_no_calificados', 'Leads No Calificados', 'created_at');
   if (vistaActual === 'reg-teams') return renderRegistroTeams(main);
   if (vistaActual === 'catalogo') return renderCatalogo(main);
   if (vistaActual === 'res-kpis' || vistaActual === 'res-ejecutivo') return renderResumenKpis(main);
@@ -811,6 +833,7 @@ async function recargarUnaTabla(tabla, columnaFecha) {
       'llamadas_pbx': 'Llamadas PBX',
       'llamadas_celular': 'Llamadas Celular',
       'llamadas_whatsapp': 'Llamadas WhatsApp',
+      'leads_no_calificados': 'Leads No Calificados',
       'leads': 'Leads Calificados',
       'catalogo': 'Catálogo'
     };
@@ -826,10 +849,11 @@ async function recargarUnaTabla(tabla, columnaFecha) {
 
 async function recargarTodoYContadores() {
   console.log('Iniciando recargarTodoYContadores...');
-  cargaCompleta = { leads: false, llamadas_pbx: false, llamadas_celular: false, llamadas_whatsapp: false, catalogo: false, llamadas_teams: false };
+  cargaCompleta = { leads: false, leads_no_calificados: false, llamadas_pbx: false, llamadas_celular: false, llamadas_whatsapp: false, catalogo: false, llamadas_teams: false };
   cruceCache = null;
   try {
     await cargarTablaCompleta('leads', 'fecha_agendada');
+    await cargarTablaCompleta('leads_no_calificados', 'created_at');
     await cargarTablaCompleta('llamadas_pbx', 'fecha_hora');
     await cargarTablaCompleta('llamadas_celular', 'fecha');
     await cargarTablaCompleta('llamadas_whatsapp', 'fecha_llamada');
@@ -1087,6 +1111,15 @@ function normalizarVistaWhatsapp(item) {
   };
 }
 
+function normalizarVistaLeadsNoCalificados(item) {
+  return {
+    'Número de lead': item?.client_id || '',
+    'Nombre del lead': item?.client_name || '',
+    'Ejecutivo asignado': item?.advisor_name || '',
+    'Fecha y hora de entrada': item?.created_at_sv || item?.created_at || ''
+  };
+}
+
 async function renderRegistro(main, tabla, titulo, columnaFecha) {
   main.innerHTML = `
     <div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
@@ -1163,6 +1196,10 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
 
   if (tabla === 'llamadas_whatsapp') {
     datosFiltrados = datosFiltrados.map(normalizarVistaWhatsapp);
+  }
+
+  if (tabla === 'leads_no_calificados') {
+    datosFiltrados = datosFiltrados.map(normalizarVistaLeadsNoCalificados);
   }
 
   if (tabla === 'leads') {
@@ -3406,6 +3443,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   initTheme();
   establecerFechasPorDefecto();
+  actualizarMarcaDashboard();
+  actualizarMenuDashboard();
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session) {
     mostrarAplicacion();

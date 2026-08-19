@@ -1440,6 +1440,13 @@ function repintar(contId) {
     columnasVistas.add(clave);
     columnasUnicas.push(col);
   }
+  if (contId === 'tabla-dinamica') {
+    const codigoColumna = columnasUnicas.find(col => normalizarNombreColumna(col) === 'codigo_prospecto');
+    const leadColumna = columnasUnicas.find(col => normalizarNombreColumna(col) === 'lead');
+    if (codigoColumna && leadColumna && datosBase.every(fila => String(fila[codigoColumna] ?? '') === String(fila[leadColumna] ?? ''))) {
+      columnasUnicas.splice(columnasUnicas.indexOf(leadColumna), 1);
+    }
+  }
   // Reorder columns: prefer primary fields on the left, push KPI columns to the end
   try {
     const preferredNorm = ['uniqueid','codigo_prospecto','lead','nombre_prospecto','cliente','asesor_nombre','asesor','ejecutivo','telefono','telefono_comparado','telefono_crm','hora_reunion','hora_agendada','fecha_reunion','fecha_agendada','resultado','status','pais','vendedor'];
@@ -3008,6 +3015,7 @@ function normalizarFilaLeads(item) {
 
   const codigoProspectoReal = String(item.codigo_prospecto ?? item.lead ?? salida.lead ?? '').trim();
   salida.codigo_prospecto = codigoProspectoReal || '';
+  delete salida.lead;
   salida.id = String(item.id ?? salida.id ?? '').trim();
   salida.__rowKey = String(salida.id || codigoProspectoReal || salida.telefono || salida.nombre_prospecto || '').trim();
 

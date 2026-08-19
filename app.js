@@ -2,8 +2,8 @@
 // ESTADO GLOBAL
 // ==================================================================
 let supabaseClient = null;
-let cache = { leads: [], llamadas_pbx: [], llamadas_celular: [], catalogo: [], llamadas_teams: [] };
-let cargaCompleta = { leads: false, llamadas_pbx: false, llamadas_celular: false, catalogo: false, llamadas_teams: false };
+let cache = { leads: [], llamadas_pbx: [], llamadas_celular: [], llamadas_whatsapp: [], catalogo: [], llamadas_teams: [] };
+let cargaCompleta = { leads: false, llamadas_pbx: false, llamadas_celular: false, llamadas_whatsapp: false, catalogo: false, llamadas_teams: false };
 let cruceCache = null;
 let vistaActual = 'config';
 let contenidoModalCelda = '';
@@ -155,6 +155,7 @@ function render() {
   if (vistaActual === 'criterios') return renderCriterios(main);
   if (vistaActual === 'reg-pbx') return renderRegistro(main, 'llamadas_pbx', 'Llamadas PBX', 'fecha_hora');
   if (vistaActual === 'reg-cel') return renderRegistro(main, 'llamadas_celular', 'Llamadas Celular', 'fecha');
+  if (vistaActual === 'reg-whatsapp') return renderRegistro(main, 'llamadas_whatsapp', 'Llamadas WhatsApp', 'fecha_llamada');
   if (vistaActual === 'reg-leads') return renderRegistro(main, 'leads', 'Leads Calificados', 'fecha_agendada');
   if (vistaActual === 'reg-teams') return renderRegistroTeams(main);
   if (vistaActual === 'catalogo') return renderCatalogo(main);
@@ -790,11 +791,12 @@ async function recargarUnaTabla(tabla, columnaFecha) {
     const tituloMapa = {
       'llamadas_pbx': 'Llamadas PBX',
       'llamadas_celular': 'Llamadas Celular',
+      'llamadas_whatsapp': 'Llamadas WhatsApp',
       'leads': 'Leads Calificados',
       'catalogo': 'Catálogo'
     };
     const titulo = tituloMapa[tabla] || tabla;
-    const columna = columnaFecha && columnaFecha !== 'null' ? columnaFecha : (tabla === 'llamadas_pbx' ? 'fecha_hora' : tabla === 'llamadas_celular' ? 'fecha' : tabla === 'leads' ? 'fecha_agendada' : 'created_at');
+    const columna = columnaFecha && columnaFecha !== 'null' ? columnaFecha : (tabla === 'llamadas_pbx' ? 'fecha_hora' : tabla === 'llamadas_celular' ? 'fecha' : tabla === 'llamadas_whatsapp' ? 'fecha_llamada' : tabla === 'leads' ? 'fecha_agendada' : 'created_at');
     
     renderRegistro(document.getElementById('main-content'), tabla, titulo, columna);
   } catch (err) {
@@ -805,12 +807,13 @@ async function recargarUnaTabla(tabla, columnaFecha) {
 
 async function recargarTodoYContadores() {
   console.log('Iniciando recargarTodoYContadores...');
-  cargaCompleta = { leads: false, llamadas_pbx: false, llamadas_celular: false, catalogo: false, llamadas_teams: false };
+  cargaCompleta = { leads: false, llamadas_pbx: false, llamadas_celular: false, llamadas_whatsapp: false, catalogo: false, llamadas_teams: false };
   cruceCache = null;
   try {
     await cargarTablaCompleta('leads', 'fecha_agendada');
     await cargarTablaCompleta('llamadas_pbx', 'fecha_hora');
     await cargarTablaCompleta('llamadas_celular', 'fecha');
+    await cargarTablaCompleta('llamadas_whatsapp', 'fecha_llamada');
     await cargarTablaCompleta('catalogo', null);
     
     try {
@@ -1050,6 +1053,21 @@ function normalizarVistaPbx(item) {
   };
 }
 
+function normalizarVistaWhatsapp(item) {
+  const fecha = item?.fecha_llamada ? new Date(item.fecha_llamada) : null;
+  const fechaValida = fecha && !Number.isNaN(fecha.getTime());
+  return {
+    'Número ejecutivo': item?.numero_ejecutivo || '',
+    'Número cliente': item?.numero_cliente || '',
+    'Fecha': fechaValida ? fecha.toLocaleDateString('es-SV') : '',
+    'Hora': fechaValida ? fecha.toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '',
+    'Duración (seg)': item?.duracion_segundos ?? '',
+    'Estado': item?.estado || '',
+    'Dirección': item?.direccion || '',
+    'Medio': item?.medio || ''
+  };
+}
+
 async function renderRegistro(main, tabla, titulo, columnaFecha) {
   main.innerHTML = `
     <div class="bg-[#111827] p-4 rounded-lg border border-gray-800">
@@ -1122,6 +1140,10 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
       limpio.__fuente_pbx = 'Issabel';
       return limpio;
     });
+  }
+
+  if (tabla === 'llamadas_whatsapp') {
+    datosFiltrados = datosFiltrados.map(normalizarVistaWhatsapp);
   }
 
   if (tabla === 'leads') {

@@ -11,7 +11,7 @@ let detalleFiltro = null;
 let kpi1DetalleCruce = [];
 
 let SB_URL = "https://sbopifiiyezmvsadwkpg.supabase.co";
-let SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNib3BpZmlieWV6bXZzYWR3c3BnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MzM0OTYsImV4cCI6MjEwMDMwOTQ5Nn0.ZI5y8lroFF529Xr-Otm1fcq6H2lhbh9e3s-WU9O6I7A";
+let SB_KEY = "sb_publishable_1drMMd0cMfJLz0tlEhq1_Q_JLdfpygh";
 
 // PBX API Configuration
 let PBX_HOST = "https://api.red.com.sv";

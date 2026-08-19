@@ -32,6 +32,39 @@ function getSupabase() {
   return supabaseClient;
 }
 
+function mostrarPantallaLogin(mensaje = '') {
+  document.getElementById('app-shell')?.classList.add('hidden');
+  document.getElementById('login-screen')?.classList.remove('hidden');
+  const error = document.getElementById('login-error');
+  if (error) error.textContent = mensaje;
+}
+
+function mostrarAplicacion() {
+  document.getElementById('login-screen')?.classList.add('hidden');
+  document.getElementById('app-shell')?.classList.remove('hidden');
+}
+
+async function iniciarSesion(event) {
+  event.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const submit = document.getElementById('login-submit');
+  const error = document.getElementById('login-error');
+
+  submit.disabled = true;
+  submit.textContent = 'Ingresando...';
+  error.textContent = '';
+  const { error: authError } = await getSupabase().auth.signInWithPassword({ email, password });
+  if (authError) error.textContent = 'Correo o contraseña incorrectos.';
+  submit.disabled = false;
+  submit.textContent = 'Entrar';
+}
+
+async function cerrarSesion() {
+  await getSupabase().auth.signOut();
+  mostrarPantallaLogin();
+}
+
 function refrescarClienteSupabase() {
   SB_URL = document.getElementById('sb-url').value.trim();
   SB_KEY = document.getElementById('sb-key').value.trim();
@@ -3339,5 +3372,19 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   initTheme();
   establecerFechasPorDefecto();
-  irA('catalogo');
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    mostrarAplicacion();
+    irA('catalogo');
+  } else {
+    mostrarPantallaLogin();
+  }
+  supabaseClient.auth.onAuthStateChange((_event, nuevaSesion) => {
+    if (nuevaSesion) {
+      mostrarAplicacion();
+      if (vistaActual === 'config') irA('catalogo');
+    } else {
+      mostrarPantallaLogin();
+    }
+  });
 });

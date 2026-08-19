@@ -1167,6 +1167,7 @@ async function renderRegistroTeams(main) {
 let filtroColState = {};
 window.__datosBase = {};
 window.__ultimoFiltrado = {};
+window.__tablaRenderizadores = {};
 
 function valorMostrable(v) {
   if (v === null || v === undefined || v === '') return '(Vacío)';
@@ -1177,6 +1178,14 @@ function pintarTablaConFiltros(contId, datosBase) {
   window.__datosBase[contId] = datosBase;
   filtroColState[contId] = filtroColState[contId] || {};
   repintar(contId);
+}
+
+function filtrarDatosTabla(contId, datosBase, columnas) {
+  const filtros = filtroColState[contId] || {};
+  return datosBase.filter(fila => columnas.every(col => {
+    const seleccion = filtros[col];
+    return !seleccion || seleccion.has(valorMostrable(fila[col]));
+  }));
 }
 
 function abrirModalCelda(titulo, contenido) {
@@ -1416,6 +1425,11 @@ function encontrarLeadRealPorIdentidad(lista, rowId, codigoProspecto = '', idPer
 }
 
 function repintar(contId) {
+  const renderizador = window.__tablaRenderizadores[contId];
+  if (renderizador) {
+    renderizador(window.__datosBase[contId] || []);
+    return;
+  }
   const datosBase = window.__datosBase[contId] || [];
   const filtros = filtroColState[contId] || {};
   const cont = document.getElementById(contId);
@@ -2200,17 +2214,21 @@ function pintarTablaResumenMaestra(datos) {
     }).join('')}</tr>`;
   };
 
+  const datosFiltrados = filtrarDatosTabla('tabla-resumen-maestra', datos, cols.map(c => c.key));
+  window.__ultimoFiltrado['tabla-resumen-maestra'] = datosFiltrados;
+
   const thead = `<tr>${cols.map(c => {
     const align = c.kpiGroup ? 'text-center' : ['pais', 'ejecutivo', 'lead', 'resultado', 'telefono', 'fecha_reunion', 'hora_reunion', 'fecha_llamada', 'hora_llamada'].includes(c.key) ? 'text-left' : 'text-right';
     const content = c.labelTitle ? `<div class="kpi-header ${c.kpiGroup === 'kpi2' ? 'kpi-header-kpi2' : 'kpi-header-kpi3'}"><span class="kpi-title text-red-300">${c.labelTitle}</span><span class="kpi-subtitle">${c.labelSubtitle}</span></div>` : `<div class="kpi-header"><span class="kpi-title">${c.label}</span></div>`;
-    return `<th class="p-2.5 ${align} text-[10px] align-top">${content}</th>`;
+    const activo = filtroColState['tabla-resumen-maestra'][c.key] ? 'activo' : '';
+    return `<th class="p-2.5 ${align} text-[10px] align-top">${content}<span class="filtro-icono ${activo}" onclick="abrirFiltroColumna('tabla-resumen-maestra','${c.key}',this)">▾</span></th>`;
   }).join('')}</tr>`;
 
   document.getElementById('tabla-resumen-maestra').innerHTML = `
     <div class="overflow-auto rounded-lg border border-gray-800">
       <table class="w-full text-xs border-collapse kpi-maestra-table">
         <thead class="bg-[#0f172a] text-white">${thead}</thead>
-        <tbody class="divide-y divide-gray-800">${datos.map(filaHtml).join('')}</tbody>
+        <tbody class="divide-y divide-gray-800">${datosFiltrados.map(filaHtml).join('') || `<tr><td colspan="${cols.length}" class="p-4 text-center text-gray-400">Sin resultados con esos filtros.</td></tr>`}</tbody>
       </table>
     </div>`;
 }
@@ -2425,6 +2443,9 @@ async function renderResumenKpis(main) {
       </div>
     `).join('');
   const datosMaestros = construirResumenMaestra(cruce);
+    window.__datosBase['tabla-resumen-maestra'] = datosMaestros;
+    filtroColState['tabla-resumen-maestra'] = filtroColState['tabla-resumen-maestra'] || {};
+    window.__tablaRenderizadores['tabla-resumen-maestra'] = pintarTablaResumenMaestra;
   pintarTablaResumenMaestra(datosMaestros);
 }
 
@@ -2446,6 +2467,7 @@ function calcularResumenPorPais(cruce) {
 }
 
 async function renderResumenKPI1(main) {
+  filtroColState['tabla-kpi1'] = filtroColState['tabla-kpi1'] || {};
   main.innerHTML = `<div class="bg-[#111827] p-4 rounded-lg border border-gray-800 space-y-6">
     <div class="flex justify-between items-center mb-3">
       <div>
@@ -2463,11 +2485,11 @@ async function renderResumenKPI1(main) {
       <table class="w-full text-xs border-collapse" id="tabla-kpi1">
         <thead class="bg-[#0f172a] text-white">
           <tr>
-            <th class="p-2.5 text-left text-[10px]">País</th>
-            <th class="p-2.5 text-left text-[10px]">Ejecutivo</th>
-            <th class="p-2.5 text-right text-[10px]">Leads</th>
-            <th class="p-2.5 text-right text-[10px]">Cumplieron</th>
-            <th class="p-2.5 text-right text-[10px]">% Cumplimiento</th>
+            <th class="p-2.5 text-left text-[10px]">País <span class="filtro-icono ${filtroColState['tabla-kpi1'].pais ? 'activo' : ''}" onclick="event.stopPropagation(); abrirFiltroColumna('tabla-kpi1','pais',this)">▾</span></th>
+            <th class="p-2.5 text-left text-[10px]">Ejecutivo <span class="filtro-icono ${filtroColState['tabla-kpi1'].ejecutivo ? 'activo' : ''}" onclick="event.stopPropagation(); abrirFiltroColumna('tabla-kpi1','ejecutivo',this)">▾</span></th>
+            <th class="p-2.5 text-right text-[10px]">Leads <span class="filtro-icono ${filtroColState['tabla-kpi1'].leads ? 'activo' : ''}" onclick="event.stopPropagation(); abrirFiltroColumna('tabla-kpi1','leads',this)">▾</span></th>
+            <th class="p-2.5 text-right text-[10px]">Cumplieron <span class="filtro-icono ${filtroColState['tabla-kpi1'].cumplidos ? 'activo' : ''}" onclick="event.stopPropagation(); abrirFiltroColumna('tabla-kpi1','cumplidos',this)">▾</span></th>
+            <th class="p-2.5 text-right text-[10px]">% Cumplimiento <span class="filtro-icono ${filtroColState['tabla-kpi1'].pct_cumplimiento ? 'activo' : ''}" onclick="event.stopPropagation(); abrirFiltroColumna('tabla-kpi1','pct_cumplimiento',this)">▾</span></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-800" id="tbody-kpi1"><tr><td colspan="5" class="p-4 text-center text-red-300">Calculando cruce...</td></tr></tbody>
@@ -2480,11 +2502,17 @@ async function renderResumenKPI1(main) {
   const cruce = await calcularCruceUnificado();
   window.kpi1DetalleCruce = cruce;
   const datosKPI1 = construirResumenPorEjecutivo(cruce);
+  window.__datosBase['tabla-kpi1'] = datosKPI1;
+  filtroColState['tabla-kpi1'] = filtroColState['tabla-kpi1'] || {};
+  window.__tablaRenderizadores['tabla-kpi1'] = pintarTablaKPI1;
   pintarTablaKPI1(datosKPI1);
 }
 
 function pintarTablaKPI1(datos) {
-  const filas = datos.map(d => {
+  const columnas = ['pais', 'ejecutivo', 'leads', 'cumplidos', 'pct_cumplimiento'];
+  const datosFiltrados = filtrarDatosTabla('tabla-kpi1', datos, columnas);
+  window.__ultimoFiltrado['tabla-kpi1'] = datosFiltrados;
+  const filas = datosFiltrados.map(d => {
     const colorEjecutivo = generarColorEjecutivo(d.ejecutivo || '');
     return `<tr class="hover:bg-slate-800/50 text-gray-200 cursor-pointer ${colorEjecutivo}" onclick="mostrarDetalleKPI1('${encodeURIComponent(String(d.ejecutivo || ''))}')">
       <td class="p-2.5 text-left">${nombrePais(d.pais)}</td>

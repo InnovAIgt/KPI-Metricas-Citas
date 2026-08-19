@@ -804,6 +804,10 @@ async function cargarTablaCompleta(tabla, orden) {
   }
   cache[tabla] = todos;
   cargaCompleta[tabla] = true;
+  if (tabla === 'leads_no_calificados' && todos.length === 0) {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) throw new Error('La sesión no está disponible para leer Leads No Calificados. Vuelve a iniciar sesión.');
+  }
   return todos;
 }
 

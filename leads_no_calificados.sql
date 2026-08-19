@@ -17,6 +17,8 @@ create index if not exists idx_leads_no_calificados_client_id
 
 alter table public.leads_no_calificados enable row level security;
 
+grant select on table public.leads_no_calificados to authenticated;
+
 drop policy if exists "Usuarios autenticados pueden leer leads no calificados"
   on public.leads_no_calificados;
 

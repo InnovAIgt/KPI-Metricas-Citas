@@ -1147,13 +1147,25 @@ function normalizarVistaWhatsapp(item) {
 }
 
 function normalizarVistaLeadsNoCalificados(item) {
+  const entrada = item?.created_at ? parseFecha(item.created_at) : null;
+  const indicadores = calcularIndicadorAtencion(entrada);
   return {
     'Número de lead': item?.client_id || '',
     'Nombre del lead': item?.client_name || '',
     'Ejecutivo asignado': item?.advisor_name || '',
     'Teléfono': item?.telefono || item?.client_phone || '',
-    'Fecha y hora de entrada': item?.created_at_sv || item?.created_at || ''
+    'Fecha y hora de entrada': item?.created_at_sv || item?.created_at || '',
+    'Tiempo restante atención': indicadores.tiempo_atencion,
+    'Entrada fuera de horario': indicadores.entrada_fuera_horario,
+    __fechaEntradaAtencion: entrada
   };
+}
+
+function actualizarIndicadoresNoCalificados() {
+  const datos = window.__datosBase['tabla-dinamica'];
+  if (!Array.isArray(datos) || vistaActual !== 'reg-no-calificados') return;
+  datos.forEach(fila => Object.assign(fila, calcularIndicadorAtencion(fila.__fechaEntradaAtencion)));
+  repintar('tabla-dinamica');
 }
 
 function obtenerFechaEntradaLead(item) {
@@ -1167,6 +1179,42 @@ function esHorarioLaboral(fecha) {
   const dia = fecha.getDay();
   const minutos = fecha.getHours() * 60 + fecha.getMinutes();
   return dia >= 1 && dia <= 5 && minutos >= 8 * 60 && minutos < 18 * 60;
+}
+
+function siguienteInicioLaboral(fecha) {
+  const inicio = new Date(fecha);
+  inicio.setHours(8, 0, 0, 0);
+  do {
+    inicio.setDate(inicio.getDate() + 1);
+  } while (inicio.getDay() === 0 || inicio.getDay() === 6);
+  return inicio;
+}
+
+function obtenerVentanaAtencion(fechaEntrada) {
+  if (!fechaEntrada || Number.isNaN(fechaEntrada.getTime())) return null;
+  const inicio = esHorarioLaboral(fechaEntrada)
+    ? new Date(fechaEntrada)
+    : (() => {
+        const dia = fechaEntrada.getDay();
+        const minutos = fechaEntrada.getHours() * 60 + fechaEntrada.getMinutes();
+        if (dia >= 1 && dia <= 5 && minutos < 8 * 60) {
+          const mismoDia = new Date(fechaEntrada);
+          mismoDia.setHours(8, 0, 0, 0);
+          return mismoDia;
+        }
+        return siguienteInicioLaboral(fechaEntrada);
+      })();
+  return { inicio, limite: new Date(inicio.getTime() + 60 * 60000) };
+}
+
+function calcularIndicadorAtencion(fechaEntrada) {
+  const ventana = obtenerVentanaAtencion(fechaEntrada);
+  if (!ventana) return { tiempo_atencion: 'Sin fecha', entrada_fuera_horario: 'Sin fecha' };
+  const horas = (ventana.limite.getTime() - Date.now()) / 3600000;
+  return {
+    tiempo_atencion: horas > 0 ? `${horas.toFixed(1)} h` : 'Vencido',
+    entrada_fuera_horario: esHorarioLaboral(fechaEntrada) ? 'No' : 'Sí'
+  };
 }
 
 function calcularIndicadoresLead(fechaReunion, horaReunion, fechaEntrada, horaEntrada) {
@@ -1310,6 +1358,8 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
   pintarTablaConFiltros('tabla-dinamica', datosFiltrados);
   if (tabla === 'leads') {
     temporizadorLeads = setInterval(actualizarIndicadoresLeads, 60000);
+  } else if (tabla === 'leads_no_calificados') {
+    temporizadorLeads = setInterval(actualizarIndicadoresNoCalificados, 60000);
   }
 }
 
@@ -2770,19 +2820,16 @@ function calcularKPI1NoCalificados(datos) {
   return datos.map(lead => {
     const entrada = parseFecha(lead.created_at);
     const ejecutivo = lead.advisor_name || 'Sin asignar';
-    if (!entrada || !esHorarioLaboralNoCalificado(entrada)) {
-      return { ...lead, ejecutivo, resultado: 'Fuera de horario laboral', cumplio: false, hora_llamada: '', fuente: '' };
-    }
-
-    const limite = new Date(entrada.getTime() + 60 * 60000);
+    const ventana = obtenerVentanaAtencion(entrada);
+    if (!ventana) return { ...lead, ejecutivo, resultado: 'No cumplió', cumplio: false, hora_llamada: '', fuente: '' };
+    const inicioAtencion = ventana.inicio;
+    const limite = ventana.limite;
     const telefonoLead = normalizarTel(lead.telefono || lead.client_phone);
     const operadores = obtenerOperadoresEjecutivo(ejecutivo);
     const llamadasPorTelefono = llamadas.filter(llamada => telefonoLead && llamada.telefono === telefonoLead);
     const llamadasEjecutivo = llamadasPorTelefono.filter(llamada => !operadores.size || operadores.has(llamada.operador));
-    const llamadaValida = llamadasEjecutivo.find(llamada =>
-      llamada.fecha >= entrada && llamada.fecha <= limite && esHorarioLaboralNoCalificado(llamada.fecha)
-    );
-    const llamadaPosterior = llamadasEjecutivo.find(llamada => llamada.fecha >= entrada);
+    const llamadaValida = llamadasEjecutivo.find(llamada => llamada.fecha >= inicioAtencion && llamada.fecha <= limite && esHorarioLaboralNoCalificado(llamada.fecha));
+    const llamadaPosterior = llamadasEjecutivo.find(llamada => llamada.fecha >= inicioAtencion);
     const ahora = new Date();
     let resultado = 'No cumplió';
     if (llamadaValida) resultado = 'Cumplió';
@@ -2855,7 +2902,9 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
     const colorEjecutivo = generarColorEjecutivo(r.ejecutivo || '');
     return `
     <tr class="hover:bg-slate-800/50 text-gray-200 ${colorEjecutivo}">
-      <td class="p-2.5 text-left">${nombrePais(r.pais) || ''}</td>
+      'Fecha y hora de entrada': item?.created_at_sv || item?.created_at || '',
+      'Tiempo restante atención': indicadores.tiempo_atencion,
+      'Entrada fuera de horario': indicadores.entrada_fuera_horario
       <td class="p-2.5 text-left">${r.ejecutivo || ''}</td>
       <td class="p-2.5 text-left">${r.lead || ''}</td>
       <td class="p-2.5 text-left">${r.cliente || ''}</td>

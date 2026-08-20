@@ -2837,7 +2837,7 @@ function calcularKPI1NoCalificados(datos) {
     else if (ahora < limite) resultado = 'Pendiente de evaluar';
 
     const tiempoHastaLlamada = llamadaPosterior ? Math.max(0, (llamadaPosterior.fecha.getTime() - entrada.getTime()) / 3600000) : null;
-    return { ...lead, ejecutivo, resultado, cumplio: resultado === 'Cumplió', telefono: lead.telefono || lead.client_phone || '', hora_llamada: llamadaPosterior ? llamadaPosterior.fecha.toLocaleTimeString('es-SV') : '', fuente: llamadaPosterior?.fuente || '', tiempo_hasta_llamada_horas: tiempoHastaLlamada == null ? 'Sin llamada' : `${tiempoHastaLlamada.toFixed(1)} h`, tiempo_hasta_llamada_num: tiempoHastaLlamada };
+    return { ...lead, ejecutivo, resultado, cumplio: resultado === 'Cumplió', telefono: lead.telefono || lead.client_phone || '', hora_llamada: llamadaPosterior ? llamadaPosterior.fecha.toLocaleTimeString('es-SV') : '', fecha_llamada: llamadaPosterior ? llamadaPosterior.fecha.toISOString().split('T')[0] : '', fuente: llamadaPosterior?.fuente || '', tiempo_hasta_llamada_horas: tiempoHastaLlamada == null ? 'Sin llamada' : `${tiempoHastaLlamada.toFixed(1)} h`, tiempo_hasta_llamada_num: tiempoHastaLlamada };
   });
 }
 
@@ -2867,7 +2867,25 @@ function mostrarDetalleNoCalificados(ejecutivoEncoded) {
   const registros = (window.kpi1NoCalificadosDetalle || []).filter(item => item.ejecutivo === ejecutivo);
   const detalle = document.getElementById('detalle-no-kpi1');
   if (!detalle) return;
-  detalle.innerHTML = `<div class="overflow-auto rounded-lg border border-gray-800"><div class="flex items-center justify-between p-3 border-b border-gray-800"><h3 class="text-xs font-bold text-gray-200">Detalle de ${ejecutivo}</h3><span class="text-[11px] text-gray-500">${registros.length} leads</span></div><table class="w-full text-xs border-collapse"><thead><tr>${['Lead','Nombre','Teléfono','Entrada','Resultado','Hora llamada','Tiempo hasta llamada','Fuente'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${registros.map(item => `<tr class="${generarColorEjecutivo(ejecutivo)}"><td class="p-2">${item.client_id || ''}</td><td class="p-2">${item.client_name || ''}</td><td class="p-2">${item.telefono || ''}</td><td class="p-2">${item.created_at_sv || item.created_at || ''}</td><td class="p-2">${item.resultado || ''}</td><td class="p-2">${item.hora_llamada || 'No encontrada'}</td><td class="p-2">${item.tiempo_hasta_llamada_horas || 'Sin llamada'}</td><td class="p-2">${item.fuente || ''}</td></tr>`).join('') || '<tr><td colspan="8" class="p-3 text-center text-gray-500">No hay detalle.</td></tr>'}</tbody></table></div>`;
+  detalle.innerHTML = `<div class="overflow-auto rounded-lg border border-gray-800"><div class="flex items-center justify-between p-3 border-b border-gray-800"><h3 class="text-xs font-bold text-gray-200">Detalle de ${ejecutivo}</h3><span class="text-[11px] text-gray-500">${registros.length} leads</span></div><table class="w-full text-xs border-collapse"><thead><tr>${['Lead','Nombre','Teléfono','Entrada','Resultado','Hora llamada','Tiempo hasta llamada','Fuente'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${registros.map(item => {
+    const puedeAbrirLlamada = item.fuente && item.fecha_llamada;
+    const accion = puedeAbrirLlamada ? ` onclick="abrirRegistroLlamadaNoCalificado('${encodeURIComponent(item.fuente)}','${encodeURIComponent(item.telefono || '')}','${encodeURIComponent(item.fecha_llamada)}')" title="Abrir registro de llamada"` : '';
+    return `<tr class="${generarColorEjecutivo(ejecutivo)} ${puedeAbrirLlamada ? 'cursor-pointer hover:bg-slate-800/50' : ''}"${accion}><td class="p-2">${item.client_id || ''}</td><td class="p-2">${item.client_name || ''}</td><td class="p-2">${item.telefono || ''}</td><td class="p-2">${item.created_at_sv || item.created_at || ''}</td><td class="p-2">${item.resultado || ''}</td><td class="p-2">${item.hora_llamada || 'No encontrada'}</td><td class="p-2">${item.tiempo_hasta_llamada_horas || 'Sin llamada'}</td><td class="p-2">${item.fuente || ''}</td></tr>`;
+  }).join('') || '<tr><td colspan="8" class="p-3 text-center text-gray-500">No hay detalle.</td></tr>'}</tbody></table></div>`;
+}
+
+function abrirRegistroLlamadaNoCalificado(fuenteEncoded, telefonoEncoded, fechaEncoded) {
+  const fuente = decodeURIComponent(fuenteEncoded || '');
+  const telefono = decodeURIComponent(telefonoEncoded || '');
+  const fecha = decodeURIComponent(fechaEncoded || '');
+  const fuenteNormalizada = normalizarFuenteLlamada(fuente).toLowerCase();
+  if (fuenteNormalizada === 'issabel' || fuenteNormalizada === 'pbx') {
+    detalleFiltro = { tabla: 'llamadas_pbx', telefono, fecha };
+    irA('reg-pbx');
+  } else if (fuenteNormalizada === 'celular') {
+    detalleFiltro = { tabla: 'llamadas_celular', telefono, fecha };
+    irA('reg-cel');
+  }
 }
 
 async function renderResumenNoCalificadosKPI1(main) {

@@ -2821,7 +2821,7 @@ function calcularKPI1NoCalificados(datos) {
     const entrada = parseFecha(lead.created_at);
     const ejecutivo = lead.advisor_name || 'Sin asignar';
     const ventana = obtenerVentanaAtencion(entrada);
-    if (!ventana) return { ...lead, ejecutivo, resultado: 'No cumplió', cumplio: false, hora_llamada: '', fuente: '' };
+    if (!ventana) return { ...lead, ejecutivo, resultado: 'No cumplió', cumplio: false, hora_llamada: '', fuente: '', clasificacion_tiempo: 'Sin llamada' };
     const inicioAtencion = ventana.inicio;
     const limite = ventana.limite;
     const telefonoLead = normalizarTel(lead.telefono || lead.client_phone);
@@ -2837,8 +2837,26 @@ function calcularKPI1NoCalificados(datos) {
     else if (ahora < limite) resultado = 'Pendiente de evaluar';
 
     const tiempoHastaLlamada = llamadaPosterior ? Math.max(0, (llamadaPosterior.fecha.getTime() - entrada.getTime()) / 3600000) : null;
-    return { ...lead, ejecutivo, resultado, cumplio: resultado === 'Cumplió', telefono: lead.telefono || lead.client_phone || '', hora_llamada: llamadaPosterior ? llamadaPosterior.fecha.toLocaleTimeString('es-SV') : '', fecha_llamada: llamadaPosterior ? llamadaPosterior.fecha.toISOString().split('T')[0] : '', fuente: llamadaPosterior?.fuente || '', tiempo_hasta_llamada_horas: tiempoHastaLlamada == null ? 'Sin llamada' : `${tiempoHastaLlamada.toFixed(1)} h`, tiempo_hasta_llamada_num: tiempoHastaLlamada };
+    return { ...lead, ejecutivo, resultado, cumplio: resultado === 'Cumplió', telefono: lead.telefono || lead.client_phone || '', hora_llamada: llamadaPosterior ? llamadaPosterior.fecha.toLocaleTimeString('es-SV') : '', fecha_llamada: llamadaPosterior ? llamadaPosterior.fecha.toISOString().split('T')[0] : '', fuente: llamadaPosterior?.fuente || '', tiempo_hasta_llamada_horas: tiempoHastaLlamada == null ? 'Sin llamada' : `${tiempoHastaLlamada.toFixed(1)} h`, tiempo_hasta_llamada_num: tiempoHastaLlamada, clasificacion_tiempo: clasificarTiempoLlamada(tiempoHastaLlamada) };
   });
+}
+
+function clasificarTiempoLlamada(horas) {
+  if (horas == null) return 'Sin llamada';
+  if (horas < 1) return 'Cumplió < 1h';
+  if (horas < 12) return 'Cumplió < 12h';
+  if (horas < 24) return 'Cumplió < 24h';
+  if (horas < 48) return 'Cumplió < 48h';
+  return 'Cumplió > 48h';
+}
+
+function claseClasificacionTiempo(clasificacion) {
+  if (clasificacion === 'Cumplió < 1h') return 'bg-emerald-900 text-emerald-300';
+  if (clasificacion === 'Cumplió < 12h') return 'bg-lime-900 text-lime-300';
+  if (clasificacion === 'Cumplió < 24h') return 'bg-amber-900 text-amber-300';
+  if (clasificacion === 'Cumplió < 48h') return 'bg-orange-900 text-orange-300';
+  if (clasificacion === 'Cumplió > 48h') return 'bg-red-900 text-red-300';
+  return 'bg-gray-700 text-gray-300';
 }
 
 function resumirKPI1NoCalificados(datos) {
@@ -2858,7 +2876,8 @@ function resumirKPI1NoCalificados(datos) {
   return Array.from(grupos.values()).map(grupo => ({
     ...grupo,
     pct_cumplimiento: grupo.leads ? `${Math.round((grupo.cumplio / grupo.leads) * 100)}%` : '0%',
-    promedio_llamada_horas: grupo.tiempos_llamada.length ? `${(grupo.tiempos_llamada.reduce((total, horas) => total + horas, 0) / grupo.tiempos_llamada.length).toFixed(1)} h` : 'Sin llamada'
+    promedio_llamada_horas: grupo.tiempos_llamada.length ? `${(grupo.tiempos_llamada.reduce((total, horas) => total + horas, 0) / grupo.tiempos_llamada.length).toFixed(1)} h` : 'Sin llamada',
+    clasificacion_tiempo: grupo.tiempos_llamada.length ? clasificarTiempoLlamada(grupo.tiempos_llamada.reduce((total, horas) => total + horas, 0) / grupo.tiempos_llamada.length) : 'Sin llamada'
   }));
 }
 
@@ -2867,11 +2886,12 @@ function mostrarDetalleNoCalificados(ejecutivoEncoded) {
   const registros = (window.kpi1NoCalificadosDetalle || []).filter(item => item.ejecutivo === ejecutivo);
   const detalle = document.getElementById('detalle-no-kpi1');
   if (!detalle) return;
-  detalle.innerHTML = `<div class="overflow-auto rounded-lg border border-gray-800"><div class="flex items-center justify-between p-3 border-b border-gray-800"><h3 class="text-xs font-bold text-gray-200">Detalle de ${ejecutivo}</h3><span class="text-[11px] text-gray-500">${registros.length} leads</span></div><table class="w-full text-xs border-collapse"><thead><tr>${['Lead','Nombre','Teléfono','Entrada','Resultado','Hora llamada','Tiempo hasta llamada','Fuente'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${registros.map(item => {
+  detalle.innerHTML = `<div class="overflow-auto rounded-lg border border-gray-800"><div class="flex items-center justify-between p-3 border-b border-gray-800"><h3 class="text-xs font-bold text-gray-200">Detalle de ${ejecutivo}</h3><span class="text-[11px] text-gray-500">${registros.length} leads</span></div><table class="w-full text-xs border-collapse"><thead><tr>${['Lead','Nombre','Teléfono','Entrada','Resultado','Hora llamada','Tiempo hasta llamada','Clasificación','Fuente'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${registros.map(item => {
     const puedeAbrirLlamada = item.fuente && item.fecha_llamada;
     const accion = puedeAbrirLlamada ? ` onclick="abrirRegistroLlamadaNoCalificado('${encodeURIComponent(item.fuente)}','${encodeURIComponent(item.telefono || '')}','${encodeURIComponent(item.fecha_llamada)}')" title="Abrir registro de llamada"` : '';
-    return `<tr class="${generarColorEjecutivo(ejecutivo)} ${puedeAbrirLlamada ? 'cursor-pointer hover:bg-slate-800/50' : ''}"${accion}><td class="p-2">${item.client_id || ''}</td><td class="p-2">${item.client_name || ''}</td><td class="p-2">${item.telefono || ''}</td><td class="p-2">${item.created_at_sv || item.created_at || ''}</td><td class="p-2">${item.resultado || ''}</td><td class="p-2">${item.hora_llamada || 'No encontrada'}</td><td class="p-2">${item.tiempo_hasta_llamada_horas || 'Sin llamada'}</td><td class="p-2">${item.fuente || ''}</td></tr>`;
-  }).join('') || '<tr><td colspan="8" class="p-3 text-center text-gray-500">No hay detalle.</td></tr>'}</tbody></table></div>`;
+    const claseTiempo = claseClasificacionTiempo(item.clasificacion_tiempo);
+    return `<tr class="${generarColorEjecutivo(ejecutivo)} ${puedeAbrirLlamada ? 'cursor-pointer hover:bg-slate-800/50' : ''}"${accion}><td class="p-2">${item.client_id || ''}</td><td class="p-2">${item.client_name || ''}</td><td class="p-2">${item.telefono || ''}</td><td class="p-2">${item.created_at_sv || item.created_at || ''}</td><td class="p-2">${item.resultado || ''}</td><td class="p-2">${item.hora_llamada || 'No encontrada'}</td><td class="p-2">${item.tiempo_hasta_llamada_horas || 'Sin llamada'}</td><td class="p-2"><span class="badge ${claseTiempo}">${item.clasificacion_tiempo || 'Sin llamada'}</span></td><td class="p-2">${item.fuente || ''}</td></tr>`;
+  }).join('') || '<tr><td colspan="9" class="p-3 text-center text-gray-500">No hay detalle.</td></tr>'}</tbody></table></div>`;
 }
 
 function abrirRegistroLlamadaNoCalificado(fuenteEncoded, telefonoEncoded, fechaEncoded) {
@@ -2909,7 +2929,7 @@ async function renderResumenNoCalificadosKPI1(main) {
   window.kpi1NoCalificadosDetalle = datos;
   const resumen = resumirKPI1NoCalificados(datos);
   document.getElementById('estado-no-kpi1').textContent = `${datos.length} leads evaluados`;
-  document.getElementById('tabla-no-kpi1').innerHTML = `<table class="w-full text-xs border-collapse"><thead><tr>${['Ejecutivo','Leads','Cumplió','No cumplió','Cumplió a otra hora','Pendientes','Fuera de horario','% Cumplimiento','Promedio hasta llamada'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${resumen.map(item => `<tr class="cursor-pointer hover:bg-slate-800/50 ${generarColorEjecutivo(item.ejecutivo)}" onclick="mostrarDetalleNoCalificados('${encodeURIComponent(item.ejecutivo)}')"><td class="p-2">${item.ejecutivo}</td><td class="p-2">${item.leads}</td><td class="p-2">${item.cumplio}</td><td class="p-2">${item.no_cumplio}</td><td class="p-2">${item.otra_hora}</td><td class="p-2">${item.pendientes}</td><td class="p-2">${item.fuera_horario}</td><td class="p-2">${item.pct_cumplimiento}</td><td class="p-2">${item.promedio_llamada_horas}</td></tr>`).join('')}</tbody></table>`;
+  document.getElementById('tabla-no-kpi1').innerHTML = `<table class="w-full text-xs border-collapse"><thead><tr>${['Ejecutivo','Leads','Cumplió','No cumplió','Cumplió a otra hora','Pendientes','Fuera de horario','% Cumplimiento','Promedio hasta llamada','Clasificación'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${resumen.map(item => `<tr class="cursor-pointer hover:bg-slate-800/50 ${generarColorEjecutivo(item.ejecutivo)}" onclick="mostrarDetalleNoCalificados('${encodeURIComponent(item.ejecutivo)}')"><td class="p-2">${item.ejecutivo}</td><td class="p-2">${item.leads}</td><td class="p-2">${item.cumplio}</td><td class="p-2">${item.no_cumplio}</td><td class="p-2">${item.otra_hora}</td><td class="p-2">${item.pendientes}</td><td class="p-2">${item.fuera_horario}</td><td class="p-2">${item.pct_cumplimiento}</td><td class="p-2">${item.promedio_llamada_horas}</td><td class="p-2"><span class="badge ${claseClasificacionTiempo(item.clasificacion_tiempo)}">${item.clasificacion_tiempo}</span></td></tr>`).join('')}</tbody></table>`;
 }
 
 function mostrarDetalleKPI1(ejecutivoEncoded) {

@@ -1156,7 +1156,7 @@ function normalizarVistaLeadsNoCalificados(item) {
     'Teléfono': item?.telefono || item?.client_phone || '',
     'Fecha y hora de entrada': item?.created_at_sv || item?.created_at || '',
     'Tiempo restante atención': indicadores.tiempo_atencion,
-    'Entrada fuera de horario': indicadores.entrada_fuera_horario,
+    'Entrada en horario': indicadores.entrada_fuera_horario,
     __fechaEntradaAtencion: entrada
   };
 }
@@ -1235,7 +1235,7 @@ function calcularIndicadoresLead(fechaReunion, horaReunion, fechaEntrada, horaEn
   }
   return {
     'Tiempo restante reunión': restante,
-    'Entrada fuera de horario': estadoEntradaLaboral(entrada)
+    'Entrada en horario': estadoEntradaLaboral(entrada)
   };
 }
 
@@ -1821,8 +1821,8 @@ function repintar(contId) {
       if (c === 'acciones') return `<td class="p-2 ${cellBase}">${v}</td>`;
       if (c === 'Estado' || c === 'Resultado') return `<td class="p-2 whitespace-nowrap ${cellBase}">${badgeEstadoCruce(v)}</td>`;
       if (c === 'Cumplió') return `<td class="p-2 whitespace-nowrap ${cellBase}">${badgeCumplio(v)}</td>`;
-      if (c === 'Entrada fuera de horario') {
-        const clase = v === 'Sí' ? 'bg-amber-900 text-amber-300' : v === 'No' ? 'bg-emerald-900 text-emerald-300' : 'bg-gray-700 text-gray-300';
+      if (c === 'Entrada en horario') {
+        const clase = v === 'Sí' ? 'bg-emerald-900 text-emerald-300' : 'bg-amber-900 text-amber-300';
         return `<td class="p-2 whitespace-nowrap ${cellBase}"><span class="badge ${clase}">${v}</span></td>`;
       }
       if (columnasExpandibles.includes(c) && v && String(v).length > 50) {
@@ -2451,7 +2451,7 @@ function pintarTablaResumenMaestra(datos) {
     { key: 'fecha_llamada', label: 'Fecha llamada' },
     { key: 'hora_llamada', label: 'Hora llamada' },
     { key: 'tiempo_llamada_horas', label: 'Tiempo hasta llamada (h)' },
-    { key: 'entrada_fuera_horario', label: 'Entrada fuera de horario' },
+    { key: 'entrada_fuera_horario', label: 'Entrada en horario' },
     { key: 'kpi_sla_etapa_1', labelTitle: 'KPI 2', labelSubtitle: 'Etapa 1', kpiGroup: 'kpi2' },
     { key: 'kpi_sla_etapa_2', labelTitle: 'KPI 2', labelSubtitle: 'Etapa 2', kpiGroup: 'kpi2' },
     { key: 'kpi_sla_etapa_3', labelTitle: 'KPI 2', labelSubtitle: 'Etapa 3', kpiGroup: 'kpi2' },
@@ -2892,7 +2892,7 @@ function mostrarDetalleNoCalificados(ejecutivoEncoded) {
   const registros = (window.kpi1NoCalificadosDetalle || []).filter(item => item.ejecutivo === ejecutivo);
   const detalle = document.getElementById('detalle-no-kpi1');
   if (!detalle) return;
-  detalle.innerHTML = `<div class="overflow-auto rounded-lg border border-gray-800"><div class="flex items-center justify-between p-3 border-b border-gray-800"><h3 class="text-xs font-bold text-gray-200">Detalle de ${ejecutivo}</h3><span class="text-[11px] text-gray-500">${registros.length} leads</span></div><table class="w-full text-xs border-collapse"><thead><tr>${['Lead','Nombre','Teléfono','Entrada','Entrada fuera de horario','Resultado','Hora llamada','Tiempo hasta llamada','Clasificación','Fuente'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${registros.map(item => {
+  detalle.innerHTML = `<div class="overflow-auto rounded-lg border border-gray-800"><div class="flex items-center justify-between p-3 border-b border-gray-800"><h3 class="text-xs font-bold text-gray-200">Detalle de ${ejecutivo}</h3><span class="text-[11px] text-gray-500">${registros.length} leads</span></div><table class="w-full text-xs border-collapse"><thead><tr>${['Lead','Nombre','Teléfono','Entrada','Entrada en horario','Resultado','Hora llamada','Tiempo hasta llamada','Clasificación','Fuente'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${registros.map(item => {
     const puedeAbrirLlamada = item.fuente && item.fecha_llamada;
     const accion = puedeAbrirLlamada ? ` onclick="abrirRegistroLlamadaNoCalificado('${encodeURIComponent(item.fuente)}','${encodeURIComponent(item.telefono || '')}','${encodeURIComponent(item.fecha_llamada)}')" title="Abrir registro de llamada"` : '';
     const claseTiempo = claseClasificacionTiempo(item.clasificacion_tiempo);
@@ -2991,7 +2991,7 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
               <th class="p-2.5 text-right text-[10px]">Hora reunión</th>
               <th class="p-2.5 text-left text-[10px]">Resultado</th>
               <th class="p-2.5 text-center text-[10px]">Cumplió</th>
-              <th class="p-2.5 text-center text-[10px]">Entrada fuera de horario</th>
+              <th class="p-2.5 text-center text-[10px]">Entrada en horario</th>
               <th class="p-2.5 text-left text-[10px]">Fuente</th>
               <th class="p-2.5 text-right text-[10px]">Fecha contacto</th>
               <th class="p-2.5 text-right text-[10px]">Hora contacto</th>

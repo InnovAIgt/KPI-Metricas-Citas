@@ -2940,9 +2940,6 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
     const colorEjecutivo = generarColorEjecutivo(r.ejecutivo || '');
     return `
     <tr class="hover:bg-slate-800/50 text-gray-200 ${colorEjecutivo}">
-      'Fecha y hora de entrada': item?.created_at_sv || item?.created_at || '',
-      'Tiempo restante atención': indicadores.tiempo_atencion,
-      'Entrada fuera de horario': indicadores.entrada_fuera_horario
       <td class="p-2.5 text-left">${r.ejecutivo || ''}</td>
       <td class="p-2.5 text-left">${r.lead || ''}</td>
       <td class="p-2.5 text-left">${r.cliente || ''}</td>

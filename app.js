@@ -1181,6 +1181,12 @@ function esHorarioLaboral(fecha) {
   return dia >= 1 && dia <= 5 && minutos >= 8 * 60 && minutos < 18 * 60;
 }
 
+function estadoEntradaLaboral(fecha) {
+  if (!fecha || Number.isNaN(fecha.getTime())) return 'No debe haber';
+  if (esHorarioLaboral(fecha)) return 'Sí';
+  return fecha.getDay() === 0 || fecha.getDay() === 6 ? 'No fin de semana' : 'No entre semana';
+}
+
 function siguienteInicioLaboral(fecha) {
   const inicio = new Date(fecha);
   inicio.setHours(8, 0, 0, 0);
@@ -1209,11 +1215,11 @@ function obtenerVentanaAtencion(fechaEntrada) {
 
 function calcularIndicadorAtencion(fechaEntrada) {
   const ventana = obtenerVentanaAtencion(fechaEntrada);
-  if (!ventana) return { tiempo_atencion: 'Sin fecha', entrada_fuera_horario: 'Sin fecha' };
+  if (!ventana) return { tiempo_atencion: 'Sin fecha', entrada_fuera_horario: 'No debe haber' };
   const horas = (ventana.limite.getTime() - Date.now()) / 3600000;
   return {
     tiempo_atencion: horas > 0 ? `${horas.toFixed(1)} h` : 'Vencido',
-    entrada_fuera_horario: esHorarioLaboral(fechaEntrada) ? 'No' : 'Sí'
+    entrada_fuera_horario: estadoEntradaLaboral(fechaEntrada)
   };
 }
 
@@ -1229,7 +1235,7 @@ function calcularIndicadoresLead(fechaReunion, horaReunion, fechaEntrada, horaEn
   }
   return {
     'Tiempo restante reunión': restante,
-    'Entrada fuera de horario': entrada ? (esHorarioLaboral(entrada) ? 'No' : 'Sí') : 'Sin fecha'
+    'Entrada fuera de horario': estadoEntradaLaboral(entrada)
   };
 }
 
@@ -2339,7 +2345,7 @@ async function calcularCruceUnificado() {
       fecha_contacto: (coincidencia && coincidencia.fechaHora) ? formatearFechaCorta(coincidencia.fechaHora) : '',
       hora_contacto: (coincidencia && coincidencia.fechaHora) ? formatearHoraCorta(coincidencia.fechaHora) : '',
       tiempo_llamada_horas: horasHastaLlamada == null ? 'Sin llamada' : `${horasHastaLlamada.toFixed(1)} h`,
-      entrada_fuera_horario: entradaLead ? (esHorarioLaboral(entradaLead) ? 'No' : 'Sí') : 'Sin fecha',
+      entrada_fuera_horario: estadoEntradaLaboral(entradaLead),
       diferencia_min: diferenciaMin,
       duracion_seg: duracionSeg,
       estado_llamada: estadoTipo || '',
@@ -2397,7 +2403,7 @@ function construirResumenMaestra(cruce) {
     fecha_llamada: r.fecha_llamada_corta || r.fecha_contacto || '',
     hora_llamada: r.hora_llamada_corta || r.hora_contacto || '',
     tiempo_llamada_horas: r.tiempo_llamada_horas || '',
-    entrada_fuera_horario: r.entrada_fuera_horario || 'Sin fecha',
+    entrada_fuera_horario: r.entrada_fuera_horario || 'No debe haber',
     kpi_sla_etapa_1: r.kpi_sla_etapa_1 ? 'Sí' : 'No',
     kpi_sla_etapa_2: r.kpi_sla_etapa_2 ? 'Sí' : 'No',
     kpi_sla_etapa_3: r.kpi_sla_etapa_3 ? 'Sí' : 'No',
@@ -2886,11 +2892,11 @@ function mostrarDetalleNoCalificados(ejecutivoEncoded) {
   const registros = (window.kpi1NoCalificadosDetalle || []).filter(item => item.ejecutivo === ejecutivo);
   const detalle = document.getElementById('detalle-no-kpi1');
   if (!detalle) return;
-  detalle.innerHTML = `<div class="overflow-auto rounded-lg border border-gray-800"><div class="flex items-center justify-between p-3 border-b border-gray-800"><h3 class="text-xs font-bold text-gray-200">Detalle de ${ejecutivo}</h3><span class="text-[11px] text-gray-500">${registros.length} leads</span></div><table class="w-full text-xs border-collapse"><thead><tr>${['Lead','Nombre','Teléfono','Entrada','Resultado','Hora llamada','Tiempo hasta llamada','Clasificación','Fuente'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${registros.map(item => {
+  detalle.innerHTML = `<div class="overflow-auto rounded-lg border border-gray-800"><div class="flex items-center justify-between p-3 border-b border-gray-800"><h3 class="text-xs font-bold text-gray-200">Detalle de ${ejecutivo}</h3><span class="text-[11px] text-gray-500">${registros.length} leads</span></div><table class="w-full text-xs border-collapse"><thead><tr>${['Lead','Nombre','Teléfono','Entrada','Entrada fuera de horario','Resultado','Hora llamada','Tiempo hasta llamada','Clasificación','Fuente'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${registros.map(item => {
     const puedeAbrirLlamada = item.fuente && item.fecha_llamada;
     const accion = puedeAbrirLlamada ? ` onclick="abrirRegistroLlamadaNoCalificado('${encodeURIComponent(item.fuente)}','${encodeURIComponent(item.telefono || '')}','${encodeURIComponent(item.fecha_llamada)}')" title="Abrir registro de llamada"` : '';
     const claseTiempo = claseClasificacionTiempo(item.clasificacion_tiempo);
-    return `<tr class="${generarColorEjecutivo(ejecutivo)} ${puedeAbrirLlamada ? 'cursor-pointer hover:bg-slate-800/50' : ''}"${accion}><td class="p-2">${item.client_id || ''}</td><td class="p-2">${item.client_name || ''}</td><td class="p-2">${item.telefono || ''}</td><td class="p-2">${item.created_at_sv || item.created_at || ''}</td><td class="p-2">${item.resultado || ''}</td><td class="p-2">${item.hora_llamada || 'No encontrada'}</td><td class="p-2">${item.tiempo_hasta_llamada_horas || 'Sin llamada'}</td><td class="p-2"><span class="badge ${claseTiempo}">${item.clasificacion_tiempo || 'Sin llamada'}</span></td><td class="p-2">${item.fuente || ''}</td></tr>`;
+    return `<tr class="${generarColorEjecutivo(ejecutivo)} ${puedeAbrirLlamada ? 'cursor-pointer hover:bg-slate-800/50' : ''}"${accion}><td class="p-2">${item.client_id || ''}</td><td class="p-2">${item.client_name || ''}</td><td class="p-2">${item.telefono || ''}</td><td class="p-2">${item.created_at_sv || item.created_at || ''}</td><td class="p-2">${estadoEntradaLaboral(parseFecha(item.created_at))}</td><td class="p-2">${item.resultado || ''}</td><td class="p-2">${item.hora_llamada || 'No encontrada'}</td><td class="p-2">${item.tiempo_hasta_llamada_horas || 'Sin llamada'}</td><td class="p-2"><span class="badge ${claseTiempo}">${item.clasificacion_tiempo || 'Sin llamada'}</span></td><td class="p-2">${item.fuente || ''}</td></tr>`;
   }).join('') || '<tr><td colspan="9" class="p-3 text-center text-gray-500">No hay detalle.</td></tr>'}</tbody></table></div>`;
 }
 
@@ -2940,6 +2946,7 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
     const colorEjecutivo = generarColorEjecutivo(r.ejecutivo || '');
     return `
     <tr class="hover:bg-slate-800/50 text-gray-200 ${colorEjecutivo}">
+      <td class="p-2.5 text-left">${nombrePais(r.pais || 'N/D')}</td>
       <td class="p-2.5 text-left">${r.ejecutivo || ''}</td>
       <td class="p-2.5 text-left">${r.lead || ''}</td>
       <td class="p-2.5 text-left">${r.cliente || ''}</td>
@@ -2948,6 +2955,7 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
       <td class="p-2.5 text-right">${r.hora_reunion || ''}</td>
       <td class="p-2.5 text-left"><span class="${claseResultado(r.resultado)}">${r.resultado || ''}</span></td>
       <td class="p-2.5 text-center">${r.cumplio || 'No'}</td>
+      <td class="p-2.5 text-center">${r.entrada_fuera_horario || 'No debe haber'}</td>
       <td class="p-2.5 text-left">${r.fuente || ''}</td>
       <td class="p-2.5 text-right">${r.fecha_contacto || ''}</td>
       <td class="p-2.5 text-right">${r.hora_contacto || ''}</td>
@@ -2983,6 +2991,7 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
               <th class="p-2.5 text-right text-[10px]">Hora reunión</th>
               <th class="p-2.5 text-left text-[10px]">Resultado</th>
               <th class="p-2.5 text-center text-[10px]">Cumplió</th>
+              <th class="p-2.5 text-center text-[10px]">Entrada fuera de horario</th>
               <th class="p-2.5 text-left text-[10px]">Fuente</th>
               <th class="p-2.5 text-right text-[10px]">Fecha contacto</th>
               <th class="p-2.5 text-right text-[10px]">Hora contacto</th>
@@ -2995,7 +3004,7 @@ function mostrarDetalleKPI1(ejecutivoEncoded) {
               <th class="p-2.5 text-left text-[10px]">Observación</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-800">${filas || `<tr><td colspan="19" class="p-4 text-center text-gray-400">No hay registros asociados a este ejecutivo.</td></tr>`}</tbody>
+          <tbody class="divide-y divide-gray-800">${filas || `<tr><td colspan="20" class="p-4 text-center text-gray-400">No hay registros asociados a este ejecutivo.</td></tr>`}</tbody>
         </table>
       </div>
     </div>`;

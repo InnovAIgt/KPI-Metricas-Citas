@@ -11,6 +11,7 @@ let detalleFiltro = null;
 let kpi1DetalleCruce = [];
 let modoDashboard = 'calificados';
 let temporizadorLeads = null;
+let leadsDisponiblesLlamadaManual = [];
 
 let SB_URL = "https://sbopifiiyezmvsadwkpg.supabase.co";
 let SB_KEY = "sb_publishable_1drMMd0cMfJLz0tlEhq1_Q_JLdfpygh";
@@ -1249,6 +1250,117 @@ function actualizarIndicadoresLeads() {
   repintar('tabla-dinamica');
 }
 
+function textoSeguro(valor) {
+  return String(valor ?? '').replace(/[&<>'"]/g, caracter => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[caracter]));
+}
+
+function obtenerNombreLeadManual(lead) {
+  return modoDashboard === 'no-calificados'
+    ? (lead?.client_name || '')
+    : (lead?.nombre_prospecto || lead?.nombre || lead?.cliente || '');
+}
+
+function obtenerCodigoLeadManual(lead) {
+  return modoDashboard === 'no-calificados'
+    ? (lead?.client_id || '')
+    : (lead?.codigo_prospecto || lead?.codigo || lead?.lead_id || '');
+}
+
+function obtenerTelefonoLeadManual(lead) {
+  return lead?.telefono || lead?.client_phone || lead?.telefono_contacto || lead?.celular || '';
+}
+
+function obtenerEjecutivoLeadManual(lead) {
+  return modoDashboard === 'no-calificados' ? (lead?.advisor_name || '') : (lead?.asesor_nombre || '');
+}
+
+function actualizarDatosLeadLlamadaManual() {
+  const select = document.getElementById('llamada-manual-lead');
+  const lead = leadsDisponiblesLlamadaManual[Number(select?.value)];
+  if (!lead) return;
+  document.getElementById('llamada-manual-telefono-lead').value = obtenerTelefonoLeadManual(lead);
+  document.getElementById('llamada-manual-contacto-lead').value = obtenerNombreLeadManual(lead);
+  const ejecutivo = obtenerEjecutivoLeadManual(lead);
+  const ejecutivoSelect = document.getElementById('llamada-manual-ejecutivo');
+  const opcion = Array.from(ejecutivoSelect.options).find(o => o.dataset.nombre.toLowerCase() === ejecutivo.trim().toLowerCase());
+  if (opcion) ejecutivoSelect.value = opcion.value;
+  actualizarDatosEjecutivoLlamadaManual();
+}
+
+function actualizarDatosEjecutivoLlamadaManual() {
+  const select = document.getElementById('llamada-manual-ejecutivo');
+  const ejecutivo = cache.catalogo[Number(select?.value)];
+  const contacto = ejecutivo ? [ejecutivo.celular, ejecutivo.extension].filter(Boolean).join(' / ') : '';
+  const campo = document.getElementById('llamada-manual-contacto-ejecutivo');
+  if (campo) campo.value = contacto;
+}
+
+async function abrirModalLlamadaManual(tabla) {
+  await Promise.all([
+    asegurarCache(modoDashboard === 'no-calificados' ? 'leads_no_calificados' : 'leads', modoDashboard === 'no-calificados' ? 'created_at' : 'fecha_agendada'),
+    asegurarCache('catalogo', null)
+  ]);
+  const leads = filtrarPorFechaGlobal(
+    modoDashboard === 'no-calificados' ? cache.leads_no_calificados : cache.leads,
+    modoDashboard === 'no-calificados' ? 'created_at' : 'fecha_agendada'
+  );
+  leadsDisponiblesLlamadaManual = leads;
+  const leadSelect = document.getElementById('llamada-manual-lead');
+  const ejecutivoSelect = document.getElementById('llamada-manual-ejecutivo');
+  leadSelect.innerHTML = leads.map((lead, index) => {
+    const codigo = obtenerCodigoLeadManual(lead) || `Registro ${index + 1}`;
+    const nombre = obtenerNombreLeadManual(lead);
+    const telefono = obtenerTelefonoLeadManual(lead);
+    return `<option value="${index}">${textoSeguro([codigo, nombre, telefono].filter(Boolean).join(' | '))}</option>`;
+  }).join('');
+  ejecutivoSelect.innerHTML = cache.catalogo.map((ejecutivo, index) => `<option value="${index}" data-nombre="${textoSeguro(ejecutivo.nombre_ejecutivo || '')}">${textoSeguro(ejecutivo.nombre_ejecutivo || 'Sin nombre')}</option>`).join('');
+  if (!leads.length || !cache.catalogo.length) {
+    mostrarToast('Necesitas tener al menos un lead y un ejecutivo en el catálogo.', 'error');
+    return;
+  }
+  document.getElementById('llamada-manual-tabla').value = tabla;
+  document.getElementById('llamada-manual-medio').textContent = tabla === 'llamadas_pbx' ? 'Se guardará en Llamadas PBX' : 'Se guardará en Llamadas Celular';
+  document.getElementById('llamada-manual-fecha').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('llamada-manual-hora').value = new Date().toTimeString().slice(0, 5);
+  actualizarDatosLeadLlamadaManual();
+  document.getElementById('modal-llamada-manual').classList.remove('modal-hidden');
+}
+
+function cerrarModalLlamadaManual() {
+  document.getElementById('modal-llamada-manual')?.classList.add('modal-hidden');
+  document.getElementById('form-llamada-manual')?.reset();
+}
+
+async function guardarLlamadaManual(event) {
+  event.preventDefault();
+  const tabla = document.getElementById('llamada-manual-tabla').value;
+  const lead = leadsDisponiblesLlamadaManual[Number(document.getElementById('llamada-manual-lead').value)];
+  const ejecutivo = cache.catalogo[Number(document.getElementById('llamada-manual-ejecutivo').value)];
+  const fecha = document.getElementById('llamada-manual-fecha').value;
+  const hora = document.getElementById('llamada-manual-hora').value;
+  if (!lead || !ejecutivo || !fecha || !hora) return;
+  const telefono = obtenerTelefonoLeadManual(lead);
+  const datos = tabla === 'llamadas_pbx'
+    ? { extension: ejecutivo.extension || '', destino: telefono, estado: 'Manual', nombre: ejecutivo.nombre_ejecutivo || '', fecha_hora: `${fecha}T${hora}:00`, solo_fecha: fecha, pais: ejecutivo.pais || '' }
+    : { fecha, hora: `${hora}:00`, destino: telefono, tipo: 'Saliente', usuario: ejecutivo.usuario || ejecutivo.nombre_ejecutivo || '' };
+  const submit = document.getElementById('llamada-manual-submit');
+  submit.disabled = true;
+  try {
+    const { error } = await getSupabase().from(tabla).insert([datos]);
+    if (error) throw error;
+    cache[tabla] = [];
+    cargaCompleta[tabla] = false;
+    cruceCache = null;
+    cerrarModalLlamadaManual();
+    mostrarToast('Llamada manual agregada');
+    await recargarUnaTabla(tabla, tabla === 'llamadas_pbx' ? 'fecha_hora' : 'fecha');
+  } catch (error) {
+    mostrarToast('Error: ' + error.message, 'error');
+  } finally {
+    submit.disabled = false;
+  }
+}
+
 async function renderRegistro(main, tabla, titulo, columnaFecha) {
   if (temporizadorLeads) {
     clearInterval(temporizadorLeads);
@@ -1267,6 +1379,11 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
             Exportar XLSX
           </button>
+          ${tabla === 'llamadas_pbx' || tabla === 'llamadas_celular' ? `
+          <button type="button" onclick="abrirModalLlamadaManual('${tabla}')" class="bg-emerald-700 hover:bg-emerald-600 text-xs px-2.5 py-1.5 rounded font-bold flex items-center gap-1" title="Agregar llamada manual" aria-label="Agregar llamada manual">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"></path></svg>
+            Agregar llamada
+          </button>` : ''}
           ${tabla === 'llamadas_pbx' ? `
           <label class="text-[11px] text-gray-500">País</label>
           <select id="pbx-pais" onchange="actualizarPaisPbxDesdeUI(); render()" class="p-1.5 text-xs rounded">

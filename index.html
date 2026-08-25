@@ -256,6 +256,56 @@
     </div>
   </div>
 
+  <div id="modal-llamada-manual" class="modal-overlay modal-hidden">
+    <div class="modal-content">
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-red-300">Agregar llamada manual</h2>
+          <p id="llamada-manual-medio" class="text-[11px] text-gray-500 mt-1"></p>
+        </div>
+        <button type="button" onclick="cerrarModalLlamadaManual()" class="text-gray-400 hover:text-gray-300" aria-label="Cerrar">×</button>
+      </div>
+      <form id="form-llamada-manual" onsubmit="guardarLlamadaManual(event)">
+        <input type="hidden" id="llamada-manual-tabla">
+        <div class="form-group">
+          <label for="llamada-manual-lead">Lead</label>
+          <select id="llamada-manual-lead" required onchange="actualizarDatosLeadLlamadaManual()"></select>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="form-group">
+            <label for="llamada-manual-ejecutivo">Ejecutivo</label>
+            <select id="llamada-manual-ejecutivo" required onchange="actualizarDatosEjecutivoLlamadaManual()"></select>
+          </div>
+          <div class="form-group">
+            <label for="llamada-manual-fecha">Fecha</label>
+            <input type="date" id="llamada-manual-fecha" required>
+          </div>
+          <div class="form-group">
+            <label for="llamada-manual-hora">Hora</label>
+            <input type="time" id="llamada-manual-hora" required>
+          </div>
+          <div class="form-group">
+            <label for="llamada-manual-telefono-lead">Teléfono del lead</label>
+            <input type="text" id="llamada-manual-telefono-lead" readonly>
+          </div>
+          <div class="form-group">
+            <label for="llamada-manual-contacto-lead">Nombre del lead</label>
+            <input type="text" id="llamada-manual-contacto-lead" readonly>
+          </div>
+          <div class="form-group">
+            <label for="llamada-manual-contacto-ejecutivo">Teléfono / extensión del ejecutivo</label>
+            <input type="text" id="llamada-manual-contacto-ejecutivo" readonly>
+          </div>
+        </div>
+        <p class="text-[11px] text-gray-500 mb-4">Duración, uniqueid, audio y demás datos automáticos quedan vacíos.</p>
+        <div class="flex gap-2 justify-end">
+          <button type="button" onclick="cerrarModalLlamadaManual()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">Cancelar</button>
+          <button id="llamada-manual-submit" type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded text-sm font-bold">Guardar llamada</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div id="modal-celda" class="modal-overlay modal-hidden">
     <div class="modal-celda">
       <div class="flex justify-between items-center mb-4">

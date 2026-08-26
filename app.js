@@ -1399,6 +1399,7 @@ async function eliminarLlamadaManual() {
     cache[tabla] = [];
     cargaCompleta[tabla] = false;
     cruceCache = null;
+    detalleFiltro = null;
     mostrarToast('Llamada manual eliminada');
     await recargarUnaTabla(tabla, tabla === 'llamadas_pbx' ? 'fecha_hora' : 'fecha');
   } catch (error) {
@@ -1418,6 +1419,7 @@ async function guardarLlamadaManual(event) {
   const datos = tabla === 'llamadas_pbx'
     ? { extension: ejecutivo.extension || '', destino: telefono, estado: 'Manual', nombre: ejecutivo.nombre_ejecutivo || '', fecha_hora: `${fecha}T${hora}:00`, solo_fecha: fecha, pais: ejecutivo.pais || '' }
     : { id: Date.now(), fecha, hora: `${hora}:00`, destino: telefono, tipo: 'Saliente', linea: 'Manual', usuario: ejecutivo.usuario || ejecutivo.nombre_ejecutivo || '' };
+  const esEdicion = Boolean(llamadaManualEnEdicion);
   const submit = document.getElementById('llamada-manual-submit');
   submit.disabled = true;
   try {
@@ -1431,8 +1433,9 @@ async function guardarLlamadaManual(event) {
     cache[tabla] = [];
     cargaCompleta[tabla] = false;
     cruceCache = null;
+    detalleFiltro = null;
     cerrarModalLlamadaManual();
-    mostrarToast('Llamada manual agregada');
+    mostrarToast(esEdicion ? 'Llamada manual actualizada' : 'Llamada manual agregada');
     await recargarUnaTabla(tabla, tabla === 'llamadas_pbx' ? 'fecha_hora' : 'fecha');
   } catch (error) {
     mostrarToast('Error: ' + error.message, 'error');

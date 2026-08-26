@@ -1271,7 +1271,8 @@ function obtenerTelefonoLeadManual(lead) {
 }
 
 function obtenerEjecutivoLeadManual(lead) {
-  return modoDashboard === 'no-calificados' ? (lead?.advisor_name || '') : (lead?.asesor_nombre || '');
+  if (modoDashboard === 'no-calificados') return lead?.advisor_name || lead?.asesor_nombre || lead?.ejecutivo || '';
+  return lead?.asesor_nombre || lead?.ejecutivo || lead?.asesor || lead?.asesor_name || lead?.advisor_name || '';
 }
 
 function actualizarDatosLeadLlamadaManual() {
@@ -1282,7 +1283,8 @@ function actualizarDatosLeadLlamadaManual() {
   document.getElementById('llamada-manual-contacto-lead').value = obtenerNombreLeadManual(lead);
   const ejecutivo = obtenerEjecutivoLeadManual(lead);
   const ejecutivoSelect = document.getElementById('llamada-manual-ejecutivo');
-  const opcion = Array.from(ejecutivoSelect.options).find(o => o.dataset.nombre.toLowerCase() === ejecutivo.trim().toLowerCase());
+  const claveEjecutivo = normalizarClaveUsuario(ejecutivo);
+  const opcion = Array.from(ejecutivoSelect.options).find(o => normalizarClaveUsuario(o.dataset.nombre) === claveEjecutivo);
   if (opcion) ejecutivoSelect.value = opcion.value;
   actualizarDatosEjecutivoLlamadaManual();
 }

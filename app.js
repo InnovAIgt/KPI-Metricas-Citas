@@ -1283,7 +1283,11 @@ function obtenerEjecutivoLeadManual(lead) {
 function esLlamadaManual(tabla, llamada) {
   if (!llamada) return false;
   if (tabla === 'llamadas_pbx') return String(llamada.estado || '').trim().toLowerCase() === 'manual';
-  return String(llamada.linea || '').trim().toLowerCase() === 'manual' || llamada.manual === true;
+  const linea = String(llamada.linea || '').trim().toLowerCase();
+  if (linea === 'manual' || llamada.manual === true) return true;
+  const tipo = String(llamada.tipo || '').trim().toLowerCase();
+  const sinDatosAutomaticos = !llamada.duracion && !llamada.dia_consultado;
+  return !linea && tipo === 'saliente' && sinDatosAutomaticos;
 }
 
 function actualizarDatosLeadLlamadaManual() {

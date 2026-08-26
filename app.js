@@ -175,6 +175,9 @@ function toggleSubmenu(id) { document.getElementById(id).classList.toggle('hidde
 
 function irA(view) {
   vistaActual = view;
+  if (window.location.hash) {
+    window.history.replaceState(null, document.title, `${window.location.pathname}${window.location.search}`);
+  }
   document.querySelectorAll('.sidebar-btn, .sub-btn').forEach(b => b.classList.remove('active'));
   const btn = document.querySelector(`[data-view="${view}"]`);
   if (btn) btn.classList.add('active');

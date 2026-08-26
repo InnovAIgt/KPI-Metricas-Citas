@@ -1342,7 +1342,7 @@ async function guardarLlamadaManual(event) {
   const telefono = obtenerTelefonoLeadManual(lead);
   const datos = tabla === 'llamadas_pbx'
     ? { extension: ejecutivo.extension || '', destino: telefono, estado: 'Manual', nombre: ejecutivo.nombre_ejecutivo || '', fecha_hora: `${fecha}T${hora}:00`, solo_fecha: fecha, pais: ejecutivo.pais || '' }
-    : { fecha, hora: `${hora}:00`, destino: telefono, tipo: 'Saliente', usuario: ejecutivo.usuario || ejecutivo.nombre_ejecutivo || '' };
+    : { id: Date.now(), fecha, hora: `${hora}:00`, destino: telefono, tipo: 'Saliente', usuario: ejecutivo.usuario || ejecutivo.nombre_ejecutivo || '' };
   const submit = document.getElementById('llamada-manual-submit');
   submit.disabled = true;
   try {

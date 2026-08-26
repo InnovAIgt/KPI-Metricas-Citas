@@ -1464,7 +1464,7 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
           </button>
           ${tabla === 'llamadas_pbx' || tabla === 'llamadas_celular' ? `
           <button type="button" onclick="abrirModalLlamadaManual('${tabla}')" class="bg-emerald-700 hover:bg-emerald-600 text-xs px-2.5 py-1.5 rounded font-bold flex items-center gap-1" title="Agregar llamada manual" aria-label="Agregar llamada manual">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"></path></svg>
+            <svg class="manual-call-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.6 4.8 5.9 6.1a2.2 2.2 0 0 0-.7 2.8 16.8 16.8 0 0 0 9.9 9.9 2.2 2.2 0 0 0 2.8-.7l1.3-1.7a1.8 1.8 0 0 0-.2-2.4l-2-2a1.8 1.8 0 0 0-2.4-.1l-1.2 1a12.3 12.3 0 0 1-4.3-4.3l1-1.2a1.8 1.8 0 0 0-.1-2.4l-2-2a1.8 1.8 0 0 0-2.4-.2Z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.5 4.5v4m-2-2h4"></path></svg>
             Agregar llamada
           </button>` : ''}
           ${tabla === 'llamadas_pbx' ? `

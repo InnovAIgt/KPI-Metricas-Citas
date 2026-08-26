@@ -1951,6 +1951,11 @@ function repintar(contId) {
       return a.localeCompare(b);
     });
     const newOrder = [...left.map(x=>x.col), ...middle, ...kpis];
+    const indiceAcciones = newOrder.indexOf('acciones');
+    if (indiceAcciones !== -1) {
+      newOrder.splice(indiceAcciones, 1);
+      newOrder.push('acciones');
+    }
     // replace columnasUnicas with ordered list
     columnasUnicas.length = 0;
     columnasUnicas.push(...newOrder);

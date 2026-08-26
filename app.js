@@ -12,6 +12,7 @@ let kpi1DetalleCruce = [];
 let modoDashboard = 'calificados';
 let temporizadorLeads = null;
 let leadsDisponiblesLlamadaManual = [];
+let llamadaManualEnEdicion = null;
 
 let SB_URL = "https://sbopifiiyezmvsadwkpg.supabase.co";
 let SB_KEY = "sb_publishable_1drMMd0cMfJLz0tlEhq1_Q_JLdfpygh";
@@ -1131,7 +1132,8 @@ function normalizarVistaPbx(item) {
     'Fecha': fechaFormateada || '',
     'Hora': horaSolo,
     'Ejecutivo': item.nombre || '',
-    Escuchar: obtenerUrlAudio(item) || ''
+    Escuchar: obtenerUrlAudio(item) || '',
+    acciones: accionesLlamadaManual('llamadas_pbx', item)
   };
 }
 
@@ -1278,6 +1280,12 @@ function obtenerEjecutivoLeadManual(lead) {
   return lead?.asesor_nombre || lead?.ejecutivo || lead?.asesor || lead?.asesor_name || lead?.advisor_name || '';
 }
 
+function esLlamadaManual(tabla, llamada) {
+  if (!llamada) return false;
+  if (tabla === 'llamadas_pbx') return String(llamada.estado || '').trim().toLowerCase() === 'manual';
+  return String(llamada.linea || '').trim().toLowerCase() === 'manual' || llamada.manual === true;
+}
+
 function actualizarDatosLeadLlamadaManual() {
   const select = document.getElementById('llamada-manual-lead');
   const lead = leadsDisponiblesLlamadaManual[Number(select?.value)];
@@ -1300,7 +1308,26 @@ function actualizarDatosEjecutivoLlamadaManual() {
   if (campo) campo.value = contacto;
 }
 
-async function abrirModalLlamadaManual(tabla) {
+function prepararFormularioLlamadaManual(tabla, registro = null) {
+  llamadaManualEnEdicion = registro ? { tabla, registro } : null;
+  const fechaHora = registro?.fecha_hora || '';
+  const fechaCelular = registro?.fecha || '';
+  const horaCelular = String(registro?.hora || '').slice(0, 5);
+  const fecha = fechaHora ? String(fechaHora).split(/[T ]/)[0] : fechaCelular;
+  const hora = fechaHora ? (String(fechaHora).split(/[T ]/)[1] || '').slice(0, 5) : horaCelular;
+  const leadIndex = leadsDisponiblesLlamadaManual.findIndex(lead => normalizarTel(obtenerTelefonoLeadManual(lead)) === normalizarTel(registro?.destino));
+  if (leadIndex >= 0) document.getElementById('llamada-manual-lead').value = String(leadIndex);
+  const operador = registro?.nombre || registro?.usuario || registro?.extension || '';
+  const ejecutivoIndex = cache.catalogo.findIndex(e => [e.nombre_ejecutivo, e.usuario, e.extension].some(valor => normalizarClaveUsuario(valor) === normalizarClaveUsuario(operador)));
+  if (ejecutivoIndex >= 0) document.getElementById('llamada-manual-ejecutivo').value = String(ejecutivoIndex);
+  document.getElementById('llamada-manual-fecha').value = fecha || new Date().toISOString().slice(0, 10);
+  document.getElementById('llamada-manual-hora').value = hora || new Date().toTimeString().slice(0, 5);
+  document.getElementById('llamada-manual-submit').textContent = registro ? 'Guardar cambios' : 'Guardar llamada';
+  document.getElementById('llamada-manual-delete')?.classList.toggle('hidden', !registro);
+  actualizarDatosLeadLlamadaManual();
+}
+
+async function abrirModalLlamadaManual(tabla, id = '') {
   await Promise.all([
     asegurarCache(modoDashboard === 'no-calificados' ? 'leads_no_calificados' : 'leads', modoDashboard === 'no-calificados' ? 'created_at' : 'fecha_agendada'),
     asegurarCache('catalogo', null)
@@ -1323,17 +1350,56 @@ async function abrirModalLlamadaManual(tabla) {
     mostrarToast('Necesitas tener al menos un lead y un ejecutivo en el catálogo.', 'error');
     return;
   }
+  const registro = id ? (cache[tabla] || []).find(item => String(item.id ?? '') === String(decodeURIComponent(id))) : null;
   document.getElementById('llamada-manual-tabla').value = tabla;
   document.getElementById('llamada-manual-medio').textContent = tabla === 'llamadas_pbx' ? 'Se guardará en Llamadas PBX' : 'Se guardará en Llamadas Celular';
-  document.getElementById('llamada-manual-fecha').value = new Date().toISOString().slice(0, 10);
-  document.getElementById('llamada-manual-hora').value = new Date().toTimeString().slice(0, 5);
-  actualizarDatosLeadLlamadaManual();
+  prepararFormularioLlamadaManual(tabla, registro);
   document.getElementById('modal-llamada-manual').classList.remove('modal-hidden');
 }
 
 function cerrarModalLlamadaManual() {
   document.getElementById('modal-llamada-manual')?.classList.add('modal-hidden');
   document.getElementById('form-llamada-manual')?.reset();
+  llamadaManualEnEdicion = null;
+}
+
+function abrirEdicionLlamadaManual(tabla, id) {
+  abrirModalLlamadaManual(tabla, encodeURIComponent(String(id)));
+}
+
+function accionesLlamadaManual(tabla, llamada) {
+  if (!esLlamadaManual(tabla, llamada) || llamada.id === undefined || llamada.id === null) return '';
+  const id = encodeURIComponent(String(llamada.id));
+  return `<div class="flex gap-1" style="white-space: nowrap;"><button type="button" onclick="event.stopPropagation(); abrirEdicionLlamadaManual('${tabla}','${id}')" class="bg-amber-600 hover:bg-amber-500 text-xs px-2 py-1 rounded" title="Editar llamada manual">Editar</button><button type="button" onclick="event.stopPropagation(); eliminarLlamadaDesdeTabla('${tabla}','${id}')" class="bg-red-600 hover:bg-red-500 text-xs px-2 py-1 rounded" title="Eliminar llamada manual">Eliminar</button></div>`;
+}
+
+async function eliminarLlamadaDesdeTabla(tabla, id) {
+  const registro = (cache[tabla] || []).find(item => String(item.id ?? '') === String(decodeURIComponent(id)));
+  if (!registro) return mostrarToast('Llamada manual no encontrada', 'error');
+  llamadaManualEnEdicion = { tabla, registro };
+  await eliminarLlamadaManual();
+}
+
+async function eliminarLlamadaManual() {
+  const contexto = llamadaManualEnEdicion;
+  if (!contexto || !confirm('¿Eliminar esta llamada manual?')) return;
+  const { tabla, registro } = contexto;
+  try {
+    let consulta = getSupabase().from(tabla).delete();
+    if (registro.id !== undefined && registro.id !== null) consulta = consulta.eq('id', registro.id);
+    else if (tabla === 'llamadas_pbx') consulta = consulta.eq('fecha_hora', registro.fecha_hora).eq('destino', registro.destino).eq('extension', registro.extension || '');
+    else consulta = consulta.eq('id', registro.id);
+    const { error } = await consulta;
+    if (error) throw error;
+    cerrarModalLlamadaManual();
+    cache[tabla] = [];
+    cargaCompleta[tabla] = false;
+    cruceCache = null;
+    mostrarToast('Llamada manual eliminada');
+    await recargarUnaTabla(tabla, tabla === 'llamadas_pbx' ? 'fecha_hora' : 'fecha');
+  } catch (error) {
+    mostrarToast('Error: ' + error.message, 'error');
+  }
 }
 
 async function guardarLlamadaManual(event) {
@@ -1347,11 +1413,16 @@ async function guardarLlamadaManual(event) {
   const telefono = obtenerTelefonoLeadManual(lead);
   const datos = tabla === 'llamadas_pbx'
     ? { extension: ejecutivo.extension || '', destino: telefono, estado: 'Manual', nombre: ejecutivo.nombre_ejecutivo || '', fecha_hora: `${fecha}T${hora}:00`, solo_fecha: fecha, pais: ejecutivo.pais || '' }
-    : { id: Date.now(), fecha, hora: `${hora}:00`, destino: telefono, tipo: 'Saliente', usuario: ejecutivo.usuario || ejecutivo.nombre_ejecutivo || '' };
+    : { id: Date.now(), fecha, hora: `${hora}:00`, destino: telefono, tipo: 'Saliente', linea: 'Manual', usuario: ejecutivo.usuario || ejecutivo.nombre_ejecutivo || '' };
   const submit = document.getElementById('llamada-manual-submit');
   submit.disabled = true;
   try {
-    const { error } = await getSupabase().from(tabla).insert([datos]);
+    let query = getSupabase().from(tabla);
+    const datosGuardar = { ...datos };
+    if (llamadaManualEnEdicion) delete datosGuardar.id;
+    const { error } = llamadaManualEnEdicion
+      ? await query.update(datosGuardar).eq('id', llamadaManualEnEdicion.registro.id)
+      : await query.insert([datos]);
     if (error) throw error;
     cache[tabla] = [];
     cargaCompleta[tabla] = false;
@@ -1451,6 +1522,13 @@ async function renderRegistro(main, tabla, titulo, columnaFecha) {
 
   if (tabla === 'llamadas_whatsapp') {
     datosFiltrados = datosFiltrados.map(normalizarVistaWhatsapp);
+  }
+
+  if (tabla === 'llamadas_celular') {
+    datosFiltrados = datosFiltrados.map(item => ({
+      ...item,
+      acciones: accionesLlamadaManual('llamadas_celular', item)
+    }));
   }
 
   if (tabla === 'leads_no_calificados') {

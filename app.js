@@ -1193,6 +1193,13 @@ function estadoEntradaLaboral(fecha) {
   return fecha.getDay() === 0 || fecha.getDay() === 6 ? 'No fin de semana' : 'No entre semana';
 }
 
+function badgeEntradaLaboral(estado) {
+  if (estado === 'Sí') return '<span class="badge bg-emerald-900 text-emerald-300">Sí</span>';
+  if (estado === 'No fin de semana') return '<span class="badge bg-red-900 text-red-300">No</span> <span class="badge bg-amber-900 text-amber-300">Fin de semana</span>';
+  if (estado === 'No entre semana') return '<span class="badge bg-red-900 text-red-300">No</span> <span class="badge bg-amber-900 text-amber-300">Día de semana</span>';
+  return `<span class="badge bg-red-900 text-red-300">${estado}</span>`;
+}
+
 function siguienteInicioLaboral(fecha) {
   const inicio = new Date(fecha);
   inicio.setHours(8, 0, 0, 0);
@@ -2034,8 +2041,7 @@ function repintar(contId) {
       if (c === 'Estado' || c === 'Resultado') return `<td class="p-2 whitespace-nowrap ${cellBase}">${badgeEstadoCruce(v)}</td>`;
       if (c === 'Cumplió') return `<td class="p-2 whitespace-nowrap ${cellBase}">${badgeCumplio(v)}</td>`;
       if (c === 'Entrada en horario') {
-        const clase = v === 'Sí' ? 'bg-emerald-900 text-emerald-300' : 'bg-amber-900 text-amber-300';
-        return `<td class="p-2 whitespace-nowrap ${cellBase}"><span class="badge ${clase}">${v}</span></td>`;
+        return `<td class="p-2 whitespace-nowrap ${cellBase}">${badgeEntradaLaboral(v)}</td>`;
       }
       if (columnasExpandibles.includes(c) && v && String(v).length > 50) {
         const encoded = encodeURIComponent(String(v));
@@ -3035,6 +3041,8 @@ function calcularKPI1NoCalificados(datos) {
     }))
   ].filter(llamada => llamada.fecha && !Number.isNaN(llamada.fecha.getTime()));
 
+  llamadas.sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
+
   return datos.map(lead => {
     const entrada = parseFecha(lead.created_at);
     const ejecutivo = lead.advisor_name || 'Sin asignar';
@@ -3047,14 +3055,14 @@ function calcularKPI1NoCalificados(datos) {
     const llamadasPorTelefono = llamadas.filter(llamada => telefonoLead && llamada.telefono === telefonoLead);
     const llamadasEjecutivo = llamadasPorTelefono.filter(llamada => !operadores.size || operadores.has(llamada.operador));
     const llamadaValida = llamadasEjecutivo.find(llamada => llamada.fecha >= inicioAtencion && llamada.fecha <= limite && esHorarioLaboralNoCalificado(llamada.fecha));
-    const llamadaPosterior = llamadasEjecutivo.find(llamada => llamada.fecha >= inicioAtencion);
+    const llamadaPosterior = llamadasEjecutivo.find(llamada => llamada.fecha >= entrada);
     const ahora = new Date();
     let resultado = 'No cumplió';
     if (llamadaValida) resultado = 'Cumplió';
     else if (llamadaPosterior) resultado = 'Cumplió a otra hora';
     else if (ahora < limite) resultado = 'Pendiente de evaluar';
 
-    const tiempoHastaLlamada = llamadaPosterior ? Math.max(0, (llamadaPosterior.fecha.getTime() - entrada.getTime()) / 3600000) : null;
+    const tiempoHastaLlamada = llamadaPosterior ? Math.max(0, (llamadaPosterior.fecha.getTime() - inicioAtencion.getTime()) / 3600000) : null;
     return { ...lead, ejecutivo, resultado, cumplio: resultado === 'Cumplió', telefono: lead.telefono || lead.client_phone || '', hora_llamada: llamadaPosterior ? llamadaPosterior.fecha.toLocaleTimeString('es-SV') : '', fecha_llamada: llamadaPosterior ? llamadaPosterior.fecha.toISOString().split('T')[0] : '', fuente: llamadaPosterior?.fuente || '', tiempo_hasta_llamada_horas: tiempoHastaLlamada == null ? 'Sin llamada' : `${tiempoHastaLlamada.toFixed(1)} h`, tiempo_hasta_llamada_num: tiempoHastaLlamada, clasificacion_tiempo: clasificarTiempoLlamada(tiempoHastaLlamada) };
   });
 }
@@ -3104,12 +3112,14 @@ function mostrarDetalleNoCalificados(ejecutivoEncoded) {
   const registros = (window.kpi1NoCalificadosDetalle || []).filter(item => item.ejecutivo === ejecutivo);
   const detalle = document.getElementById('detalle-no-kpi1');
   if (!detalle) return;
-  detalle.innerHTML = `<div class="overflow-auto rounded-lg border border-gray-800"><div class="flex items-center justify-between p-3 border-b border-gray-800"><h3 class="text-xs font-bold text-gray-200">Detalle de ${ejecutivo}</h3><span class="text-[11px] text-gray-500">${registros.length} leads</span></div><table class="w-full text-xs border-collapse"><thead><tr>${['Lead','Nombre','Teléfono','Entrada','Entrada en horario','Resultado','Hora llamada','Tiempo hasta llamada','Clasificación','Fuente'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${registros.map(item => {
+  detalle.innerHTML = `<div class="overflow-auto rounded-lg border border-gray-800"><div class="flex items-center justify-between p-3 border-b border-gray-800"><h3 class="text-xs font-bold text-gray-200">Detalle de ${ejecutivo}</h3><span class="text-[11px] text-gray-500">${registros.length} leads</span></div><table class="w-full text-xs border-collapse"><thead><tr>${['Lead','Nombre','Teléfono','Entrada','Entrada en horario','Resultado','Fecha de llamada realizada','Tiempo hasta llamada','Clasificación','Fuente'].map(col => `<th class="p-2 text-left">${col}</th>`).join('')}</tr></thead><tbody>${registros.map(item => {
     const puedeAbrirLlamada = item.fuente && item.fecha_llamada;
     const accion = puedeAbrirLlamada ? ` onclick="abrirRegistroLlamadaNoCalificado('${encodeURIComponent(item.fuente)}','${encodeURIComponent(item.telefono || '')}','${encodeURIComponent(item.fecha_llamada)}')" title="Abrir registro de llamada"` : '';
     const claseTiempo = claseClasificacionTiempo(item.clasificacion_tiempo);
-    return `<tr class="${generarColorEjecutivo(ejecutivo)} ${puedeAbrirLlamada ? 'cursor-pointer hover:bg-slate-800/50' : ''}"${accion}><td class="p-2">${item.client_id || ''}</td><td class="p-2">${item.client_name || ''}</td><td class="p-2">${item.telefono || ''}</td><td class="p-2">${item.created_at_sv || item.created_at || ''}</td><td class="p-2">${estadoEntradaLaboral(parseFecha(item.created_at))}</td><td class="p-2">${item.resultado || ''}</td><td class="p-2">${item.hora_llamada || 'No encontrada'}</td><td class="p-2">${item.tiempo_hasta_llamada_horas || 'Sin llamada'}</td><td class="p-2"><span class="badge ${claseTiempo}">${item.clasificacion_tiempo || 'Sin llamada'}</span></td><td class="p-2">${item.fuente || ''}</td></tr>`;
-  }).join('') || '<tr><td colspan="9" class="p-3 text-center text-gray-500">No hay detalle.</td></tr>'}</tbody></table></div>`;
+    const fechaHoraLlamada = item.fecha_llamada ? `${formatearFechaValor(item.fecha_llamada)} ${item.hora_llamada || ''}`.trim() : 'No encontrada';
+    const estadoEntrada = estadoEntradaLaboral(parseFecha(item.created_at));
+    return `<tr class="${generarColorEjecutivo(ejecutivo)} ${puedeAbrirLlamada ? 'cursor-pointer hover:bg-slate-800/50' : ''}"${accion}><td class="p-2">${item.client_id || ''}</td><td class="p-2">${item.client_name || ''}</td><td class="p-2">${item.telefono || ''}</td><td class="p-2">${item.created_at_sv || item.created_at || ''}</td><td class="p-2 whitespace-nowrap">${badgeEntradaLaboral(estadoEntrada)}</td><td class="p-2">${item.resultado || ''}</td><td class="p-2">${fechaHoraLlamada}</td><td class="p-2">${item.tiempo_hasta_llamada_horas || 'Sin llamada'}</td><td class="p-2"><span class="badge ${claseTiempo}">${item.clasificacion_tiempo || 'Sin llamada'}</span></td><td class="p-2">${item.fuente || ''}</td></tr>`;
+  }).join('') || '<tr><td colspan="10" class="p-3 text-center text-gray-500">No hay detalle.</td></tr>'}</tbody></table></div>`;
 }
 
 function abrirRegistroLlamadaNoCalificado(fuenteEncoded, telefonoEncoded, fechaEncoded) {

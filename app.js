@@ -1084,6 +1084,7 @@ function normalizarFuenteLlamada(valor) {
   const lower = texto.toLowerCase();
   if (lower === 'pbx' || lower === 'issabel') return 'Issabel';
   if (lower === 'celular' || lower === 'cell' || lower === 'mobile') return 'Celular';
+  if (lower === 'whatsapp' || lower === 'whatssapp') return 'WhatsApp';
   if (lower === 'teams') return 'Teams';
   return texto;
 }
@@ -1720,6 +1721,9 @@ function abrirDetalleFuente(event, fila) {
   } else if (fuenteLower === 'celular') {
     detalleFiltro = { tabla: 'llamadas_celular', telefono, fecha, registroId: registro, registroTabla: registroTabla };
     irA('reg-cel');
+  } else if (fuenteLower === 'whatsapp') {
+    detalleFiltro = { tabla: 'llamadas_whatsapp', telefono, fecha, registroId: registro, registroTabla: registroTabla };
+    irA('reg-whatsapp');
   } else {
     mostrarToast('No hay detalle directo para esta fuente: ' + fuente, 'info');
   }
@@ -1752,12 +1756,14 @@ function aplicarFiltroDetalleRegistro(datos, tabla) {
       if (nombreEjecutivo !== ejecutivoFiltro) return false;
     }
     if (telefonoFiltro) {
-      const destino = normalizarTel(item.destino);
+      const destino = normalizarTel(tabla === 'llamadas_whatsapp' ? item.numero_cliente : item.destino);
       if (!destino || destino !== telefonoFiltro) return false;
     }
     if (!fechaFiltro) return true;
     const itemFecha = tabla === 'llamadas_pbx' || tabla === 'llamadas'
       ? (item.fecha_hora || item.fecha || '').split('T')[0]
+      : tabla === 'llamadas_whatsapp'
+        ? (item.fecha_llamada || '').split('T')[0]
       : (item.fecha || '').split('T')[0];
     return itemFecha === fechaFiltro;
   });
@@ -2367,6 +2373,7 @@ async function calcularCruceUnificado() {
     asegurarCache('leads', 'fecha_agendada'),
     asegurarCache('llamadas_pbx', 'fecha_hora'),
     asegurarCache('llamadas_celular', 'fecha'),
+    asegurarCache('llamadas_whatsapp', 'fecha_llamada'),
     asegurarCache('catalogo', null),
     asegurarCache('llamadas_teams', null)
   ]);
@@ -2390,6 +2397,7 @@ async function calcularCruceUnificado() {
     
     const ejec = cache.catalogo.find(e => (e.nombre_ejecutivo || '').trim().toLowerCase() === (lead.asesor_nombre || '').trim().toLowerCase());
     const usuario = ejec ? ejec.usuario : null;
+    const numeroEjecutivo = ejec ? normalizarTel(ejec.celular) : '';
     let usuarioNorm = '';
     let candidatas = [];
     let delDia = [];
@@ -2444,7 +2452,18 @@ async function calcularCruceUnificado() {
           return { fuente: 'Celular', fechaHora: fh, raw: c.raw, operador: String(c.raw.usuario || '').trim().toLowerCase() };
         });
 
-      candidatas = [...candPBX, ...candCel].filter(c => c.fechaHora && !isNaN(c.fechaHora.getTime()));
+      const candWhatsapp = (cache.llamadas_whatsapp || [])
+        .filter(c => telLead && normalizarTel(c.numero_cliente) === telLead)
+        .map(c => ({
+          fuente: 'WhatsApp',
+          fechaHora: parseFechaHoraString(c.fecha_llamada || ''),
+          raw: c,
+          operador: usuario ? String(usuario).trim().toLowerCase() : normalizarTel(c.numero_ejecutivo)
+        }))
+        .filter(c => c.operador && c.operador === numeroEjecutivo);
+
+      candidatas = [...candPBX, ...candCel, ...candWhatsapp]
+        .filter(c => c.fechaHora && !isNaN(c.fechaHora.getTime()));
       usuarioNorm = usuario ? String(usuario).trim().toLowerCase() : '';
 
       if (progr && candidatas.length) {

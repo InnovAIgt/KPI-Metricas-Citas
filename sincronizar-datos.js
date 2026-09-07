@@ -445,6 +445,11 @@ Deno.serve(async (req) => {
           : !pbxUsername || !pbxPassword
           ? "PBX_USERNAME o PBX_PASSWORD no están configurados."
           : null,
+        autenticacion_pbx: {
+          token_configurado: Boolean(jwtPbx),
+          login_realizado: Boolean(pbxUsername && pbxPassword),
+          login_error: pbxLoginError,
+        },
         registros_recibidos: {
           leads: dataLeads.length,
           leads_no_calificados: dataLeadsNoCalificados.length,

@@ -591,11 +591,16 @@ async function sincronizarAPI() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const resumenPbx = data?.resumen_pbx;
+    const diagnosticoPbx = data?.diagnostico_apis?.llamadas_pbx;
+    const autenticacionPbx = data?.autenticacion_pbx;
     const estadoPbx = resumenPbx
-      ? `PBX: ${resumenPbx.registros_recibidos} registros, 6077: ${resumenPbx.extension_6077}, hasta ${resumenPbx.fecha_maxima_recibida || 'sin fecha'}.`
-      : 'Sincronización completada.';
+      ? `PBX HTTP ${diagnosticoPbx?.http_status || 'sin respuesta'}: ${resumenPbx.registros_recibidos} registros, 6077: ${resumenPbx.extension_6077}, hasta ${resumenPbx.fecha_maxima_recibida || 'sin fecha'}.`
+      : `Sincronización completada. PBX HTTP ${diagnosticoPbx?.http_status || 'sin respuesta'}.`;
     console.info('Diagnóstico de sincronización PBX:', data);
-    mostrarToast(estadoPbx, data?.status === 'partial_error' ? 'error' : 'success');
+    const autenticacion = autenticacionPbx?.token_configurado
+      ? 'autenticación PBX OK'
+      : `autenticación PBX FALLÓ${autenticacionPbx?.login_error ? `: ${autenticacionPbx.login_error}` : ''}`;
+    mostrarToast(`${estadoPbx} ${autenticacion}`, data?.status === 'partial_error' ? 'error' : 'success');
     await recargarTodoYContadores();
   } catch (err) {
     mostrarToast('Error al sincronizar: ' + err.message, 'error');

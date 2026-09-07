@@ -590,7 +590,12 @@ async function sincronizarAPI() {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    mostrarToast('Sincronización completada.');
+    const resumenPbx = data?.resumen_pbx;
+    const estadoPbx = resumenPbx
+      ? `PBX: ${resumenPbx.registros_recibidos} registros, 6077: ${resumenPbx.extension_6077}, hasta ${resumenPbx.fecha_maxima_recibida || 'sin fecha'}.`
+      : 'Sincronización completada.';
+    console.info('Diagnóstico de sincronización PBX:', data);
+    mostrarToast(estadoPbx, data?.status === 'partial_error' ? 'error' : 'success');
     await recargarTodoYContadores();
   } catch (err) {
     mostrarToast('Error al sincronizar: ' + err.message, 'error');

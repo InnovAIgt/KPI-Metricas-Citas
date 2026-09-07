@@ -304,6 +304,8 @@ Deno.serve(async (req) => {
     let pbxPasswordBody = "";
     let pbxBearerTokenBody = "";
     let pbxPaisBody = "SV";
+    let pbxDesdeBody = "";
+    let pbxHastaBody = "";
     
     try {
       const body = await req.json();
@@ -312,6 +314,8 @@ Deno.serve(async (req) => {
       pbxPasswordBody = body.pbx_password || "";
       pbxBearerTokenBody = body.pbx_bearer_token || "";
       pbxPaisBody = body.pbx_pais || body.pais || "SV";
+      pbxDesdeBody = body.pbx_desde || "";
+      pbxHastaBody = body.pbx_hasta || "";
     } catch (e) {
       // Body no es JSON válido, ignorar
     }
@@ -335,7 +339,10 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const hoy = new Date().toISOString().split("T")[0];
-    const hace7dias = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const fechaHasta = /^\d{4}-\d{2}-\d{2}$/.test(pbxHastaBody) ? pbxHastaBody : hoy;
+    const fechaDesde = /^\d{4}-\d{2}-\d{2}$/.test(pbxDesdeBody)
+      ? pbxDesdeBody
+      : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
     // Obtener JWT para PBX (siempre hacer login para token fresco)
     let jwtPbx = pbxBearerToken;
@@ -374,7 +381,7 @@ Deno.serve(async (req) => {
       ),
       fetchApiConDiagnostico(
         "llamadas_pbx",
-        `${redPbxHost}/pbx/api/v1/getCalls2?desde=${hace7dias}&hasta=${hoy}&pais=${pbxPais}`,
+        `${redPbxHost}/pbx/api/v1/getCalls2?desde=${fechaDesde}&hasta=${fechaHasta}&pais=${pbxPais}`,
         headersPbx
       ),
     ]);
@@ -384,6 +391,11 @@ Deno.serve(async (req) => {
     const telefonosNoCalificados = dataLeadsNoCalificados.filter((registro) => registro.telefono).length;
     const dataCelular = extraerRegistros(celularRes.data).map((r) => ({ ...r }));
     const dataLlamadas = extraerRegistros(llamadasRes.data).map(normalizarCallRow);
+    const fechasLlamadas = dataLlamadas
+      .map((registro) => registro.fecha_hora || registro.solo_fecha)
+      .filter(Boolean)
+      .map((fecha) => String(fecha));
+    const llamadasExtension6077 = dataLlamadas.filter((registro) => String(registro.extension || '').trim() === '6077');
 
     if (llamadasRes.diagnostico.ok && dataLlamadas.length === 0) {
       llamadasRes.diagnostico.mensaje =
@@ -439,6 +451,16 @@ Deno.serve(async (req) => {
           telefonos_leads_no_calificados: telefonosNoCalificados,
           llamadas_celular: dataCelular.length,
           llamadas_pbx: dataLlamadas.length,
+        },
+        rango_pbx: {
+          desde: fechaDesde,
+          hasta: fechaHasta,
+        },
+        resumen_pbx: {
+          registros_recibidos: dataLlamadas.length,
+          extension_6077: llamadasExtension6077.length,
+          fecha_minima_recibida: fechasLlamadas.sort()[0] || null,
+          fecha_maxima_recibida: fechasLlamadas.sort().at(-1) || null,
         },
         duplicados_leads_colapsados: duplicadosLeads,
         diagnostico_apis: diagnosticoApis,

@@ -50,12 +50,13 @@ async function upsertEnLotes(
 
   for (let i = 0; i < validos.length; i += BATCH_SIZE) {
     const lote = validos.slice(i, i + BATCH_SIZE);
-    const { error } = await supabase
+    const respuesta = await supabase
       .from(tabla)
       .upsert(lote, { onConflict: onConflictCol, ignoreDuplicates: false, count: "exact" });
+    const error = respuesta?.error || null;
 
     if (error) {
-      errores.push({ tabla, lote_desde: i, mensaje: error.message, detalles: error.details ?? null });
+      errores.push({ tabla, lote_desde: i, mensaje: error?.message || String(error), detalles: error?.details ?? null });
     } else {
       insertados += lote.length;
     }
@@ -229,6 +230,7 @@ function normalizarLeadNoCalificado(registro: any) {
 }
 
 Deno.serve(async (req) => {
+  console.log(`[sincronizar-datos] inicio ${req.method}`);
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       headers: corsHeaders,
@@ -306,16 +308,17 @@ Deno.serve(async (req) => {
     let pbxPaisBody = "SV";
     let pbxDesdeBody = "";
     let pbxHastaBody = "";
+    let bodyRecibido: any = {};
     
     try {
-      const body = await req.json();
-      pbxHostBody = body.pbx_host || "";
-      pbxUsernameBody = body.pbx_username || "";
-      pbxPasswordBody = body.pbx_password || "";
-      pbxBearerTokenBody = body.pbx_bearer_token || "";
-      pbxPaisBody = body.pbx_pais || body.pais || "SV";
-      pbxDesdeBody = body.pbx_desde || "";
-      pbxHastaBody = body.pbx_hasta || "";
+      bodyRecibido = await req.json();
+      pbxHostBody = bodyRecibido.pbx_host || "";
+      pbxUsernameBody = bodyRecibido.pbx_username || "";
+      pbxPasswordBody = bodyRecibido.pbx_password || "";
+      pbxBearerTokenBody = bodyRecibido.pbx_bearer_token || "";
+      pbxPaisBody = bodyRecibido.pbx_pais || bodyRecibido.pais || "SV";
+      pbxDesdeBody = bodyRecibido.pbx_desde || "";
+      pbxHastaBody = bodyRecibido.pbx_hasta || "";
     } catch (e) {
       // Body no es JSON válido, ignorar
     }
@@ -326,7 +329,10 @@ Deno.serve(async (req) => {
     const pbxBearerToken = Deno.env.get("PBX_BEARER_TOKEN") || "";
     const pbxPais = String(pbxPaisBody || "SV").trim().toUpperCase() === "GT" ? "GT" : "SV";
 
+    const modoPrueba = bodyRecibido && Object.keys(bodyRecibido).length === 0;
+
     if (!supabaseUrl || !supabaseKey) {
+      if (!modoPrueba) {
       return new Response(
         JSON.stringify({
           status: "error",
@@ -334,9 +340,10 @@ Deno.serve(async (req) => {
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+      }
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = modoPrueba ? null : createClient(supabaseUrl, supabaseKey);
 
     const hoy = new Date().toISOString().split("T")[0];
     const fechaHasta = /^\d{4}-\d{2}-\d{2}$/.test(pbxHastaBody) ? pbxHastaBody : hoy;
@@ -363,6 +370,56 @@ Deno.serve(async (req) => {
       headersPbx.headers = { "Authorization": `Bearer ${jwtPbx}` };
     }
 
+    console.log("[sincronizar-datos] autenticacion PBX", {
+      token_configurado: Boolean(jwtPbx),
+      login_realizado: Boolean(pbxUsername && pbxPassword),
+      login_error: pbxLoginError,
+      rango: { desde: fechaDesde, hasta: fechaHasta, pais: pbxPais },
+    });
+
+    if (modoPrueba) {
+      const llamadasRes = await fetchApiConDiagnostico(
+        "llamadas_pbx",
+        `${redPbxHost}/pbx/api/v1/getCalls2?desde=${fechaDesde}&hasta=${fechaHasta}&pais=${pbxPais}`,
+        headersPbx
+      );
+      const dataLlamadas = extraerRegistros(llamadasRes.data).map(normalizarCallRow);
+      const fechasLlamadas = dataLlamadas
+        .map((registro) => registro.fecha_hora || registro.solo_fecha)
+        .filter(Boolean)
+        .map((fecha) => String(fecha))
+        .sort();
+      const llamadasExtension6077 = dataLlamadas.filter((registro) => String(registro.extension || '').trim() === '6077');
+      const fechasExtension6077 = llamadasExtension6077
+        .map((registro) => registro.fecha_hora || registro.solo_fecha)
+        .filter(Boolean)
+        .map((fecha) => String(fecha))
+        .sort();
+
+      return new Response(JSON.stringify({
+        status: "diagnostico",
+        autenticacion_pbx: {
+          token_configurado: Boolean(jwtPbx),
+          login_realizado: Boolean(pbxUsername && pbxPassword),
+          login_error: pbxLoginError,
+        },
+        rango_pbx: { desde: fechaDesde, hasta: fechaHasta, pais: pbxPais },
+        resumen_pbx: {
+          registros_recibidos: dataLlamadas.length,
+          extension_6077: llamadasExtension6077.length,
+          fecha_minima_recibida: fechasLlamadas[0] || null,
+          fecha_maxima_recibida: fechasLlamadas.at(-1) || null,
+          extension_6077_fecha_minima: fechasExtension6077[0] || null,
+          extension_6077_fecha_maxima: fechasExtension6077.at(-1) || null,
+        },
+        diagnostico_api: llamadasRes.diagnostico,
+        escritura_supabase: "omitida_en_modo_prueba",
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const [leadsRes, leadsNoCalificadosRes, celularRes, llamadasRes] = await Promise.all([
       fetchApiConDiagnostico(
         "leads",
@@ -385,6 +442,13 @@ Deno.serve(async (req) => {
         headersPbx
       ),
     ]);
+
+    console.log("[sincronizar-datos] respuestas API", {
+      leads: leadsRes.diagnostico,
+      leads_no_calificados: leadsNoCalificadosRes.diagnostico,
+      llamadas_celular: celularRes.diagnostico,
+      llamadas_pbx: llamadasRes.diagnostico,
+    });
 
     const dataLeads = extraerRegistros(leadsRes.data).map((r) => ({ ...r }));
     const dataLeadsNoCalificados = extraerRegistros(leadsNoCalificadosRes.data).map(normalizarLeadNoCalificado);
@@ -432,7 +496,14 @@ Deno.serve(async (req) => {
     ]);
 
     const huboFalloDeApi = Object.values(diagnosticoApis).some((d) => !d.ok);
-    const huboErrores = resultados.some((r) => r.errores.length > 0) || huboFalloDeApi;
+    const huboErrores = resultados.some((r) => (r?.errores || []).length > 0) || huboFalloDeApi;
+
+    console.log("[sincronizar-datos] final", {
+      status: huboErrores ? "partial_error" : "success",
+      registros_pbx: dataLlamadas.length,
+      extension_6077: llamadasExtension6077.length,
+      fecha_maxima_pbx: fechasLlamadas.sort().at(-1) || null,
+    });
 
     return new Response(
       JSON.stringify({
@@ -472,15 +543,22 @@ Deno.serve(async (req) => {
         resultado_por_tabla: resultados,
       }),
       {
-        status: huboErrores ? 207 : 200,
+        // Mantener HTTP 200 para que clientes y el panel de Supabase puedan leer el diagnóstico.
+        // El detalle de fallos queda en el campo JSON `status: partial_error`.
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   } catch (err: any) {
+    console.error("[sincronizar-datos] error no controlado", {
+      mensaje: err?.message || String(err),
+      stack: err?.stack || null,
+    });
     return new Response(
-      JSON.stringify({ status: "error", message: err.message }),
+      JSON.stringify({ status: "error", message: err?.message || String(err) }),
       {
-        status: 500,
+        // En modo diagnóstico devolver JSON legible al panel de Supabase.
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );

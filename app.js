@@ -2478,15 +2478,9 @@ async function calcularCruceUnificado() {
 
       if (progr && candidatas.length) {
         const delDia = candidatas.filter(c => mismoDia(c.fechaHora, progr));
-        const horaProgr = progr.getHours();
-        const horaCruda = c => {
-          const raw = c.raw;
-          if (!raw) return null;
-          const valor = String(raw.fecha_hora || raw.hora || raw.fecha || '');
-          const match = valor.match(/(\d{2}):(\d{2})(?::\d{2})?/);
-          return match ? Number(match[1]) : null;
-        };
-        const obtenerHora = c => c.fechaHora ? c.fechaHora.getHours() : horaCruda(c);
+        const ventanaInicio = progr.getTime() - 5 * 60000;
+        const ventanaFin = progr.getTime() + 5 * 60000;
+        const dentroVentana = c => c.fechaHora.getTime() >= ventanaInicio && c.fechaHora.getTime() <= ventanaFin;
 
         const elegirMasCercana = arr => arr.reduce((mejor, actual) => {
           if (!mejor) return actual;
@@ -2501,30 +2495,22 @@ async function calcularCruceUnificado() {
           return byOp.length ? elegirMasCercana(byOp) : elegirMasCercana(arr);
         };
 
-        // 1) Prefer a call on the scheduled hour, prioritizing same day first
-        const sameHourDay = candidatas.filter(c => mismoDia(c.fechaHora, progr) && obtenerHora(c) === horaProgr);
-        const sameHourAny = candidatas.filter(c => obtenerHora(c) === horaProgr);
-        if (sameHourDay.length) {
-          coincidencia = elegirConPreferenciaOperador(sameHourDay);
+        // 1) A call within +/- 5 minutes of the scheduled time is compliant.
+        const dentroVentanaMismoDia = delDia.filter(dentroVentana);
+        if (dentroVentanaMismoDia.length) {
+          coincidencia = elegirConPreferenciaOperador(dentroVentanaMismoDia);
           diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
-          estado = diferenciaMin <= 5 ? 'Cumplió en fecha y horario' : 'Llamó el mismo día fuera de horario';
-          fuente = coincidencia.fuente;
-        } else if (sameHourAny.length) {
-          coincidencia = elegirConPreferenciaOperador(sameHourAny);
-          diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
-          estado = mismoDia(coincidencia.fechaHora, progr)
-            ? (diferenciaMin <= 5 ? 'Cumplió en fecha y horario' : 'Llamó el mismo día fuera de horario')
-            : 'Llamó en otra fecha';
+          estado = 'Cumplió en fecha y horario';
           fuente = coincidencia.fuente;
         } else {
-          // 2) Prefer any call on the same day
+          // 2) If there is no call in the window, keep the closest same-day call as out of schedule.
           if (delDia.length) {
             coincidencia = elegirConPreferenciaOperador(delDia);
             diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
-            estado = diferenciaMin <= 5 ? 'Cumplió en fecha y horario' : 'Llamó el mismo día fuera de horario';
+            estado = 'Llamó el mismo día fuera de horario';
             fuente = coincidencia.fuente;
           } else {
-            // 3) fallback: closest overall
+            // 3) Fallback: closest call on another date.
             coincidencia = elegirConPreferenciaOperador(candidatas);
             diferenciaMin = Math.round(Math.abs(coincidencia.fechaHora - progr) / 60000);
             estado = 'Llamó en otra fecha';

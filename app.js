@@ -113,19 +113,15 @@ function refrescarCredencialesPBX() {
 // ==================================================================
 // UTILIDADES DE FECHA
 // ==================================================================
-function obtenerSemanaActual() {
+function obtenerRangoPorDefecto() {
   const hoy = new Date();
-  const dia = hoy.getDay();
-  const desdeEnDias = dia === 0 ? 6 : dia - 1; // Lunes es 1, domingo es 0
-  
   const desde = new Date(hoy);
-  desde.setDate(hoy.getDate() - desdeEnDias);
+  desde.setDate(hoy.getDate() - 29);
   desde.setHours(0, 0, 0, 0);
-  
-  const hasta = new Date(desde);
-  hasta.setDate(desde.getDate() + 6);
+
+  const hasta = new Date(hoy);
   hasta.setHours(23, 59, 59, 999);
-  
+
   return {
     desde: desde.toISOString().split('T')[0],
     hasta: hasta.toISOString().split('T')[0]
@@ -133,9 +129,12 @@ function obtenerSemanaActual() {
 }
 
 function establecerFechasPorDefecto() {
-  const semana = obtenerSemanaActual();
-  document.getElementById('global-desde').value = semana.desde;
-  document.getElementById('global-hasta').value = semana.hasta;
+  const rango = obtenerRangoPorDefecto();
+  const desdeInput = document.getElementById('global-desde');
+  const hastaInput = document.getElementById('global-hasta');
+
+  if (desdeInput) desdeInput.value = rango.desde;
+  if (hastaInput) hastaInput.value = rango.hasta;
 }
 
 function aplicarTema(tema) {
@@ -975,14 +974,19 @@ function filtrarPorFechaGlobal(datos, columnaFecha) {
   const desde = document.getElementById('global-desde')?.value;
   const hasta = document.getElementById('global-hasta')?.value;
   if (!desde && !hasta) return datos;
-  const desdeT = desde ? new Date(desde + 'T00:00:00Z').getTime() : null;
-  const hastaT = hasta ? new Date(hasta + 'T23:59:59Z').getTime() : null;
+
+  const desdeT = desde ? new Date(`${desde}T00:00:00`).getTime() : null;
+  const hastaT = hasta ? new Date(`${hasta}T23:59:59`).getTime() : null;
+
   return datos.filter(item => {
     const raw = obtenerFechaDesdeItem(item, columnaFecha);
     if (!raw) return false;
+
     const fechaRaw = normalizarFechaISO(String(raw).trim());
-    const t = new Date(fechaRaw.includes('T') ? fechaRaw : `${fechaRaw}T00:00:00Z`).getTime();
-    if (isNaN(t)) return false;
+    if (!fechaRaw) return false;
+
+    const t = new Date(fechaRaw.includes('T') ? fechaRaw : `${fechaRaw}T00:00:00`).getTime();
+    if (Number.isNaN(t)) return false;
     if (desdeT !== null && t < desdeT) return false;
     if (hastaT !== null && t > hastaT) return false;
     return true;
@@ -2224,6 +2228,17 @@ function normalizarFechaISO(fecha) {
   if (latamMatch) {
     return `${latamMatch[3]}-${latamMatch[2]}-${latamMatch[1]}`;
   }
+
+  const isoDatetimeMatch = raw.match(/^(\d{4})[\/\-](\d{2})[\/\-](\d{2})[ T](\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/);
+  if (isoDatetimeMatch) {
+    return `${isoDatetimeMatch[1]}-${isoDatetimeMatch[2]}-${isoDatetimeMatch[3]}T${isoDatetimeMatch[4]}`;
+  }
+
+  const latamDatetimeMatch = raw.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})[ T](\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/);
+  if (latamDatetimeMatch) {
+    return `${latamDatetimeMatch[3]}-${latamDatetimeMatch[2]}-${latamDatetimeMatch[1]}T${latamDatetimeMatch[4]}`;
+  }
+
   return raw;
 }
 

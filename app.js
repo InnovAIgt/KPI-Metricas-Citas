@@ -1114,9 +1114,16 @@ function normalizarFuenteLlamada(valor) {
 function normalizarVistaPbx(item) {
   if (!item || typeof item !== 'object') return item;
   const fechaHora = item.fecha_hora || item.fecha || '';
-  const anio = item.anio ?? (fechaHora ? new Date(fechaHora).getFullYear() : '');
-  const mes = item.mes ?? (fechaHora ? new Date(fechaHora).getMonth() + 1 : '');
-  const dia = item.dia ?? (fechaHora ? new Date(fechaHora).getDate() : '');
+  const fechaValida = (() => {
+    if (!fechaHora) return null;
+    const raw = String(fechaHora).trim();
+    const iso = normalizarFechaISO(raw);
+    const parsed = new Date(iso.includes('T') ? iso : `${iso}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  })();
+  const anio = item.anio ?? (fechaValida ? fechaValida.getFullYear() : '');
+  const mes = item.mes ?? (fechaValida ? fechaValida.getMonth() + 1 : '');
+  const dia = item.dia ?? (fechaValida ? fechaValida.getDate() : '');
   const copia = { ...item };
   const cliente = obtenerClienteDesdeDestino(item.destino);
 

@@ -187,12 +187,63 @@ function extraerRegistros(responseData: any) {
   return [];
 }
 
+function normalizarFechaHoraPbX(fecha: any, hora: any = null) {
+  if (fecha == null || fecha === "") return null;
+
+  const rawFecha = String(fecha).trim();
+  const rawHora = hora == null ? "" : String(hora).trim();
+  const horaExtra = rawHora || rawFecha.match(/[T\s](\d{2}:\d{2}(?::\d{2})?)/)?.[1] || "";
+
+  const isoFecha = rawFecha.includes("T") || rawFecha.includes(" ")
+    ? rawFecha.replace(" ", "T")
+    : rawFecha;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(isoFecha)) {
+    return horaExtra ? `${isoFecha}T${horaExtra}` : `${isoFecha}T00:00:00`;
+  }
+
+  const fechaIso = rawFecha.match(/^\d{4}[/-]\d{2}[/-]\d{2}$/)
+    ? rawFecha.replace(/\//g, "-")
+    : rawFecha;
+
+  if (/^\d{2}[/-]\d{2}[/-]\d{4}$/.test(fechaIso)) {
+    const [dd, mm, yyyy] = fechaIso.split(/[/-]/);
+    return horaExtra ? `${yyyy}-${mm}-${dd}T${horaExtra}` : `${yyyy}-${mm}-${dd}T00:00:00`;
+  }
+
+  if (/^\d{4}[/-]\d{2}[/-]\d{2}T\d{2}:\d{2}/.test(isoFecha)) {
+    return isoFecha.replace(" ", "T");
+  }
+
+  return null;
+}
+
 function normalizarCallRow(registro: any) {
   if (!registro || typeof registro !== "object") return registro;
 
+  const fechaRaw = registro.FECHA || registro.fecha || registro.FECHA_HORA || registro.fecha_hora || registro.SOLO_FECHA || registro.solo_fecha || null;
+  const horaRaw = registro.HORA || registro.hora || registro.HORA_LLAMADA || registro.hora_llamada || null;
+  const fechaHora = normalizarFechaHoraPbX(fechaRaw, horaRaw) || registro.FECHA_HORA || registro.fecha_hora || null;
+  const soloFecha = registro.SOLO_FECHA || registro.solo_fecha || (fechaHora ? fechaHora.split("T")[0] : null);
+  const fechaObj = fechaHora ? new Date(fechaHora) : null;
+  const uniqueidBase = [
+    registro.uniqueid,
+    registro.uniqueId,
+    registro.UNIQUEID,
+    registro.id,
+    registro.ID,
+    registro.EXTENSION,
+    registro.extension,
+    registro.DESTINO,
+    registro.destino,
+    fechaHora,
+    registro.ESTADO,
+    registro.estado,
+  ].filter((valor) => valor != null && String(valor).trim() !== "").join("|");
+
   return {
-    uniqueid: registro.uniqueid || registro.uniqueId || registro.UNIQUEID || null,
-    extension: registro.EXTENSION || registro.extension || registro.usuario || null,
+    uniqueid: uniqueidBase || null,
+    extension: String(registro.EXTENSION ?? registro.extension ?? registro.usuario ?? "").trim() || null,
     prefijo: registro.PREFIJO ?? registro.prefijo ?? null,
     destino: registro.DESTINO || registro.destino || null,
     duracion_minutos: registro.DURACION_MINUTOS || registro.duracion_minutos || null,
@@ -202,11 +253,11 @@ function normalizarCallRow(registro: any) {
       registro.DURACION_HH_MM_SS || registro.duracion_hh_mm_ss || null,
     estado: registro.ESTADO || registro.estado || null,
     nombre: registro.NOMBRE || registro.nombre || null,
-    fecha_hora: registro.FECHA || registro.fecha || null,
-    solo_fecha: registro.SOLO_FECHA || registro.solo_fecha || null,
-    anio: registro.ANIO ?? registro.anio ?? null,
-    mes: registro.MES ?? registro.mes ?? null,
-    dia: registro.DIA ?? registro.dia ?? null,
+    fecha_hora: fechaHora,
+    solo_fecha: soloFecha,
+    anio: registro.ANIO ?? registro.anio ?? (fechaObj ? fechaObj.getFullYear() : null),
+    mes: registro.MES ?? registro.mes ?? (fechaObj ? fechaObj.getMonth() + 1 : null),
+    dia: registro.DIA ?? registro.dia ?? (fechaObj ? fechaObj.getDate() : null),
     pais: registro.PAIS || registro.pais || registro.country || registro.pais_code || null,
     audio_url: registro.audio_url || registro.grabacion_url || null,
   };

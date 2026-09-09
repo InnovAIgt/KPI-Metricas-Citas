@@ -715,8 +715,8 @@ function renderCriterios(main) {
       </div>
       ${seccion('Estados de cumplimiento (resultado)', '🎯', `
         <div class="space-y-2">
-          <div class="flex items-center gap-2"><span class="badge bg-emerald-900 text-emerald-300">Cumplió en fecha y horario</span> <span class="text-gray-400">Llamada/Teams el mismo día, ±5 minutos de la hora agendada. Para Teams: con evidencia URL.</span></div>
-          <div class="flex items-center gap-2"><span class="badge bg-amber-900 text-amber-300">Llamó el mismo día fuera de horario</span> <span class="text-gray-400">Llamada en el mismo día, pero fuera de ±5 minutos.</span></div>
+          <div class="flex items-center gap-2"><span class="badge bg-emerald-900 text-emerald-300">Cumplió en fecha y horario</span> <span class="text-gray-400">Se considera cumplida si el vendedor llamó el mismo día entre 5 minutos antes y 5 minutos después de la hora agendada. También aplica para Teams con evidencia URL.</span></div>
+          <div class="flex items-center gap-2"><span class="badge bg-amber-900 text-amber-300">Llamó el mismo día fuera de horario</span> <span class="text-gray-400">La llamada fue el mismo día, pero fuera de la ventana de tolerancia de ±5 minutos.</span></div>
           <div class="flex items-center gap-2"><span class="badge bg-orange-900 text-orange-300">Llamó en otra fecha</span> <span class="text-gray-400">Llamada en fecha distinta a la agendada.</span></div>
           <div class="flex items-center gap-2"><span class="badge bg-red-900 text-red-300">Sin llamada encontrada</span> <span class="text-gray-400">No se encontró ninguna llamada coincidente. Para Teams: sin evidencia URL.</span></div>
           <div class="flex items-center gap-2"><span class="badge bg-sky-900 text-sky-300">Pendiente de evaluar</span> <span class="text-gray-400">La hora agendada aún no ha pasado o fecha pendiente.</span></div>
@@ -728,7 +728,7 @@ function renderCriterios(main) {
         <div class="space-y-2">
           <p><strong>Teléfono:</strong> Se comparan los últimos 8 dígitos del número de teléfono del lead con los registros de llamadas PBX/Celulares.</p>
           <p><strong>Ejecutivo:</strong> Se identifica mediante la extensión (PBX) o usuario (celular) y se valida contra el catálogo de ejecutivos.</p>
-          <p><strong>Tolerancia:</strong> ±5 minutos alrededor de la hora agendada. Fuera de este rango es "mismo día fuera de horario".</p>
+          <p><strong>Tolerancia:</strong> Se acepta como cumplimiento si la llamada ocurre entre 5 minutos antes y 5 minutos después de la hora agendada; fuera de ese rango se considera “mismo día fuera de horario”.</p>
           <p><strong>Teams:</strong> Se valida por fecha, hora y presencia de link de evidencia (URL).</p>
         </div>
       `)}
@@ -948,16 +948,28 @@ async function recargarUnaTabla(tabla, columnaFecha) {
 }
 
 async function recargarDatosDesdeSupabase() {
-  console.log('Iniciando recargarDatosDesdeSupabase...');
+  console.log('Iniciando recarga paralela desde Supabase...');
   cargaCompleta = { leads: false, leads_no_calificados: false, llamadas_pbx: false, llamadas_celular: false, llamadas_whatsapp: false, catalogo: false, llamadas_teams: false };
   cruceCache = null;
   try {
-    await cargarTablaCompleta('leads', 'fecha_agendada');
-    await cargarTablaCompleta('leads_no_calificados', 'created_at');
-    await cargarTablaCompleta('llamadas_pbx', 'fecha_hora');
-    await cargarTablaCompleta('llamadas_celular', 'fecha');
-    await cargarTablaCompleta('llamadas_whatsapp', 'fecha_llamada');
-    await cargarTablaCompleta('catalogo', null);
+    const cargas = [
+      cargarTablaCompleta('leads', 'fecha_agendada'),
+      cargarTablaCompleta('leads_no_calificados', 'created_at'),
+      cargarTablaCompleta('llamadas_pbx', 'fecha_hora'),
+      cargarTablaCompleta('llamadas_celular', 'fecha'),
+      cargarTablaCompleta('llamadas_whatsapp', 'fecha_llamada'),
+      cargarTablaCompleta('catalogo', null),
+    ];
+
+    const resultados = await Promise.allSettled(cargas);
+    resultados.forEach((resultado, index) => {
+      const tabla = ['leads', 'leads_no_calificados', 'llamadas_pbx', 'llamadas_celular', 'llamadas_whatsapp', 'catalogo'][index];
+      if (resultado.status === 'rejected') {
+        console.error(`Error cargando ${tabla}:`, resultado.reason);
+        cache[tabla] = [];
+        cargaCompleta[tabla] = true;
+      }
+    });
 
     try {
       await cargarTablaCompleta('llamadas_teams', null);
@@ -968,9 +980,9 @@ async function recargarDatosDesdeSupabase() {
     }
 
     render();
-    console.log('Recarga desde Supabase completada!');
+    console.log('Recarga desde Supabase completada.');
   } catch (err) {
-    console.error('Error:', err);
+    console.error('Error al recargar datos:', err);
     mostrarToast('Error al recargar: ' + err.message, 'error');
   }
 }

@@ -14,6 +14,7 @@ let temporizadorLeads = null;
 let leadsDisponiblesLlamadaManual = [];
 let llamadaManualEnEdicion = null;
 let sincronizacionEnCurso = false;
+let sesionVerificada = false;
 
 let SB_URL = "https://sbopifiiyezmvsadwkpg.supabase.co";
 let SB_KEY = "sb_publishable_1drMMd0cMfJLz0tlEhq1_Q_JLdfpygh";
@@ -104,6 +105,7 @@ async function cerrarSesion() {
 
   cache = { leads: [], leads_no_calificados: [], llamadas_pbx: [], llamadas_celular: [], llamadas_whatsapp: [], catalogo: [], llamadas_teams: [] };
   cargaCompleta = { leads: false, leads_no_calificados: false, llamadas_pbx: false, llamadas_celular: false, llamadas_whatsapp: false, catalogo: false, llamadas_teams: false };
+  sesionVerificada = false;
   vistaActual = 'config';
   detalleFiltro = null;
   cruceCache = null;
@@ -142,16 +144,20 @@ function refrescarCredencialesPBX() {
 // ==================================================================
 function obtenerRangoPorDefecto() {
   const hoy = new Date();
-  const desde = new Date(hoy);
-  desde.setDate(hoy.getDate() - 29);
-  desde.setHours(0, 0, 0, 0);
 
-  const hasta = new Date(hoy);
-  hasta.setHours(23, 59, 59, 999);
+  const inicioSemana = new Date(hoy);
+  const diaSemana = inicioSemana.getDay();
+  const diferenciaAlLunes = (diaSemana === 0 ? -6 : 1 - diaSemana);
+  inicioSemana.setDate(hoy.getDate() + diferenciaAlLunes);
+  inicioSemana.setHours(0, 0, 0, 0);
+
+  const finSemana = new Date(inicioSemana);
+  finSemana.setDate(inicioSemana.getDate() + 6);
+  finSemana.setHours(23, 59, 59, 999);
 
   return {
-    desde: desde.toISOString().split('T')[0],
-    hasta: hasta.toISOString().split('T')[0]
+    desde: inicioSemana.toISOString().split('T')[0],
+    hasta: finSemana.toISOString().split('T')[0]
   };
 }
 
@@ -608,8 +614,15 @@ async function sincronizarAPI() {
   if (estado) { estado.innerText = "Sincronizando API..."; estado.classList.remove('hidden'); }
   try {
     actualizarPaisPbxDesdeUI();
-    const desde = document.getElementById('global-desde')?.value || '';
-    const hasta = document.getElementById('global-hasta')?.value || '';
+    const rangoPorDefecto = obtenerRangoPorDefecto();
+    const desde = document.getElementById('global-desde')?.value || rangoPorDefecto.desde;
+    const hasta = document.getElementById('global-hasta')?.value || rangoPorDefecto.hasta;
+    if (document.getElementById('global-desde') && !document.getElementById('global-desde').value) {
+      document.getElementById('global-desde').value = rangoPorDefecto.desde;
+    }
+    if (document.getElementById('global-hasta') && !document.getElementById('global-hasta').value) {
+      document.getElementById('global-hasta').value = rangoPorDefecto.hasta;
+    }
     const res = await fetch(`${SB_URL}/functions/v1/sincronizar-datos`, {
       method: 'POST',
       headers: { 
@@ -4071,10 +4084,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   const verificarSesion = async () => {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
+      sesionVerificada = true;
       mostrarAplicacion();
       await sincronizarAPI();
       if (vistaActual === 'config') irA('catalogo');
     } else {
+      sesionVerificada = false;
       mostrarPantallaLogin();
     }
   };
@@ -4083,10 +4098,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   supabaseClient.auth.onAuthStateChange(async (_event, nuevaSesion) => {
     if (nuevaSesion) {
-      mostrarAplicacion();
-      await sincronizarAPI();
-      if (vistaActual === 'config') irA('catalogo');
+      if (!sesionVerificada) {
+        sesionVerificada = true;
+        mostrarAplicacion();
+        await sincronizarAPI();
+        if (vistaActual === 'config') irA('catalogo');
+      }
     } else {
+      sesionVerificada = false;
       cache = { leads: [], leads_no_calificados: [], llamadas_pbx: [], llamadas_celular: [], llamadas_whatsapp: [], catalogo: [], llamadas_teams: [] };
       cargaCompleta = { leads: false, leads_no_calificados: false, llamadas_pbx: false, llamadas_celular: false, llamadas_whatsapp: false, catalogo: false, llamadas_teams: false };
       vistaActual = 'config';

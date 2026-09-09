@@ -8,6 +8,8 @@ const corsHeaders = {
 };
 
 const BATCH_SIZE = 200;
+const MAX_DAYS_PER_SYNC = 30;
+const MAX_ROWS_PER_SYNC = 20000;
 
 const COLUMNAS_PERMITIDAS = {
   leads: ["codigo_prospecto", "nombre", "telefono", "fecha_agendada", "hora_agendada", "fecha_creado", "hora_creado", "tipo_reunion", "asesor_nombre", "pais", "created_at"],
@@ -272,12 +274,15 @@ function normalizarCallRow(registro) {
   const fechaHora = normalizarFechaHoraPbX(fechaRaw, horaRaw) || registro.FECHA_HORA || registro.fecha_hora || null;
   const soloFecha = registro.SOLO_FECHA || registro.solo_fecha || (fechaHora ? fechaHora.split("T")[0] : null);
   const fechaObj = fechaHora ? new Date(fechaHora) : null;
-  const uniqueidBase = construirUniqueIdPbx(registro, fechaHora);
+  const rawExtension = registro.EXTENSION ?? registro.extension ?? registro.usuario ?? "";
+  const extensionNormalizada = String(rawExtension).trim();
+  const extensionLimpia = extensionNormalizada.replace(/[^0-9]/g, "");
 
   return {
     id: registro.id || crypto.randomUUID(),
-    uniqueid: uniqueidBase,
-    extension: String(registro.EXTENSION ?? registro.extension ?? registro.usuario ?? "").trim() || null,
+    uniqueid: null,
+    extension: extensionLimpia || null,
+    extension_raw: extensionNormalizada || null,
     prefijo: registro.PREFIJO ?? registro.prefijo ?? null,
     destino: registro.DESTINO || registro.destino || null,
     duracion_minutos: registro.DURACION_MINUTOS || registro.duracion_minutos || null,
@@ -428,7 +433,23 @@ Deno.serve(async (req) => {
     const fechaHasta = /^\d{4}-\d{2}-\d{2}$/.test(pbxHastaBody) ? pbxHastaBody : hoy;
     const fechaDesde = /^\d{4}-\d{2}-\d{2}$/.test(pbxDesdeBody)
       ? pbxDesdeBody
-      : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+      : new Date(Date.now() - MAX_DAYS_PER_SYNC * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+    const fechaInicial = new Date(`${fechaDesde}T00:00:00Z`);
+    const fechaFinal = new Date(`${fechaHasta}T00:00:00Z`);
+    const diffDias = Math.max(1, Math.ceil((fechaFinal - fechaInicial) / (1000 * 60 * 60 * 24)) + 1);
+
+    if (diffDias > MAX_DAYS_PER_SYNC) {
+      return new Response(JSON.stringify({
+        status: "error",
+        message: `El rango PBX solicitado es demasiado grande para Supabase Edge (${diffDias} días). Se limita a ${MAX_DAYS_PER_SYNC} días por ejecución para evitar el error de memoria.`,
+        rango_solicitado: { desde: fechaDesde, hasta: fechaHasta, dias: diffDias },
+        limite: MAX_DAYS_PER_SYNC,
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     let jwtPbx = pbxBearerToken;
     let pbxLoginError = null;
@@ -467,7 +488,11 @@ Deno.serve(async (req) => {
         .filter(Boolean)
         .map((fecha) => String(fecha))
         .sort();
-      const llamadasExtension6077 = dataLlamadas.filter((registro) => String(registro.extension || "").trim() === "6077");
+      const llamadasExtension6077 = dataLlamadas.filter((registro) => {
+        const ext = String(registro.extension_raw || registro.extension || "").trim();
+        const limpia = ext.replace(/[^0-9]/g, "");
+        return limpia === "6077" || ext === "6077" || String(registro.extension || "").trim() === "6077";
+      });
       const fechasExtension6077 = llamadasExtension6077
         .map((registro) => registro.fecha_hora || registro.solo_fecha)
         .filter(Boolean)
@@ -535,12 +560,19 @@ Deno.serve(async (req) => {
     const dataLeadsNoCalificados = extraerRegistros(leadsNoCalificadosRes.data).map(normalizarLeadNoCalificado);
     const telefonosNoCalificados = dataLeadsNoCalificados.filter((registro) => registro.telefono).length;
     const dataCelular = extraerRegistros(celularRes.data).map((r) => ({ ...r }));
-    const dataLlamadas = extraerRegistros(llamadasRes.data).map(normalizarCallRow);
+    const dataLlamadasRaw = extraerRegistros(llamadasRes.data).map(normalizarCallRow);
+    const dataLlamadas = dataLlamadasRaw.length > MAX_ROWS_PER_SYNC
+      ? dataLlamadasRaw.slice(0, MAX_ROWS_PER_SYNC)
+      : dataLlamadasRaw;
     const fechasLlamadas = dataLlamadas
       .map((registro) => registro.fecha_hora || registro.solo_fecha)
       .filter(Boolean)
       .map((fecha) => String(fecha));
-    const llamadasExtension6077 = dataLlamadas.filter((registro) => String(registro.extension || "").trim() === "6077");
+    const llamadasExtension6077 = dataLlamadas.filter((registro) => {
+      const raw = String(registro.extension_raw || registro.extension || registro.DESTINO || registro.destino || "").trim();
+      const limpia = raw.replace(/[^0-9]/g, "");
+      return limpia === "6077" || raw === "6077" || String(registro.extension || "").trim() === "6077";
+    });
     const septiembrePbx = dataLlamadas.filter((registro) => {
       const fecha = String(registro.fecha_hora || registro.solo_fecha || "").trim();
       return fecha.startsWith("2026-09-") || fecha.includes("2026-09-");
@@ -555,6 +587,10 @@ Deno.serve(async (req) => {
       primer_uniqueid: dataLlamadas[0]?.uniqueid || null,
       ultimo_uniqueid: dataLlamadas.at(-1)?.uniqueid || null,
       ejemplo_6077: llamadasExtension6077.slice(0, 3),
+      mismo_payload_6077: dataLlamadas.filter((registro) => {
+        const raw = String(registro.extension_raw || registro.extension || registro.DESTINO || registro.destino || "").trim();
+        return raw.includes("6077") || raw === "6077";
+      }).slice(0, 5),
     });
 
     if (llamadasRes.diagnostico.ok && dataLlamadas.length === 0) {

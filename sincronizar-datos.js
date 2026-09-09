@@ -14,7 +14,7 @@ const COLUMNAS_PERMITIDAS = {
   leads: ["codigo_prospecto", "nombre", "telefono", "fecha_agendada", "hora_agendada", "fecha_creado", "hora_creado", "tipo_reunion", "asesor_nombre", "pais", "created_at"],
   leads_no_calificados: ["client_id", "client_name", "advisor_name", "telefono", "created_at", "created_at_sv"],
   llamadas_celular: ["id", "fecha", "hora", "destino", "duracion", "tipo", "linea", "usuario", "operador", "dia_consultado", "created_at"],
-  llamadas_pbx: ["uniqueid", "extension", "prefijo", "destino", "duracion_minutos", "duracion_segundos", "duracion_hh_mm_ss", "estado", "nombre", "fecha_hora", "solo_fecha", "anio", "mes", "dia", "pais", "audio_url", "created_at"],
+  llamadas_pbx: ["id", "uniqueid", "extension", "prefijo", "destino", "duracion_minutos", "duracion_segundos", "duracion_hh_mm_ss", "estado", "nombre", "fecha_hora", "fecha", "solo_fecha", "anio", "mes", "dia", "pais", "audio_url", "grabacion_url", "created_at"],
 };
 
 function filtrarColumnas(registros: any[], tabla: string): any[] {
@@ -271,6 +271,7 @@ function normalizarCallRow(registro: any) {
   const uniqueidBase = construirUniqueIdPbx(registro, fechaHora);
 
   return {
+    id: registro.id || crypto.randomUUID(),
     uniqueid: uniqueidBase,
     extension: String(registro.EXTENSION ?? registro.extension ?? registro.usuario ?? "").trim() || null,
     prefijo: registro.PREFIJO ?? registro.prefijo ?? null,
@@ -283,12 +284,14 @@ function normalizarCallRow(registro: any) {
     estado: registro.ESTADO || registro.estado || null,
     nombre: registro.NOMBRE || registro.nombre || null,
     fecha_hora: fechaHora,
+    fecha: soloFecha,
     solo_fecha: soloFecha,
     anio: registro.ANIO ?? registro.anio ?? (fechaObj ? fechaObj.getFullYear() : null),
     mes: registro.MES ?? registro.mes ?? (fechaObj ? fechaObj.getMonth() + 1 : null),
     dia: registro.DIA ?? registro.dia ?? (fechaObj ? fechaObj.getDate() : null),
     pais: registro.PAIS || registro.pais || registro.country || registro.pais_code || null,
     audio_url: registro.audio_url || registro.grabacion_url || null,
+    grabacion_url: registro.grabacion_url || registro.audio_url || null,
   };
 }
 

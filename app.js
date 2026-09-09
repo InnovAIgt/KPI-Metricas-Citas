@@ -575,6 +575,8 @@ async function sincronizarAPI() {
   if (estado) { estado.innerText = "Sincronizando API..."; estado.classList.remove('hidden'); }
   try {
     actualizarPaisPbxDesdeUI();
+    const desde = document.getElementById('global-desde')?.value || '';
+    const hasta = document.getElementById('global-hasta')?.value || '';
     const res = await fetch(`${SB_URL}/functions/v1/sincronizar-datos`, {
       method: 'POST',
       headers: { 
@@ -584,7 +586,9 @@ async function sincronizarAPI() {
       },
       body: JSON.stringify({
         pbx_host: PBX_HOST,
-        pbx_pais: PBX_PAIS || 'SV'
+        pbx_pais: PBX_PAIS || 'SV',
+        pbx_desde: desde,
+        pbx_hasta: hasta
       })
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

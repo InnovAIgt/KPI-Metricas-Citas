@@ -32,6 +32,32 @@ function filtrarColumnas(registros: any[], tabla: string): any[] {
   });
 }
 
+async function hashEstable(texto: string) {
+  const buffer = new TextEncoder().encode(texto);
+  const hash = await crypto.subtle.digest("SHA-256", buffer);
+  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+}
+
+async function construirUniqueIdPbx(registro: any, fechaHora: string | null = null) {
+  const extension = String(registro?.EXTENSION ?? registro?.extension ?? registro?.usuario ?? "").trim();
+  const destino = String(registro?.DESTINO ?? registro?.destino ?? "").trim();
+  const estado = String(registro?.ESTADO ?? registro?.estado ?? "").trim();
+  const nombre = String(registro?.NOMBRE ?? registro?.nombre ?? "").trim();
+  const duracion = String(registro?.DURACION_MINUTOS ?? registro?.duracion_minutos ?? registro?.duracion_hh_mm_ss ?? registro?.DURACION_HH_MM_SS ?? "").trim();
+  const fecha = fechaHora || String(registro?.FECHA_HORA ?? registro?.fecha_hora ?? registro?.FECHA ?? registro?.fecha ?? registro?.SOLO_FECHA ?? registro?.solo_fecha ?? "").trim();
+  const payload = JSON.stringify({
+    extension,
+    destino,
+    estado,
+    nombre,
+    duracion,
+    fecha,
+    pais: String(registro?.PAIS ?? registro?.pais ?? registro?.country ?? registro?.pais_code ?? "").trim(),
+  });
+
+  return await hashEstable(payload);
+}
+
 async function upsertEnLotes(
   supabase: any,
   tabla: string,
@@ -41,14 +67,16 @@ async function upsertEnLotes(
   const errores: any[] = [];
   let insertados = 0;
 
-  const registrosFiltrados = filtrarColumnas(registros, tabla).map((registro) => {
-    if (tabla === "llamadas_pbx" && onConflictCol.includes("uniqueid")) {
-      const fechaHora = registro?.fecha_hora || normalizarFechaHoraPbX(registro?.FECHA || registro?.fecha || null, registro?.HORA || registro?.hora || null);
-      const uniqueidArreglado = construirUniqueIdPbx(registro, fechaHora);
-      return { ...registro, uniqueid: uniqueidArreglado };
-    }
-    return registro;
-  });
+  const registrosFiltrados = await Promise.all(
+    filtrarColumnas(registros, tabla).map(async (registro) => {
+      if (tabla === "llamadas_pbx" && onConflictCol.includes("uniqueid")) {
+        const fechaHora = registro?.fecha_hora || normalizarFechaHoraPbX(registro?.FECHA || registro?.fecha || null, registro?.HORA || registro?.hora || null);
+        const uniqueidArreglado = await construirUniqueIdPbx(registro, fechaHora);
+        return { ...registro, uniqueid: uniqueidArreglado };
+      }
+      return registro;
+    })
+  );
 
   const columnasClave = onConflictCol.split(",").map((col) => col.trim()).filter(Boolean);
   const validos = registrosFiltrados.filter((r) => columnasClave.every((col) => r?.[col] != null && String(r?.[col]).trim() !== ""));
@@ -230,26 +258,6 @@ function normalizarFechaHoraPbX(fecha: any, hora: any = null) {
   }
 
   return null;
-}
-
-function construirUniqueIdPbx(registro: any, fechaHora: string | null = null) {
-  const extension = String(registro?.EXTENSION ?? registro?.extension ?? registro?.usuario ?? "").trim();
-  const destino = String(registro?.DESTINO ?? registro?.destino ?? "").trim();
-  const estado = String(registro?.ESTADO ?? registro?.estado ?? "").trim();
-  const fecha = fechaHora || String(registro?.FECHA_HORA ?? registro?.fecha_hora ?? registro?.FECHA ?? registro?.fecha ?? registro?.SOLO_FECHA ?? registro?.solo_fecha ?? "").trim();
-  const base = [
-    registro?.uniqueid,
-    registro?.uniqueId,
-    registro?.UNIQUEID,
-    registro?.id,
-    registro?.ID,
-    extension || "sin-extension",
-    destino || "sin-destino",
-    fecha || "sin-fecha",
-    estado || "sin-estado",
-  ].filter((valor) => valor != null && String(valor).trim() !== "").join("|");
-
-  return base || `pbx-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function normalizarCallRow(registro: any) {

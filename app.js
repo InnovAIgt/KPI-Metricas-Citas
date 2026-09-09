@@ -59,7 +59,7 @@ async function iniciarSesion(event) {
   submit.textContent = 'Ingresando...';
   error.textContent = '';
   try {
-    const { error: authError } = await getSupabase().auth.signInWithPassword({ email, password });
+    const { data, error: authError } = await getSupabase().auth.signInWithPassword({ email, password });
     if (authError) {
       const mensaje = String(authError.message || '').toLowerCase();
       error.textContent = mensaje.includes('not confirmed')
@@ -69,6 +69,22 @@ async function iniciarSesion(event) {
           : mensaje.includes('invalid api key')
             ? 'API key de Supabase inválida. Abre Configuración (ícono ⚙️) y actualiza la URL y Anon Key desde tu proyecto Supabase.'
             : `No se pudo iniciar sesión: ${authError.message}`;
+      return;
+    }
+
+    if (data?.session) {
+      mostrarAplicacion();
+      await sincronizarAPI();
+      irA('catalogo');
+    } else {
+      const { data: { session } } = await getSupabase().auth.getSession();
+      if (session) {
+        mostrarAplicacion();
+        await sincronizarAPI();
+        irA('catalogo');
+      } else {
+        mostrarPantallaLogin('La sesión no quedó activa. Intenta nuevamente.');
+      }
     }
   } catch (authError) {
     error.textContent = 'No se pudo conectar con el servicio de autenticación.';
@@ -79,7 +95,17 @@ async function iniciarSesion(event) {
 }
 
 async function cerrarSesion() {
-  await getSupabase().auth.signOut();
+  try {
+    await getSupabase().auth.signOut();
+  } catch (err) {
+    console.warn('Error al cerrar sesión:', err);
+  }
+
+  cache = { leads: [], leads_no_calificados: [], llamadas_pbx: [], llamadas_celular: [], llamadas_whatsapp: [], catalogo: [], llamadas_teams: [] };
+  cargaCompleta = { leads: false, leads_no_calificados: false, llamadas_pbx: false, llamadas_celular: false, llamadas_whatsapp: false, catalogo: false, llamadas_teams: false };
+  vistaActual = 'config';
+  detalleFiltro = null;
+  cruceCache = null;
   mostrarPantallaLogin();
 }
 
@@ -4033,19 +4059,29 @@ window.addEventListener('DOMContentLoaded', async () => {
   establecerFechasPorDefecto();
   actualizarMarcaDashboard();
   actualizarMenuDashboard();
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (session) {
-    mostrarAplicacion();
-    await sincronizarAPI();
-    irA('catalogo');
-  } else {
-    mostrarPantallaLogin();
-  }
-  supabaseClient.auth.onAuthStateChange((_event, nuevaSesion) => {
-    if (nuevaSesion) {
+
+  const verificarSesion = async () => {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
       mostrarAplicacion();
+      await sincronizarAPI();
       if (vistaActual === 'config') irA('catalogo');
     } else {
+      mostrarPantallaLogin();
+    }
+  };
+
+  await verificarSesion();
+
+  supabaseClient.auth.onAuthStateChange(async (_event, nuevaSesion) => {
+    if (nuevaSesion) {
+      mostrarAplicacion();
+      await sincronizarAPI();
+      if (vistaActual === 'config') irA('catalogo');
+    } else {
+      cache = { leads: [], leads_no_calificados: [], llamadas_pbx: [], llamadas_celular: [], llamadas_whatsapp: [], catalogo: [], llamadas_teams: [] };
+      cargaCompleta = { leads: false, leads_no_calificados: false, llamadas_pbx: false, llamadas_celular: false, llamadas_whatsapp: false, catalogo: false, llamadas_teams: false };
+      vistaActual = 'config';
       mostrarPantallaLogin();
     }
   });

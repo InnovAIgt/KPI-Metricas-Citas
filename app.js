@@ -604,7 +604,7 @@ async function sincronizarAPI() {
       ? 'autenticación PBX OK'
       : `autenticación PBX FALLÓ${autenticacionPbx?.login_error ? `: ${autenticacionPbx.login_error}` : ''}`;
     mostrarToast(`${estadoPbx} ${autenticacion}`, data?.status === 'partial_error' ? 'error' : 'success');
-    await recargarTodoYContadores();
+    await recargarDatosDesdeSupabase();
   } catch (err) {
     mostrarToast('Error al sincronizar: ' + err.message, 'error');
   } finally {
@@ -900,8 +900,8 @@ async function recargarUnaTabla(tabla, columnaFecha) {
   }
 }
 
-async function recargarTodoYContadores() {
-  console.log('Iniciando recargarTodoYContadores...');
+async function recargarDatosDesdeSupabase() {
+  console.log('Iniciando recargarDatosDesdeSupabase...');
   cargaCompleta = { leads: false, leads_no_calificados: false, llamadas_pbx: false, llamadas_celular: false, llamadas_whatsapp: false, catalogo: false, llamadas_teams: false };
   cruceCache = null;
   try {
@@ -911,7 +911,7 @@ async function recargarTodoYContadores() {
     await cargarTablaCompleta('llamadas_celular', 'fecha');
     await cargarTablaCompleta('llamadas_whatsapp', 'fecha_llamada');
     await cargarTablaCompleta('catalogo', null);
-    
+
     try {
       await cargarTablaCompleta('llamadas_teams', null);
     } catch (teamsErr) {
@@ -919,13 +919,17 @@ async function recargarTodoYContadores() {
       cache.llamadas_teams = [];
       cargaCompleta.llamadas_teams = true;
     }
-    
+
     render();
-    console.log('Recargar completado!');
+    console.log('Recarga desde Supabase completada!');
   } catch (err) {
     console.error('Error:', err);
     mostrarToast('Error al recargar: ' + err.message, 'error');
   }
+}
+
+async function recargarTodoYContadores() {
+  return recargarDatosDesdeSupabase();
 }
 
 // ==================================================================
@@ -4025,6 +4029,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session) {
     mostrarAplicacion();
+    await sincronizarAPI();
     irA('catalogo');
   } else {
     mostrarPantallaLogin();

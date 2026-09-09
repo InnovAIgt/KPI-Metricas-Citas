@@ -5,7 +5,7 @@ let supabaseClient = null;
 let cache = { leads: [], leads_no_calificados: [], llamadas_pbx: [], llamadas_celular: [], llamadas_whatsapp: [], catalogo: [], llamadas_teams: [] };
 let cargaCompleta = { leads: false, leads_no_calificados: false, llamadas_pbx: false, llamadas_celular: false, llamadas_whatsapp: false, catalogo: false, llamadas_teams: false };
 let cruceCache = null;
-let vistaActual = 'config';
+let vistaActual = 'criterios';
 let contenidoModalCelda = '';
 let detalleFiltro = null;
 let kpi1DetalleCruce = [];
@@ -4145,8 +4145,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (session) {
       sesionVerificada = true;
       mostrarAplicacion();
-      await sincronizarAPI();
-      if (vistaActual === 'config') irA('catalogo');
+      if (vistaActual === 'config' || vistaActual === 'criterios') irA('criterios');
     } else {
       sesionVerificada = false;
       mostrarPantallaLogin();
@@ -4160,8 +4159,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (!sesionVerificada) {
         sesionVerificada = true;
         mostrarAplicacion();
-        await sincronizarAPI();
-        if (vistaActual === 'config') irA('catalogo');
+        if (vistaActual === 'config' || vistaActual === 'criterios') irA('criterios');
       }
     } else {
       sesionVerificada = false;

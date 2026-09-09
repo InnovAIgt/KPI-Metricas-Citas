@@ -7,9 +7,8 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-const BATCH_SIZE = 500;
+const BATCH_SIZE = 200;
 
-// Esquema de columnas permitidas por tabla
 const COLUMNAS_PERMITIDAS = {
   leads: ["codigo_prospecto", "nombre", "telefono", "fecha_agendada", "hora_agendada", "fecha_creado", "hora_creado", "tipo_reunion", "asesor_nombre", "pais", "created_at"],
   leads_no_calificados: ["client_id", "client_name", "advisor_name", "telefono", "created_at", "created_at_sv"],
@@ -17,12 +16,12 @@ const COLUMNAS_PERMITIDAS = {
   llamadas_pbx: ["id", "uniqueid", "extension", "prefijo", "destino", "duracion_minutos", "duracion_segundos", "duracion_hh_mm_ss", "estado", "nombre", "fecha_hora", "fecha", "solo_fecha", "anio", "mes", "dia", "pais", "audio_url", "grabacion_url", "created_at"],
 };
 
-function filtrarColumnas(registros: any[], tabla: string): any[] {
+function filtrarColumnas(registros, tabla) {
   const permitidas = COLUMNAS_PERMITIDAS[tabla];
   if (!permitidas) return registros;
 
-  return registros.map(registro => {
-    const filtrado: any = {};
+  return registros.map((registro) => {
+    const filtrado = {};
     for (const col of permitidas) {
       if (col in registro) {
         filtrado[col] = registro[col];
@@ -32,18 +31,27 @@ function filtrarColumnas(registros: any[], tabla: string): any[] {
   });
 }
 
-async function hashEstable(texto: string) {
+async function hashEstable(texto) {
   const buffer = new TextEncoder().encode(texto);
   const hash = await crypto.subtle.digest("SHA-256", buffer);
-  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 32);
 }
 
-async function construirUniqueIdPbx(registro: any, fechaHora: string | null = null) {
+async function construirUniqueIdPbx(registro, fechaHora = null) {
   const extension = String(registro?.EXTENSION ?? registro?.extension ?? registro?.usuario ?? "").trim();
   const destino = String(registro?.DESTINO ?? registro?.destino ?? "").trim();
   const estado = String(registro?.ESTADO ?? registro?.estado ?? "").trim();
   const nombre = String(registro?.NOMBRE ?? registro?.nombre ?? "").trim();
-  const duracion = String(registro?.DURACION_MINUTOS ?? registro?.duracion_minutos ?? registro?.duracion_hh_mm_ss ?? registro?.DURACION_HH_MM_SS ?? "").trim();
+  const duracion = String(
+    registro?.DURACION_MINUTOS ??
+      registro?.duracion_minutos ??
+      registro?.duracion_hh_mm_ss ??
+      registro?.DURACION_HH_MM_SS ??
+      ""
+  ).trim();
   const fecha = fechaHora || String(registro?.FECHA_HORA ?? registro?.fecha_hora ?? registro?.FECHA ?? registro?.fecha ?? registro?.SOLO_FECHA ?? registro?.solo_fecha ?? "").trim();
   const payload = JSON.stringify({
     extension,
@@ -58,13 +66,8 @@ async function construirUniqueIdPbx(registro: any, fechaHora: string | null = nu
   return await hashEstable(payload);
 }
 
-async function upsertEnLotes(
-  supabase: any,
-  tabla: string,
-  registros: any[],
-  onConflictCol: string
-) {
-  const errores: any[] = [];
+async function upsertEnLotes(supabase, tabla, registros, onConflictCol) {
+  const errores = [];
   let insertados = 0;
 
   const registrosFiltrados = await Promise.all(
@@ -87,10 +90,15 @@ async function upsertEnLotes(
     const respuesta = await supabase
       .from(tabla)
       .upsert(lote, { onConflict: onConflictCol, ignoreDuplicates: false, count: "exact" });
-    const error = respuesta?.error || null;
 
+    const error = respuesta?.error || null;
     if (error) {
-      errores.push({ tabla, lote_desde: i, mensaje: error?.message || String(error), detalles: error?.details ?? null });
+      errores.push({
+        tabla,
+        lote_desde: i,
+        mensaje: error?.message || String(error),
+        detalles: error?.details ?? null,
+      });
     } else {
       insertados += lote.length;
     }
@@ -99,12 +107,8 @@ async function upsertEnLotes(
   return { tabla, insertados, sinClave, errores };
 }
 
-function dedupePorClaveMasReciente(
-  registros: any[],
-  columnaClave: string,
-  compararFn: (a: any, b: any) => number
-) {
-  const porClave = new Map<string, any>();
+function dedupePorClaveMasReciente(registros, columnaClave, compararFn) {
+  const porClave = new Map();
   for (const registro of registros) {
     const clave = registro?.[columnaClave];
     if (clave == null || clave === "") continue;
@@ -116,12 +120,12 @@ function dedupePorClaveMasReciente(
   return Array.from(porClave.values());
 }
 
-async function obtenerJwtPbx(redPbxHost: string, username: string, password: string) {
+async function obtenerJwtPbx(redPbxHost, username, password) {
   try {
     const r = await fetch(`${redPbxHost}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password }),
     });
 
     if (!r.ok) {
@@ -130,15 +134,15 @@ async function obtenerJwtPbx(redPbxHost: string, username: string, password: str
 
     const data = await r.json();
     return { token: data.token, error: null };
-  } catch (err: any) {
+  } catch (err) {
     return { token: null, error: err.message };
   }
 }
 
-async function fetchApiConDiagnostico(nombre: string, url: string, opciones: RequestInit = {}) {
+async function fetchApiConDiagnostico(nombre, url, opciones = {}) {
   try {
     const headers = {
-      "Accept": "application/json",
+      Accept: "application/json",
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
       ...(opciones.headers || {}),
     };
@@ -159,10 +163,10 @@ async function fetchApiConDiagnostico(nombre: string, url: string, opciones: Req
       };
     }
 
-    let json: any;
+    let json;
     try {
       json = JSON.parse(textoCrudo);
-    } catch (parseErr: any) {
+    } catch (parseErr) {
       return {
         data: [],
         diagnostico: {
@@ -184,7 +188,7 @@ async function fetchApiConDiagnostico(nombre: string, url: string, opciones: Req
         cuerpo_respuesta: textoCrudo.slice(0, 500),
       },
     };
-  } catch (err: any) {
+  } catch (err) {
     return {
       data: [],
       diagnostico: {
@@ -198,7 +202,7 @@ async function fetchApiConDiagnostico(nombre: string, url: string, opciones: Req
   }
 }
 
-function extraerRegistros(responseData: any) {
+function extraerRegistros(responseData) {
   if (!responseData) return [];
   if (Array.isArray(responseData)) return responseData;
   if (typeof responseData !== "object") return [];
@@ -221,7 +225,7 @@ function extraerRegistros(responseData: any) {
   return [];
 }
 
-function normalizarFechaHoraPbX(fecha: any, hora: any = null) {
+function normalizarFechaHoraPbX(fecha, hora = null) {
   if (fecha == null || fecha === "") return null;
 
   const rawFecha = String(fecha).trim();
@@ -260,7 +264,7 @@ function normalizarFechaHoraPbX(fecha: any, hora: any = null) {
   return null;
 }
 
-function normalizarCallRow(registro: any) {
+function normalizarCallRow(registro) {
   if (!registro || typeof registro !== "object") return registro;
 
   const fechaRaw = registro.FECHA || registro.fecha || registro.FECHA_HORA || registro.fecha_hora || registro.SOLO_FECHA || registro.solo_fecha || null;
@@ -277,10 +281,8 @@ function normalizarCallRow(registro: any) {
     prefijo: registro.PREFIJO ?? registro.prefijo ?? null,
     destino: registro.DESTINO || registro.destino || null,
     duracion_minutos: registro.DURACION_MINUTOS || registro.duracion_minutos || null,
-    duracion_segundos:
-      registro.DURATION_SEC ?? registro.duration_sec ?? registro.duracion_segundos ?? null,
-    duracion_hh_mm_ss:
-      registro.DURACION_HH_MM_SS || registro.duracion_hh_mm_ss || null,
+    duracion_segundos: registro.DURATION_SEC ?? registro.duration_sec ?? registro.duracion_segundos ?? null,
+    duracion_hh_mm_ss: registro.DURACION_HH_MM_SS || registro.duracion_hh_mm_ss || null,
     estado: registro.ESTADO || registro.estado || null,
     nombre: registro.NOMBRE || registro.nombre || null,
     fecha_hora: fechaHora,
@@ -295,13 +297,8 @@ function normalizarCallRow(registro: any) {
   };
 }
 
-function normalizarLeadNoCalificado(registro: any) {
-  const telefono = registro?.client_phone
-    || registro?.phone
-    || registro?.phone_number
-    || registro?.telefono
-    || registro?.numero_cliente
-    || "";
+function normalizarLeadNoCalificado(registro) {
+  const telefono = registro?.client_phone || registro?.phone || registro?.phone_number || registro?.telefono || registro?.numero_cliente || "";
   return {
     client_id: registro?.client_id || registro?.lead_id || "",
     client_name: registro?.client_name || registro?.nombre || "",
@@ -346,22 +343,22 @@ Deno.serve(async (req) => {
             : `No se pudo autenticar con PBX: ${loginResult.error || "configura PBX_USERNAME y PBX_PASSWORD en los secretos de la Edge Function."}`;
           return new Response(JSON.stringify({ status: "error", message }), {
             status: 502,
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
 
         const audioRes = await fetch(audioUrl, {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${bearer}`,
-            "Accept": "audio/*,*/*;q=0.8"
-          }
+            Authorization: `Bearer ${bearer}`,
+            Accept: "audio/*,*/*;q=0.8",
+          },
         });
 
         if (!audioRes.ok) {
           return new Response(JSON.stringify({ status: "error", message: `Audio PBX no disponible: HTTP ${audioRes.status}` }), {
             status: audioRes.status,
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
 
@@ -369,12 +366,12 @@ Deno.serve(async (req) => {
         const contentType = audioRes.headers.get("content-type") || "audio/wav";
         return new Response(audioBlob, {
           status: 200,
-          headers: { ...corsHeaders, "Content-Type": contentType, "Cache-Control": "no-store" }
+          headers: { ...corsHeaders, "Content-Type": contentType, "Cache-Control": "no-store" },
         });
-      } catch (proxyErr: any) {
+      } catch (proxyErr) {
         return new Response(JSON.stringify({ status: "error", message: proxyErr.message }), {
           status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
@@ -382,8 +379,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabaseKey = serviceKey;
-    
-    // La autenticacion PBX vive en secretos de la Edge Function, nunca en el navegador.
+
     let pbxHostBody = "";
     let pbxUsernameBody = "";
     let pbxPasswordBody = "";
@@ -391,8 +387,8 @@ Deno.serve(async (req) => {
     let pbxPaisBody = "SV";
     let pbxDesdeBody = "";
     let pbxHastaBody = "";
-    let bodyRecibido: any = {};
-    
+    let bodyRecibido = {};
+
     try {
       bodyRecibido = await req.json();
       pbxHostBody = bodyRecibido.pbx_host || "";
@@ -405,7 +401,7 @@ Deno.serve(async (req) => {
     } catch (e) {
       // Body no es JSON válido, ignorar
     }
-    
+
     const redPbxHost = Deno.env.get("RED_PBX_HOST") || "https://api.red.com.sv";
     const pbxUsername = Deno.env.get("PBX_USERNAME") || "";
     const pbxPassword = Deno.env.get("PBX_PASSWORD") || "";
@@ -416,13 +412,13 @@ Deno.serve(async (req) => {
 
     if (!supabaseUrl || !supabaseKey) {
       if (!modoPrueba) {
-      return new Response(
-        JSON.stringify({
-          status: "error",
-          message: "Faltan variables de entorno SUPABASE_URL y/o SUPABASE_SERVICE_ROLE_KEY.",
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+        return new Response(
+          JSON.stringify({
+            status: "error",
+            message: "Faltan variables de entorno SUPABASE_URL y/o SUPABASE_SERVICE_ROLE_KEY.",
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     }
 
@@ -434,7 +430,6 @@ Deno.serve(async (req) => {
       ? pbxDesdeBody
       : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-    // Obtener JWT para PBX (siempre hacer login para token fresco)
     let jwtPbx = pbxBearerToken;
     let pbxLoginError = null;
     if (!jwtPbx && pbxUsername && pbxPassword) {
@@ -448,9 +443,9 @@ Deno.serve(async (req) => {
       pbxLoginError = "PBX_USERNAME o PBX_PASSWORD no configurados";
     }
 
-    const headersPbx: any = { method: "GET" };
+    const headersPbx = { method: "GET" };
     if (jwtPbx) {
-      headersPbx.headers = { "Authorization": `Bearer ${jwtPbx}` };
+      headersPbx.headers = { Authorization: `Bearer ${jwtPbx}` };
     }
 
     console.log("[sincronizar-datos] autenticacion PBX", {
@@ -472,35 +467,38 @@ Deno.serve(async (req) => {
         .filter(Boolean)
         .map((fecha) => String(fecha))
         .sort();
-      const llamadasExtension6077 = dataLlamadas.filter((registro) => String(registro.extension || '').trim() === '6077');
+      const llamadasExtension6077 = dataLlamadas.filter((registro) => String(registro.extension || "").trim() === "6077");
       const fechasExtension6077 = llamadasExtension6077
         .map((registro) => registro.fecha_hora || registro.solo_fecha)
         .filter(Boolean)
         .map((fecha) => String(fecha))
         .sort();
 
-      return new Response(JSON.stringify({
-        status: "diagnostico",
-        autenticacion_pbx: {
-          token_configurado: Boolean(jwtPbx),
-          login_realizado: Boolean(pbxUsername && pbxPassword),
-          login_error: pbxLoginError,
-        },
-        rango_pbx: { desde: fechaDesde, hasta: fechaHasta, pais: pbxPais },
-        resumen_pbx: {
-          registros_recibidos: dataLlamadas.length,
-          extension_6077: llamadasExtension6077.length,
-          fecha_minima_recibida: fechasLlamadas[0] || null,
-          fecha_maxima_recibida: fechasLlamadas.at(-1) || null,
-          extension_6077_fecha_minima: fechasExtension6077[0] || null,
-          extension_6077_fecha_maxima: fechasExtension6077.at(-1) || null,
-        },
-        diagnostico_api: llamadasRes.diagnostico,
-        escritura_supabase: "omitida_en_modo_prueba",
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          status: "diagnostico",
+          autenticacion_pbx: {
+            token_configurado: Boolean(jwtPbx),
+            login_realizado: Boolean(pbxUsername && pbxPassword),
+            login_error: pbxLoginError,
+          },
+          rango_pbx: { desde: fechaDesde, hasta: fechaHasta, pais: pbxPais },
+          resumen_pbx: {
+            registros_recibidos: dataLlamadas.length,
+            extension_6077: llamadasExtension6077.length,
+            fecha_minima_recibida: fechasLlamadas[0] || null,
+            fecha_maxima_recibida: fechasLlamadas.at(-1) || null,
+            extension_6077_fecha_minima: fechasExtension6077[0] || null,
+            extension_6077_fecha_maxima: fechasExtension6077.at(-1) || null,
+          },
+          diagnostico_api: llamadasRes.diagnostico,
+          escritura_supabase: "omitida_en_modo_prueba",
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     const [leadsRes, leadsNoCalificadosRes, celularRes, llamadasRes] = await Promise.all([
@@ -542,11 +540,25 @@ Deno.serve(async (req) => {
       .map((registro) => registro.fecha_hora || registro.solo_fecha)
       .filter(Boolean)
       .map((fecha) => String(fecha));
-    const llamadasExtension6077 = dataLlamadas.filter((registro) => String(registro.extension || '').trim() === '6077');
+    const llamadasExtension6077 = dataLlamadas.filter((registro) => String(registro.extension || "").trim() === "6077");
+    const septiembrePbx = dataLlamadas.filter((registro) => {
+      const fecha = String(registro.fecha_hora || registro.solo_fecha || "").trim();
+      return fecha.startsWith("2026-09-") || fecha.includes("2026-09-");
+    });
+
+    console.log("[sincronizar-datos] depuracion pbx antes de upsert", {
+      total_llamadas: dataLlamadas.length,
+      extension_6077: llamadasExtension6077.length,
+      septiembre_count: septiembrePbx.length,
+      primeras_fechas: fechasLlamadas.slice(0, 5),
+      ultimas_fechas: fechasLlamadas.slice(-5),
+      primer_uniqueid: dataLlamadas[0]?.uniqueid || null,
+      ultimo_uniqueid: dataLlamadas.at(-1)?.uniqueid || null,
+      ejemplo_6077: llamadasExtension6077.slice(0, 3),
+    });
 
     if (llamadasRes.diagnostico.ok && dataLlamadas.length === 0) {
-      llamadasRes.diagnostico.mensaje =
-        "La API PBX devolvió OK, pero no se encontró un arreglo de llamadas en la respuesta.";
+      llamadasRes.diagnostico.mensaje = "La API PBX devolvió OK, pero no se encontró un arreglo de llamadas en la respuesta.";
     }
 
     const dataLeadsDedup = dedupePorClaveMasReciente(dataLeads, "codigo_prospecto", (a, b) => {
@@ -578,6 +590,16 @@ Deno.serve(async (req) => {
         : { tabla: "llamadas_pbx", insertados: 0, sinClave: 0, errores: [] },
     ]);
 
+    console.log("[sincronizar-datos] depuracion pbx despues de upsert", {
+      tabla_pbx: resultados[3],
+      total_resultados: resultados.map((r) => ({
+        tabla: r.tabla,
+        insertados: r.insertados,
+        errores: r.errores?.length || 0,
+        sinClave: r.sinClave,
+      })),
+    });
+
     const huboFalloDeApi = Object.values(diagnosticoApis).some((d) => !d.ok);
     const huboErrores = resultados.some((r) => (r?.errores || []).length > 0) || huboFalloDeApi;
 
@@ -591,14 +613,12 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         status: huboErrores ? "partial_error" : "success",
-        advertencia_credenciales: !serviceKey
-          ? "SUPABASE_SERVICE_ROLE_KEY no está configurada."
-          : null,
+        advertencia_credenciales: !serviceKey ? "SUPABASE_SERVICE_ROLE_KEY no está configurada." : null,
         advertencia_pbx_login: pbxLoginError
           ? `Error al autenticarse con PBX: ${pbxLoginError}`
           : !pbxUsername || !pbxPassword
-          ? "PBX_USERNAME o PBX_PASSWORD no están configurados."
-          : null,
+            ? "PBX_USERNAME o PBX_PASSWORD no están configurados."
+            : null,
         autenticacion_pbx: {
           token_configurado: Boolean(jwtPbx),
           login_realizado: Boolean(pbxUsername && pbxPassword),
@@ -621,29 +641,30 @@ Deno.serve(async (req) => {
           fecha_minima_recibida: fechasLlamadas.sort()[0] || null,
           fecha_maxima_recibida: fechasLlamadas.sort().at(-1) || null,
         },
+        depuracion_pbx: {
+          septiembre_count: septiembrePbx.length,
+          ejemplo_6077: llamadasExtension6077.slice(0, 3),
+          primeros_5: fechasLlamadas.slice(0, 5),
+          ultimos_5: fechasLlamadas.slice(-5),
+          resultado_tabla_pbx: resultados[3],
+        },
         duplicados_leads_colapsados: duplicadosLeads,
         diagnostico_apis: diagnosticoApis,
         resultado_por_tabla: resultados,
       }),
       {
-        // Mantener HTTP 200 para que clientes y el panel de Supabase puedan leer el diagnóstico.
-        // El detalle de fallos queda en el campo JSON `status: partial_error`.
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
-  } catch (err: any) {
+  } catch (err) {
     console.error("[sincronizar-datos] error no controlado", {
       mensaje: err?.message || String(err),
       stack: err?.stack || null,
     });
-    return new Response(
-      JSON.stringify({ status: "error", message: err?.message || String(err) }),
-      {
-        // En modo diagnóstico devolver JSON legible al panel de Supabase.
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ status: "error", message: err?.message || String(err) }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

@@ -13,6 +13,7 @@ let modoDashboard = 'calificados';
 let temporizadorLeads = null;
 let leadsDisponiblesLlamadaManual = [];
 let llamadaManualEnEdicion = null;
+let sincronizacionEnCurso = false;
 
 let SB_URL = "https://sbopifiiyezmvsadwkpg.supabase.co";
 let SB_KEY = "sb_publishable_1drMMd0cMfJLz0tlEhq1_Q_JLdfpygh";
@@ -597,6 +598,12 @@ async function reproducirAudioConToken(urlEncoded) {
 }
 
 async function sincronizarAPI() {
+  if (sincronizacionEnCurso) {
+    console.info('Sincronización ya en curso; se ignora una llamada concurrente.');
+    return;
+  }
+
+  sincronizacionEnCurso = true;
   const estado = document.getElementById('estado-config');
   if (estado) { estado.innerText = "Sincronizando API..."; estado.classList.remove('hidden'); }
   try {
@@ -634,6 +641,7 @@ async function sincronizarAPI() {
   } catch (err) {
     mostrarToast('Error al sincronizar: ' + err.message, 'error');
   } finally {
+    sincronizacionEnCurso = false;
     if (estado) estado.classList.add('hidden');
   }
 }

@@ -161,6 +161,17 @@ function obtenerRangoPorDefecto() {
   };
 }
 
+function obtenerRangoFechaDashboard() {
+  const rangoPorDefecto = obtenerRangoPorDefecto();
+  const desdeInput = document.getElementById('global-desde');
+  const hastaInput = document.getElementById('global-hasta');
+
+  const desde = desdeInput?.value || rangoPorDefecto.desde;
+  const hasta = hastaInput?.value || rangoPorDefecto.hasta;
+
+  return { desde, hasta };
+}
+
 function establecerFechasPorDefecto() {
   const rango = obtenerRangoPorDefecto();
   const desdeInput = document.getElementById('global-desde');
@@ -884,15 +895,35 @@ async function confirmarEliminar(id) {
 // ==================================================================
 // CARGA DE DATOS
 // ==================================================================
-async function cargarTablaCompleta(tabla, orden) {
+async function cargarTablaCompleta(tabla, orden, rango = null) {
   const client = getSupabase();
+  const rangoUsado = rango || obtenerRangoFechaDashboard();
+  const mapaColumnasFecha = {
+    leads: 'fecha_agendada',
+    leads_no_calificados: 'created_at',
+    llamadas_pbx: 'fecha_hora',
+    llamadas_celular: 'fecha',
+    llamadas_whatsapp: 'fecha_llamada',
+    catalogo: null,
+    llamadas_teams: null
+  };
+
+  let q = client.from(tabla).select('*');
+  const columnaFecha = mapaColumnasFecha[tabla];
+  if (columnaFecha && rangoUsado?.desde && rangoUsado?.hasta) {
+    const desdeIso = new Date(`${rangoUsado.desde}T00:00:00Z`).toISOString();
+    const hastaIso = new Date(`${rangoUsado.hasta}T23:59:59Z`).toISOString();
+    q = q.gte(columnaFecha, desdeIso).lte(columnaFecha, hastaIso);
+  }
+
+  if (orden) q = q.order(orden, { ascending: false });
+
   let todos = [];
   let desde = 0;
   const pageSize = 1000;
   while (true) {
-    let q = client.from(tabla).select('*').range(desde, desde + pageSize - 1);
-    if (orden) q = q.order(orden, { ascending: false });
-    const { data, error } = await q;
+    const queryPag = q.range(desde, desde + pageSize - 1);
+    const { data, error } = await queryPag;
     if (error) throw error;
     todos = todos.concat(data || []);
     if (!data || data.length < pageSize) break;
@@ -951,13 +982,16 @@ async function recargarDatosDesdeSupabase() {
   console.log('Iniciando recarga paralela desde Supabase...');
   cargaCompleta = { leads: false, leads_no_calificados: false, llamadas_pbx: false, llamadas_celular: false, llamadas_whatsapp: false, catalogo: false, llamadas_teams: false };
   cruceCache = null;
+
+  const rangoActual = obtenerRangoFechaDashboard();
+
   try {
     const cargas = [
-      cargarTablaCompleta('leads', 'fecha_agendada'),
-      cargarTablaCompleta('leads_no_calificados', 'created_at'),
-      cargarTablaCompleta('llamadas_pbx', 'fecha_hora'),
-      cargarTablaCompleta('llamadas_celular', 'fecha'),
-      cargarTablaCompleta('llamadas_whatsapp', 'fecha_llamada'),
+      cargarTablaCompleta('leads', 'fecha_agendada', rangoActual),
+      cargarTablaCompleta('leads_no_calificados', 'created_at', rangoActual),
+      cargarTablaCompleta('llamadas_pbx', 'fecha_hora', rangoActual),
+      cargarTablaCompleta('llamadas_celular', 'fecha', rangoActual),
+      cargarTablaCompleta('llamadas_whatsapp', 'fecha_llamada', rangoActual),
       cargarTablaCompleta('catalogo', null),
     ];
 
@@ -4090,6 +4124,19 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   initTheme();
   establecerFechasPorDefecto();
+
+  const inputDesde = document.getElementById('global-desde');
+  const inputHasta = document.getElementById('global-hasta');
+  [inputDesde, inputHasta].forEach((input) => {
+    if (input) {
+      input.addEventListener('change', async () => {
+        if (sesionVerificada) {
+          await recargarDatosDesdeSupabase();
+        }
+      });
+    }
+  });
+
   actualizarMarcaDashboard();
   actualizarMenuDashboard();
 

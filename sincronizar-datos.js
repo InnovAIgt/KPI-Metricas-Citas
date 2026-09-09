@@ -41,11 +41,17 @@ async function upsertEnLotes(
   const errores: any[] = [];
   let insertados = 0;
 
-  // Filtrar columnas no permitidas
-  const registrosFiltrados = filtrarColumnas(registros, tabla);
+  const registrosFiltrados = filtrarColumnas(registros, tabla).map((registro) => {
+    if (tabla === "llamadas_pbx" && onConflictCol.includes("uniqueid")) {
+      const fechaHora = registro?.fecha_hora || normalizarFechaHoraPbX(registro?.FECHA || registro?.fecha || null, registro?.HORA || registro?.hora || null);
+      const uniqueidArreglado = construirUniqueIdPbx(registro, fechaHora);
+      return { ...registro, uniqueid: uniqueidArreglado };
+    }
+    return registro;
+  });
 
   const columnasClave = onConflictCol.split(",").map((col) => col.trim()).filter(Boolean);
-  const validos = registrosFiltrados.filter((r) => columnasClave.every((col) => r?.[col] != null && r?.[col] !== ""));
+  const validos = registrosFiltrados.filter((r) => columnasClave.every((col) => r?.[col] != null && String(r?.[col]).trim() !== ""));
   const sinClave = registrosFiltrados.length - validos.length;
 
   for (let i = 0; i < validos.length; i += BATCH_SIZE) {
@@ -202,12 +208,13 @@ function normalizarFechaHoraPbX(fecha: any, hora: any = null) {
     return horaExtra ? `${isoFecha}T${horaExtra}` : `${isoFecha}T00:00:00`;
   }
 
-  const fechaIso = rawFecha.match(/^\d{4}[/-]\d{2}[/-]\d{2}$/)
-    ? rawFecha.replace(/\//g, "-")
-    : rawFecha;
+  if (/^\d{4}[/-]\d{2}[/-]\d{2}$/.test(rawFecha)) {
+    const [yyyy, mm, dd] = rawFecha.split(/[/-]/);
+    return horaExtra ? `${yyyy}-${mm}-${dd}T${horaExtra}` : `${yyyy}-${mm}-${dd}T00:00:00`;
+  }
 
-  if (/^\d{2}[/-]\d{2}[/-]\d{4}$/.test(fechaIso)) {
-    const [dd, mm, yyyy] = fechaIso.split(/[/-]/);
+  if (/^\d{2}[/-]\d{2}[/-]\d{4}$/.test(rawFecha)) {
+    const [dd, mm, yyyy] = rawFecha.split(/[/-]/);
     return horaExtra ? `${yyyy}-${mm}-${dd}T${horaExtra}` : `${yyyy}-${mm}-${dd}T00:00:00`;
   }
 
@@ -215,7 +222,34 @@ function normalizarFechaHoraPbX(fecha: any, hora: any = null) {
     return isoFecha.replace(" ", "T");
   }
 
+  if (/^\d{2}[/-]\d{2}[/-]\d{4}[ T]\d{2}:\d{2}/.test(rawFecha)) {
+    const fechaLarga = rawFecha.replace(/\//g, "-");
+    const [fechaParte, horaParte] = fechaLarga.split(/[T\s]/);
+    const [dd, mm, yyyy] = fechaParte.split("-");
+    return `${yyyy}-${mm}-${dd}T${horaParte}`;
+  }
+
   return null;
+}
+
+function construirUniqueIdPbx(registro: any, fechaHora: string | null = null) {
+  const extension = String(registro?.EXTENSION ?? registro?.extension ?? registro?.usuario ?? "").trim();
+  const destino = String(registro?.DESTINO ?? registro?.destino ?? "").trim();
+  const estado = String(registro?.ESTADO ?? registro?.estado ?? "").trim();
+  const fecha = fechaHora || String(registro?.FECHA_HORA ?? registro?.fecha_hora ?? registro?.FECHA ?? registro?.fecha ?? registro?.SOLO_FECHA ?? registro?.solo_fecha ?? "").trim();
+  const base = [
+    registro?.uniqueid,
+    registro?.uniqueId,
+    registro?.UNIQUEID,
+    registro?.id,
+    registro?.ID,
+    extension || "sin-extension",
+    destino || "sin-destino",
+    fecha || "sin-fecha",
+    estado || "sin-estado",
+  ].filter((valor) => valor != null && String(valor).trim() !== "").join("|");
+
+  return base || `pbx-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function normalizarCallRow(registro: any) {
@@ -226,23 +260,10 @@ function normalizarCallRow(registro: any) {
   const fechaHora = normalizarFechaHoraPbX(fechaRaw, horaRaw) || registro.FECHA_HORA || registro.fecha_hora || null;
   const soloFecha = registro.SOLO_FECHA || registro.solo_fecha || (fechaHora ? fechaHora.split("T")[0] : null);
   const fechaObj = fechaHora ? new Date(fechaHora) : null;
-  const uniqueidBase = [
-    registro.uniqueid,
-    registro.uniqueId,
-    registro.UNIQUEID,
-    registro.id,
-    registro.ID,
-    registro.EXTENSION,
-    registro.extension,
-    registro.DESTINO,
-    registro.destino,
-    fechaHora,
-    registro.ESTADO,
-    registro.estado,
-  ].filter((valor) => valor != null && String(valor).trim() !== "").join("|");
+  const uniqueidBase = construirUniqueIdPbx(registro, fechaHora);
 
   return {
-    uniqueid: uniqueidBase || null,
+    uniqueid: uniqueidBase,
     extension: String(registro.EXTENSION ?? registro.extension ?? registro.usuario ?? "").trim() || null,
     prefijo: registro.PREFIJO ?? registro.prefijo ?? null,
     destino: registro.DESTINO || registro.destino || null,

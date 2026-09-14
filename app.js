@@ -2396,6 +2396,41 @@ function mismoDia(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+function esEjecutivoCFUENTES(nombre) {
+  return normalizarClaveUsuario(nombre) === 'cfuentes';
+}
+
+function calcularLeadsConVentanaCFUENTES(leads) {
+  const leadsConVentana = new Set();
+  const leadsCfuentes = (leads || [])
+    .map((lead, index) => {
+      const progr = parseFechaHora(obtenerLeadFecha(lead), obtenerLeadHora(lead));
+      return {
+        key: String(lead.codigo_prospecto || lead.id || index),
+        lead,
+        progr,
+      };
+    })
+    .filter(item => esEjecutivoCFUENTES(item.lead?.asesor_nombre) && item.progr);
+
+  for (let i = 0; i < leadsCfuentes.length; i++) {
+    for (let j = i + 1; j < leadsCfuentes.length; j++) {
+      const actual = leadsCfuentes[i];
+      const siguiente = leadsCfuentes[j];
+
+      if (!mismoDia(actual.progr, siguiente.progr)) continue;
+
+      const diffMs = Math.abs(actual.progr.getTime() - siguiente.progr.getTime());
+      if (diffMs <= 2 * 60 * 60 * 1000) {
+        leadsConVentana.add(actual.key);
+        leadsConVentana.add(siguiente.key);
+      }
+    }
+  }
+
+  return leadsConVentana;
+}
+
 function hhmmssASegundos(str) {
   if (!str) return null;
   const partes = String(str).split(':').map(Number);
@@ -2517,6 +2552,7 @@ async function calcularCruceUnificado() {
   });
   leads = filtrarPorFechaGlobal(leads, 'fecha_agendada');
   const ahora = new Date();
+  const leadsConVentanaCFUENTES = calcularLeadsConVentanaCFUENTES(leads);
 
   const resultado = leads.map(lead => {
     const telLead = normalizarTel(lead.telefono);
@@ -2530,8 +2566,13 @@ async function calcularCruceUnificado() {
     
     const ejec = cache.catalogo.find(e => (e.nombre_ejecutivo || '').trim().toLowerCase() === (lead.asesor_nombre || '').trim().toLowerCase());
     const usuario = ejec ? ejec.usuario : null;
+    const extension = ejec ? ejec.extension : null;
     const numeroEjecutivo = ejec ? normalizarTel(ejec.celular) : '';
+    const leadKey = String(lead.codigo_prospecto || lead.id || `${lead.asesor_nombre || 'sin-asignar'}-${lead.fecha_agendada || ''}-${lead.hora_agendada || ''}`);
+    const usaVentanaCFUENTES = esEjecutivoCFUENTES(lead.asesor_nombre) && leadsConVentanaCFUENTES.has(leadKey);
+    const ventanaToleranciaMinutos = usaVentanaCFUENTES ? 15 : 5;
     let usuarioNorm = '';
+    let extensionNorm = '';
     let candidatas = [];
     let delDia = [];
 
@@ -2562,7 +2603,8 @@ async function calcularCruceUnificado() {
             fuente: 'Issabel',
             fechaHora: parseFechaHoraString(rawFechaHora),
             raw: c,
-            operador: String(c.nombre || c.usuario || '').trim().toLowerCase()
+            operador: String(c.nombre || c.usuario || c.extension || '').trim().toLowerCase(),
+            operadorKeys: [c.nombre, c.usuario, c.extension].filter(Boolean).map(normalizarClaveUsuario)
           };
         });
 
@@ -2582,7 +2624,13 @@ async function calcularCruceUnificado() {
         .map(c => {
           const fBase = c.raw.fecha ? String(c.raw.fecha).split('T')[0] : null;
           const fh = fBase && c.raw.hora ? new Date(`${fBase}T${c.raw.hora}`) : null;
-          return { fuente: 'Celular', fechaHora: fh, raw: c.raw, operador: String(c.raw.usuario || '').trim().toLowerCase() };
+          return {
+            fuente: 'Celular',
+            fechaHora: fh,
+            raw: c.raw,
+            operador: String(c.raw.usuario || c.raw.nombre || '').trim().toLowerCase(),
+            operadorKeys: [c.raw.usuario, c.raw.nombre].filter(Boolean).map(normalizarClaveUsuario)
+          };
         });
 
       const candWhatsapp = (cache.llamadas_whatsapp || [])
@@ -2597,12 +2645,13 @@ async function calcularCruceUnificado() {
 
       candidatas = [...candPBX, ...candCel, ...candWhatsapp]
         .filter(c => c.fechaHora && !isNaN(c.fechaHora.getTime()));
-      usuarioNorm = usuario ? String(usuario).trim().toLowerCase() : '';
+      usuarioNorm = usuario ? normalizarClaveUsuario(usuario) : '';
+      extensionNorm = extension ? normalizarClaveUsuario(extension) : '';
 
       if (progr && candidatas.length) {
         const delDia = candidatas.filter(c => mismoDia(c.fechaHora, progr));
-        const ventanaInicio = progr.getTime() - 5 * 60000;
-        const ventanaFin = progr.getTime() + 5 * 60000;
+        const ventanaInicio = progr.getTime() - ventanaToleranciaMinutos * 60000;
+        const ventanaFin = progr.getTime() + ventanaToleranciaMinutos * 60000;
         const dentroVentana = c => c.fechaHora.getTime() >= ventanaInicio && c.fechaHora.getTime() <= ventanaFin;
 
         const elegirMasCercana = arr => arr.reduce((mejor, actual) => {
@@ -2613,12 +2662,20 @@ async function calcularCruceUnificado() {
         }, null);
 
         const elegirConPreferenciaOperador = (arr) => {
-          if (!usuarioNorm) return elegirMasCercana(arr);
-          const byOp = arr.filter(c => (c.operador || '').toLowerCase() === usuarioNorm);
+          const operadoresPreferidos = [usuarioNorm, extensionNorm, normalizarClaveUsuario(lead.asesor_nombre || '')].filter(Boolean);
+          if (!operadoresPreferidos.length) return elegirMasCercana(arr);
+
+          const byOp = arr.filter(c => {
+            const keys = Array.isArray(c.operadorKeys) && c.operadorKeys.length
+              ? c.operadorKeys
+              : [normalizarClaveUsuario(c.operador || '')].filter(Boolean);
+            return keys.some(key => operadoresPreferidos.includes(key));
+          });
+
           return byOp.length ? elegirMasCercana(byOp) : elegirMasCercana(arr);
         };
 
-        // 1) A call within +/- 5 minutes of the scheduled time is compliant.
+        // 1) A call within +/- ventanaToleranciaMinutos of the scheduled time is compliant.
         const dentroVentanaMismoDia = delDia.filter(dentroVentana);
         if (dentroVentanaMismoDia.length) {
           coincidencia = elegirConPreferenciaOperador(dentroVentanaMismoDia);
@@ -2641,7 +2698,7 @@ async function calcularCruceUnificado() {
           }
         }
       } else if (progr) {
-        const limite = new Date(progr.getTime() + 5 * 60000);
+        const limite = new Date(progr.getTime() + ventanaToleranciaMinutos * 60000);
         estado = ahora < limite ? 'Pendiente de evaluar' : 'Sin llamada encontrada';
       }
 
